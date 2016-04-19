@@ -25,3 +25,18 @@ import urlib2
 import types
 import SocketServer
 import threading
+import tempfile
+import zipfile
+import pickle
+import glob  # for directory scanning
+import abc  # abstract base class
+import colorsys
+import logging
+import pygame as pg
+import scipy.ndimage as ndimage
+import scipy.stats.stats as sss  # for auto white balance
+import scipy.cluster.vq as scv
+import scipy.linalg as nla  # for linear algebra/least squares
+import math
+import copy  # for deep copy
+import numpy as npy
