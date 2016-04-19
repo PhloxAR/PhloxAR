@@ -1,2 +1,6 @@
 # phlox
-python augmented reality
+python augmented reality framework
+
+## requirements
++ Scipy
++ Numpy

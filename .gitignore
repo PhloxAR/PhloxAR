@@ -57,3 +57,21 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Emacs Desktop
+.emacs.desktop
+.emacs.desktop.lock
+
+# temp directory
+reserve/
+introduction.org
+paper/
+*/tmp/*
+
+# for now, unavailable
+docs/
+data/
+examples/
+
+# distutils
+MANIFEST
