@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef __PHLOX_DISPATCH_HPP__
-#define __PHLOX_DISPATCH_HPP__
+#ifndef PHLOX_DISPATCH_HPP
+#define PHLOX_DISPATCH_HPP
 
 typedef unsigned char uchar;
 typedef unsigned short ushort;
@@ -100,4 +100,4 @@ typedef unsigned short ushort;
     return NULL;                                  \
   }
 
-#endif  // __PHLOX_DISPATCH_HPP__
+#endif  // PHLOX_DISPATCH_HPP

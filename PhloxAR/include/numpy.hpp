@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef __PHLOX_NUMPY_HPP__
-#define __PHLOX_NUMPY_HPP__
+#ifndef PHLOX_NUMPY_HPP
+#define PHLOX_NUMPY_HPP
 
 #include <complex>
 #include <Python.h>
@@ -94,4 +94,4 @@ namespace numpy {
 
 }
 
-#endif  // __PHLOX_NUMPY_HPP__
+#endif  // PHLOX_NUMPY_HPP

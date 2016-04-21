@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef __PHLOX_ARRAY_HPP__
-#define __PHLOX_ARRAY_HPP__
+#ifndef PHLOX_ARRAY_HPP
+#define PHLOX_ARRAY_HPP
 
 #include <iterator>
 #include <algorithm>
@@ -42,10 +42,10 @@ namespace numpy {
   const unsigned index_type_number = NPY_INTP;
 
   struct position {
-    position(): _nd(0) {}
-    position(const npy_intp* pos, int nd): _nd(nd) {
-      for (int i = 0; i != _nd; ++i) {
-        _pos[i] = pos[i];
+    position(): nd(0) {}
+    position(const npy_intp* position, int nd): nd(nd) {
+      for (int i = 0; i != nd; ++i) {
+        _pos[i] = posistion[i];
       }
     }
 
@@ -54,14 +54,14 @@ namespace numpy {
     }
 
     int ndim() const {
-      return _nd;
+      return nd;
     }
 
-    int _nd;
-    npy_intp _pos[NPY_MAXDIMS];
+    int nd;
+    npy_intp pos[NPY_MAXDIMS];
 
     bool operator ==(const position& rhs) {
-      return !std::memcmp(this->_pos, rhs._pos, sizeof(this->_pos[0])*this->_nd);
+      return !std::memcmp(this->_pos, rhs._pos, sizeof(this->_pos[0])*this->nd);
     }
 
     bool operator !=(const position& rhs) {
@@ -70,14 +70,14 @@ namespace numpy {
 
     static position from1(npy_intp p0) {
       position res;
-      res._nd = 1;
+      res.nd = 1;
       res._pos[0] = p0;
       return res;
     }
 
     static position from2(npy_intp p0, npy_intp p1) {
       position res;
-      res._nd = 2;
+      res.nd = 2;
       res.pos[0] = p0;
       res.pos[1] = p1;
       return res;
@@ -95,38 +95,38 @@ namespace numpy {
   };
 
   inline position operator +=(const position& l, const position& r) {
-    assert(l._nd == r._nd);
-    for (int i = 0; i != l._nd; ++i) {
+    assert(l.nd == r.nd);
+    for (int i = 0; i != l.nd; ++i) {
       l._pos[i] += r._pos[i];
     }
     return l;
   }
 
   inline position operator +(const position& l, const position& r) {
-    assert(l._nd == r._nd);
+    assert(l.nd == r.nd);
     position res = l;
     res += r;
     return res;
   }
 
   inline position operator -=(const position& l, const position& r) {
-    assert(l._nd == r._nd);
-    for (int i = 0; i != l._nd; ++i) {
+    assert(l.nd == r.nd);
+    for (int i = 0; i != l.nd; ++i) {
       l._pos[i] -= r._pos[i];
     }
     return l;
   }
 
   inline position operator -(const position& l, const position& r) {
-    assert(l._nd == r._nd);
+    assert(l.nd == r.nd);
     position res = l;
     res -= r;
     return res;
   }
 
   inline bool operator ==(const position& l, const position& r) {
-    if (l._nd != r._nd) return false;
-    for (int i = 0; i != r._nd; ++i) {
+    if (l.nd != r.nd) return false;
+    for (int i = 0; i != r.nd; ++i) {
       if (l._pos[i] != r._pos[i])
         return false
     }
@@ -140,7 +140,7 @@ namespace numpy {
   template <typename T>
   T& operator <<(T& out, const numpy::position& p) {
     out << "[";
-    for (int d = 0; d != p._nd; ++d) {
+    for (int d = 0; d != p.nd; ++d) {
       out << p._pos[d] << ":";
     }
     out << "]";
@@ -237,13 +237,13 @@ namespace numpy {
 #endif
       assert(PyArray_Check(array));
       int nd = PyArray_NDIM(array);
-      _pos._nd = nd;
+      _pos.nd = nd;
       _data = ndarray_cast<BaseType*>(array);
       std::fill(_pos._pos, _pos._pos+nd, 0);
 
       unsigned cummul = 0;
 
-      for (int i = 0; i != _pos._nd; ++i) {
+      for (int i = 0; i != _pos.nd; ++i) {
         _dims[i] = PyArray_DIM(array, nd-i-1);
         _steps[i] = PyArray_STRIDE(array, nd-i-1) / sizeof(BaseType) - cummul;
         cummul *= PyArray_DIM(array, nd-i-1);
@@ -252,7 +252,7 @@ namespace numpy {
     }
 
     iterator_base& operator ++() {
-      for (int i = 0; i != _pos._nd; ++i) {
+      for (int i = 0; i != _pos.nd; ++i) {
         _data += _steps[i];
         ++pos_.pos_[i];
         if (_pos._pos[i] != _dims[i]) {
@@ -263,9 +263,9 @@ namespace numpy {
       return *this;
     }
 
-    int index(unsigned i) const { return index_rev(_pos._nd-i-1); }
+    int index(unsigned i) const { return index_rev(_pos.nd-i-1); }
     int index_rev(unsigned i) const { return _pos._pos[i]; }
-    npy_intp dimension(unsigned i) const { return dimension_rev(_pos._nd-i-1); }
+    npy_intp dimension(unsigned i) const { return dimension_rev(_pos.nd-i-1); }
     npy_intp dimension_rev(unsigned i) const { return _dims[i]; }
 
     bool operator ==(const iterator_base& rhs) { return this->_pos == rhs->_pos; }
@@ -273,7 +273,7 @@ namespace numpy {
 
     ::numpy::position position() const {
       ::numpy::position res = _pos;
-      std::reverse(res._pos, res._pos+res._nd);
+      std::reverse(res._pos, res._pos+res.nd);
       return res;
     }
 
@@ -391,10 +391,10 @@ namespace numpy {
     const npy_intp* raw_dims() const { return PyArray_DIMS(_array); }
 
     bool validposition(const position& pos) const {
-      if (ndims() != pos._nd) {
+      if (ndims() != pos.nd) {
         return false;
       }
-      for (int i=0; i != pos._nd; ++i) {
+      for (int i=0; i != pos.nd; ++i) {
         if (pos[i] < 0 || pos[i] >= this->dim(i))
           return false;
       }
@@ -709,4 +709,4 @@ namespace numpy {
 
 }  // namespace numpy
 
-#endif  // __PHLOX_ARRAY_HPP__
+#endif  // PHLOX_ARRAY_HPP
