@@ -46,7 +46,7 @@ import warnings
 import time
 import socket
 import re
-import urlib2
+# import urlib2
 import types
 import SocketServer
 import threading
@@ -65,7 +65,7 @@ import scipy.linalg as nla  # for linear algebra/least squares
 import math
 import copy  # for deep copy
 import numpy as npy
-import scipy.sptaial.distance as spsd
+import scipy.spatial.distance as spsd
 import scipy.cluster.vq as cluster
 import platform
 import itertools
@@ -81,7 +81,7 @@ from types import IntType, LongType, FloatType, InstanceType
 from cStringIO import StringIO
 from numpy import int32
 from numpy import uint8
-from EXIF import *
+from exif import *
 # from pygame import gfxdraw
 from pickle import *
 
@@ -100,7 +100,7 @@ try:
     from PIL import ImageFont as pilImageFont
     from PIL import GifImagePlugin
     getheader = GifImagePlugin.getheader
-    getdata = GitImagePlugin.getdata
+    getdata = GifImagePlugin.getdata
 except ImportError:
     try:
         import Image as pil
@@ -218,6 +218,7 @@ def rev_tuple(n):
     return tuple(reversed(n))
 
 
+# TODO: to remove.
 def find(k, seq):
     """
     Search for item in a list.

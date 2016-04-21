@@ -6,7 +6,7 @@ http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/FujiFilm.html
 """
 
 from __future__ import division, print_function, unicode_literals, absolute_import
-from utils import make_string
+from ..utils import make_string
 
 TAGS = {
     0x0000: ('NoteVersion', make_string),
