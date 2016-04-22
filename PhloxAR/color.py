@@ -219,7 +219,7 @@ class ColorMap(object):
 
     def __init__(self, color, start_map, end_map):
         """
-        
+
         :param color:
         :param start_map:
         :param end_map:
