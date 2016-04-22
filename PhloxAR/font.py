@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division, print_function, unicode_literals, absolute_import
+
 # TODO: clearly list what used
-from base import *
+from PhloxAR.base import *
 
 
 class Font(object):
@@ -18,7 +19,7 @@ class Font(object):
 
     _ext = '.ttf'
     _fontpath = './fonts/'
-    _fontface = 'lato'
+    _fontface = 'Lato'
     _fontsize = 16
     # _style = RGR
     _font = None
@@ -66,19 +67,18 @@ class Font(object):
         """
         return self._font.getname()
 
-    def set_font(self, font='Lato', style='regular'):
+    def set_font(self, font='Lato'):  # , style='regular'):
         """
         Set the name of the font listed in the font family or
         pass the absolute path of the truetype font file.
         """
         if not isinstance(font, basestring):
             print("Please pass a string.")
-            return None
 
         if font in self._fonts:
             self._fontface = font
-            f = self._fontpath + self._fontface + '/' + self._fontface + self._ext
-            print(font_to_use)
+            f = self._fontpath + self._fontface + '/' + self._fontface + \
+                self._ext
         else:
             self._fontface = font
             f = font
@@ -116,7 +116,7 @@ class Font(object):
 
     def print_fonts(self):
         """
-        Prints the list of buitlin fonts.
+        Prints the list of builtin fonts.
         """
         print("Builtin fonts: ")
         for f in self._fonts:

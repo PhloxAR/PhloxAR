@@ -58,7 +58,7 @@ namespace numpy {
     }
 
     int nd;
-    npy_intp pos[NPY_MAXDIMS];
+    npy_intp _pos[NPY_MAXDIMS];
 
     bool operator ==(const position& rhs) {
       return !std::memcmp(this->_pos, rhs._pos, sizeof(this->_pos[0])*this->nd);
