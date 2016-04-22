@@ -75,3 +75,6 @@ examples/
 
 # distutils
 MANIFEST
+
+# PyCharm
+.idea/
