@@ -219,8 +219,32 @@ class ColorMap(object):
 
     def __init__(self, color, start_map, end_map):
         """
-
-        :param color:
-        :param start_map:
-        :param end_map:
+        :param color: tuple of colors which need to be mapped.
+        :param start_map: starting of the range of number with which we map
+                          the colors.
+        :param end_map: end of the range of the number with which we map
+                        the colors.
         """
+        self.color = npy.array(color)
+        if self.color.ndim == 1:  # To check if only one color was passed.
+            color = ((color[0], color[1], color[2]), Color.WHITE)
+            self.color = npy.array(color)
+        self.start_map = float(start_map)
+        self.end_map = float(end_map)
+        self.value_range = float(end_map - start_map)  # delta
+        self.color_distance = self.value_range / float(len(self.color) - 1)
+
+    def __getitem__(self, val):
+        if val > self.end_map:
+            val = self.end_map
+        elif val < self.start_map:
+            val = self.start_map
+        value = (val - self.start_map) / self.color_distance
+        alpha = float(value - int(value))
+        index = int(value)
+        if index == len(self.color) - 1:
+            color = tuple(self.color[index])
+            return int(color[0]), int(color[1]), int(color[2])
+        color = tuple(self.color[index]*(1-alpha) + self.color[index+1]*alpha)
+
+        return int(color[0]), int(color[1]), int(color[2])
