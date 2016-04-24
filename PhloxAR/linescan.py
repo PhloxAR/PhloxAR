@@ -174,3 +174,56 @@ class LineScan(list):
         ret_val._update(self)
 
         return ret_val
+
+    def minima(self):
+        """
+        Global minima in the line scan.
+        :return: a list of tuples of the format: (LineScanIndex, MinimaValue,
+                  (image_position_x, image_position_y))
+        """
+        minvalue = npy.min(self)
+        idxs = npy.where(npy.array(self) == minvalue)[0]
+        minvalue = npy.ones((1, len(idxs))) * minvalue
+        minvalue = minvalue[0]
+        pts = npy.array(self.point_loc)
+        pts = pts[idxs]
+        pts = [(p[0], p[1]) for p in pts]
+        return zip(idxs, minvalue, pts)
+
+    def maxima(self):
+        """
+        Global maxima in the line scan.
+        :return: a list of tuples of the format: (LineScanIndex, MaximaValue,
+                  (image_position_x, image_position_y))
+        """
+        maxvalue = npy.max(self)
+        idxs = npy.where(npy.array(self) == maxvalue)[0]
+        maxvalue = npy.ones((1, len(idxs))) * maxvalue
+        maxvalue = maxvalue[0]
+        pts = npy.array(self.point_loc)
+        pts = pts[idxs]
+        pts = [(p[0], p[1]) for p in pts]
+
+        return zip(idxs, maxvalue, pts)
+
+    def derivative(self):
+        """
+        Finds the discrete derivative of the signal. The discrete derivative
+        is simply the difference between each successive samples. A good use of
+        this function is edge detection.
+        :return: a LineScan object.
+        """
+        tmp = npy.array(self, dtype='float32')
+        d = [0]
+        d += list(tmp[1:] - tmp[0:-1])
+        ret_val = LineScan(d, image=self,)
+
+    def local_minima(self):
+        """
+        Local minima are defined as points that are less than their neighbors
+        to the left and to the right.
+        :return: a list of tuples of the format: (LineScanIndex, MaximaValue,
+                  (image_position_x, image_position_y))
+        """
+        tmp = npy.array(self)
+        idx = npy.r_[True, tmp[1:] < tmp[:-1]] & npy.r_[tmp[:-1] < tmp[1:], True]
