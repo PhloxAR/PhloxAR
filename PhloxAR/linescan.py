@@ -4,8 +4,8 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PhloxAR.base import *
-import scipy.signal as signal
-import scipy.optimize as optimize
+import scipy.signal
+import scipy.optimize
 import numpy as npy
 import copy, operator
 
@@ -133,13 +133,13 @@ class LineScan(list):
         smoothed = [0.0] * (len(self) - window)
 
         for i in range(len(smoothed)):
-            smoothed[i] = sum(npy.array(self[i:i+window]) * weight) / sum(weight)
+            smoothed[i] = sum(npy.array(self[i:i+window])*weight) / sum(weight)
 
-        front = self[0:degree-1]
+        front = self[0:degree - 1]
         front += smoothed
-        front += self[-1*degree:]
+        front += self[-1 * degree:]
         ret_val = LineScan(front, image=self.image, point_loc=self.point_loc,
-                           pt1=self.pt1, pt2=self.pt2,)
+                           pt1=self.pt1, pt2=self.pt2)
         ret_val._update(self)
         return ret_val
 
@@ -155,7 +155,7 @@ class LineScan(list):
         ret_val._update(self)
         return ret_val
 
-    def scale(self, val_range=(0,1)):
+    def scale(self, val_range=(0, 1)):
         """
         Scale the signal  so the max and min values are all scaled to the values
         in val_range. This is handy if you want to compare the shape of tow
@@ -168,7 +168,7 @@ class LineScan(list):
         vmin = npy.min(tmp)
         a = npy.min(val_range)
         b = npy.max(val_range)
-        tmp = (((b-a) / (vmax-vmin)) * (tmp-vmin)) + a
+        tmp = (((b - a) / (vmax - vmin)) * (tmp - vmin)) + a
         ret_val = LineScan(list(tmp[:]), image=self.image,
                            point_loc=self.point_loc, pt1=self.pt1, pt2=self.pt2)
         ret_val._update(self)
@@ -216,7 +216,10 @@ class LineScan(list):
         tmp = npy.array(self, dtype='float32')
         d = [0]
         d += list(tmp[1:] - tmp[0:-1])
-        ret_val = LineScan(d, image=self,)
+        ret_val = LineScan(d, image=self, point_loc=self.point_loc,
+                           pt1=self.pt1, pt2=self.pt2)
+        ret_val._update(self)
+        return ret_val
 
     def local_minima(self):
         """
@@ -227,3 +230,65 @@ class LineScan(list):
         """
         tmp = npy.array(self)
         idx = npy.r_[True, tmp[1:] < tmp[:-1]] & npy.r_[tmp[:-1] < tmp[1:], True]
+        i = npy.where(idx is True)[0]
+        values = tmp[i]
+        pts = npy.array(self.point_loc)
+        pts = pts[i]
+        pts = [(p[0], p[1]) for p in pts]
+
+        return zip(i, values, pts)
+
+    def local_maxmima(self):
+        """
+        Local minima are defined as points that are less than their neighbors
+        to the left and to the right.
+        :return: a list of tuples of the format: (LineScanIndex, MaximaValue,
+                  (image_position_x, image_position_y))
+        """
+        tmp = npy.array(self)
+        idx = npy.r_[True, tmp[1:] > tmp[:-1]] & npy.r_[tmp[:-1] > tmp[1:], True]
+        i = npy.where(idx is True)[0]
+        values = tmp[i]
+        pts = npy.array(self.point_loc)
+        pts = pts[i]
+        pts = [(p[0], p[1]) for p in pts]
+
+        return zip(i, values, pts)
+
+    def resample(self, n=100):
+        """
+        Re-sample the signal to fit into n samples. This method is handy
+        if you would like to resize multiple signals so that they fit
+        together nice. Note that using n < len(LineScan) can cause data loss.
+        :param n: number of samples to reshape to.
+        :return: a LineScan object of length n.
+        """
+        sig = scipy.signal.resample(self, n)
+        pts = npy.array(self.point_loc)
+        x = linspace(pts[0, 0], pts[-1, 0], n)
+        y = linspace(pts[0, 1], pts[-1, 1], n)
+        pts = zip(x, y)
+        ret_val = LineScan(list(sig), image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, pt2=self.pt2)
+        ret_val._update(self)
+
+        return ret_val
+
+    def fit2model(self, func, p0=None):
+        """
+        Fit the data to the provided model. This can be any
+        arbitrary 2D signal.
+        :param func: a function of the form func(x_values, p0, p1, ... pn)
+                      where p is parameter for the model.
+        :param p0: a list of the initial guess for the model parameters.
+        :return: a LineScan object where the fitted model data replaces
+                  the actual data.
+        """
+        yvals = npy.array(self, dtype='float32')
+        xvals = range(0, len(yvals), 1)
+        popt, pcov = scipy.optimize.curve_fit(func, xvals, yvals, p0=p0)
+        yvals = func(xvals, *popt)
+        ret_val = LineScan(list(yvals), image=self.image,
+                           point_loc=self.point_loc, pt1=self.pt1, pt2=self.pt2)
+        ret_val._update(self)
+        return ret_val

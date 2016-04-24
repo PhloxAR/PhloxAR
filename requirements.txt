@@ -1,0 +1,3 @@
+SciPy
+Numpy
+PyGame
