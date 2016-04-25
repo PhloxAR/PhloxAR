@@ -628,6 +628,95 @@ class LineScan(list):
         :return: a LineScan object with the kernel of the provided
                   algorithm applied.
         """
+        k = list()
         if diameter % 2 == 0:
-            warnings.warn()
+            warnings.warn("Diameter mush be an odd integer.")
+            return None
+        if kernel == 'uniform':
+            k = list(1 / float(diameter) * npy.ones(diameter))
+        elif kernel == 'gaussian':
+            r = diameter / 2
+            for i in range(-int(r), int(r) + 1):
+                k.append(npy.exp(-i**2 / (2*(r/3)**2)) / (npy.sqrt(2*npy.pi) * (r/3)))
+        ret_val = LineScan(map(int, self.convolve(k)))
+        ret_val._update(self)
 
+        return ret_val
+
+    def find_peaks(self, window=30, delta=3):
+        """
+        Find the peaks in a LineScan.
+        :param window: the size of the window in which the peak should have
+                        the highest value to be considered as a peak. By
+                        default this is 15 as it gives appropriate results.
+                        The lower this value the more the peaks are returned.
+        :param delta: the minimum difference between the peak and all elements
+                       in the window
+        :return: a list of (peak position, peak value) tuples.
+        """
+        maximum = -npy.Inf
+        width = int(window / 2)
+        peaks = []
+
+        for i, val in enumerate(self):
+            if val > maximum:
+                maximum = val
+                max_pos = i
+            # checking whether peak satisfies window and delta conditions
+            if max(self[max(0, i-width):i+width]) + delta < maximum:
+                peaks.append((max_pos, maximum))
+                maximum = -npy.Inf
+
+        return peaks
+
+    def find_valleys(self, window=30, delta=3):
+        """
+        Finds the valleys in a LineScan.
+        :param window: the size of the window in which the valley should
+                        have the highest value to be considered as a valley.
+                        By default this is 15 as it gives appropriate results.
+                        The lower this value the more the valleys are returned
+        :param delta: the minimum difference between the valley and all
+                       elements in the window
+        :return: a list of (valley position, peak value) tuples.
+        """
+        minimum = -npy.Inf
+        width = int(window / 2)
+        valleys = []
+
+        for i, val in enumerate(self):
+            if val < minimum:
+                minimum = val
+                min_pos = i
+            # checking whether peak satisfies window and delta conditions
+            if min(self[max(0, i - width):i + width]) - delta < minimum:
+                valleys.append((min_pos, minimum))
+                minimum = -npy.Inf
+
+        return valleys
+
+    def fit_spline(self, degree=2):
+        """
+        Generates a spline curve fitting over the points in LineScan with
+        order of precision given by the parameter degree.
+        :param degree: the precision of the generated spline.
+        :return: the spline as a LineScan fitting over the initial values of
+                  LineScan
+        Notes:
+        Implementation taken from http://www.scipy.org/Cookbook/Interpolation
+        """
+        if degree > 4:
+            degree = 4  # No significant improvement with respect to time usage
+        if degree < 1:
+            warnings.warn("LineScan.fit_spline - degree needs to be >= 1.")
+            return None
+
+        ret_val = None
+        y = npy.array(self)
+        x = npy.arange(0, len(y), 1)
+        dx = 1
+        newx = npy.arange(0, len(y)-1, pow(0.1, degree))
+        cj = signal.cspline1d(y)
+        cj = signal.cspline1d_eval(cj, newx, dx=dx, x0=x[0])
+
+        return ret_val
