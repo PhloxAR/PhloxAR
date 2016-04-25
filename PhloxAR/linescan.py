@@ -4,8 +4,8 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PhloxAR.base import *
-import scipy.signal
-import scipy.optimize
+import scipy.signal as signal
+import scipy.optimize as optimize
 import numpy as npy
 import copy, operator
 
@@ -263,7 +263,7 @@ class LineScan(list):
         :param n: number of samples to reshape to.
         :return: a LineScan object of length n.
         """
-        sig = scipy.signal.resample(self, n)
+        sig = signal.resample(self, n)
         pts = npy.array(self.point_loc)
         x = linspace(pts[0, 0], pts[-1, 0], n)
         y = linspace(pts[0, 1], pts[-1, 1], n)
@@ -286,9 +286,82 @@ class LineScan(list):
         """
         yvals = npy.array(self, dtype='float32')
         xvals = range(0, len(yvals), 1)
-        popt, pcov = scipy.optimize.curve_fit(func, xvals, yvals, p0=p0)
+        popt, pcov = optimize.curve_fit(func, xvals, yvals, p0=p0)
         yvals = func(xvals, *popt)
         ret_val = LineScan(list(yvals), image=self.image,
                            point_loc=self.point_loc, pt1=self.pt1, pt2=self.pt2)
         ret_val._update(self)
         return ret_val
+
+    def get_model_params(self, func, p0=None):
+        """
+        Fit a model to the data and then return.
+        :param func: a function of the form func(x_values, p0, p1, ... pn)
+                      where p is parameter for the model.
+        :param p0: a list of the initial guess for the model parameters.
+        :return: The model parameters as a list.
+        """
+        yvals = npy.array(self, dtype='float32')
+        xvals = range(0, len(yvals), 1)
+        popt, pcov = optimize.curve_fit(func, xvals, yvals, p0=p0)
+
+        return popt
+
+    def convolve(self, kernel):
+        """
+        Convolve the line scan with a one dimensional kernel stored as
+        a list. Allows you to create an arbitrary filter for the signal.
+        :param kernel: an Nx1 list or npy.array that defines the kernel.
+        :return: a LineScan feature with the kernel applied. We crop
+                  the fiddly bits at the end and the begging of the kernel
+                  so everything lines up nicely.
+        """
+        out = npy.convolve(self, npy.array(kernel, dtype='float32'), 'same')
+        ret_val = LineScan(out, image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, pt2=self.pt2, channel=self.channel)
+        return ret_val
+
+    def fft(self):
+        """
+        Perform a Fast Fourier Transform on the line scan and return
+        the FFT output and the frequency of each value.
+        :return: the FFT as a numpy array of irrational numbers and a one
+                  dimensional list of frequency values.
+        """
+        sig = npy.array(self, dtype='float32')
+        fft = npy.fft.fft(sig)
+        freq = npy.fft.fftfreq(len(sig))
+
+        return fft, freq
+
+    def ifft(self, fft):
+        """
+        Perform a inverse Fast Fourier Transform on the provided irrationally
+        valued signal and return the results as a LineScan.
+        :param fft: a one dimensional numpy array of irrational values upon
+                     which we will perform the IFFT.
+        :return: a LineScan object of the reconstructed singal.
+        """
+        sig = npy.fft.ifft(fft)
+        ret_val = LineScan(sig.real)
+        ret_val.image = self.image
+        ret_val.point_loc = self.point_loc
+        return ret_val
+
+    def empty_lut(self, val=-1):
+        """
+        Create an empty look up table(LUT)
+        :param val: If default value is what the lut is initially filled with
+        if val == 0
+            the array is all zeros.
+        if val > 0
+            the array is set to default value. Clipped to 255.
+        if val < 0
+            the array is set to the range [0,255]
+        if val is a tuple of two values:
+            we set stretch the range of 0 to 255 to match the range provided.
+        :return: a LUT.
+        """
+        lut = None
+        if isinstance(val, list) or isinstance(val, tuple):
+            start = npy.clip(val[0], 0, 255)
