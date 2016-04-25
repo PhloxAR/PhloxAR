@@ -340,7 +340,7 @@ class LineScan(list):
         valued signal and return the results as a LineScan.
         :param fft: a one dimensional numpy array of irrational values upon
                      which we will perform the IFFT.
-        :return: a LineScan object of the reconstructed singal.
+        :return: a LineScan object of the reconstructed signal.
         """
         sig = npy.fft.ifft(fft)
         ret_val = LineScan(sig.real)
@@ -348,7 +348,7 @@ class LineScan(list):
         ret_val.point_loc = self.point_loc
         return ret_val
 
-    def empty_lut(self, val=-1):
+    def lut(val=-1):
         """
         Create an empty look up table(LUT)
         :param val: If default value is what the lut is initially filled with
@@ -365,3 +365,269 @@ class LineScan(list):
         lut = None
         if isinstance(val, list) or isinstance(val, tuple):
             start = npy.clip(val[0], 0, 255)
+            stop = npy.clip(val[1], 0, 255)
+            lut = npy.around(npy.linsapce(start, stop, 256), 0)
+            lut = npy.array(lut, dtype='uint8')
+            lut = lut.tolist()
+        elif val == 0:
+            lut = npy.zeros([1, 256]).tolist()[0]
+        elif val > 0:
+            val = npy.clip(val, 1, 255)
+            lut = npy.ones([1, 256]) * val
+            lut = npy.array(lut, dtype='uint8')
+            lut = lut.tolist()
+        elif val < 0:
+            lut = npy.linspace(0, 256, 256)
+            lut = npy.array(lut, dtype='uint8')
+            lut = lut.tolist()
+
+        return lut
+
+    def fill_lut(self, lut, idxs, value=255):
+        """
+        Fill up an existing LUT at the indexes specified by idxs
+        with the value specified by value. This is useful for picking
+        out specific values.
+        :param lut: an existing LUT (just a list of 255 values).
+        :param idxs: the indexes of the LUT to fill with the value.
+                      This can also be a sample swatch of an image.
+        :param value: the value to set the LUT[idx] to.
+        :return: an updated LUT.
+        """
+        if idxs.__class__.__name__ == 'Image':
+            npg = idxs.getGrayNumpy()
+            npg = npg.reshape([npg.shape[0] * npg.shape[1]])
+            idxs = npg.tolist()
+        val = npy.clip(value, 0, 255)
+
+        for idx in idxs:
+            if 0 <= idx < len(lut):
+                lut[idx] = val
+        return lut
+
+    def threshold(self, threshold=128, invert=False):
+        """
+        Do a 1-D threshold operation. Values about the threshold will
+        be set to 255, values below the threshold will be set to 0.
+        If invert is true we do the opposite.
+        :param threshold: the cutoff value for threshold.
+        :param invert: if invert is False, above the threshold are set
+                        to 255, if invert is True, set to 0.
+        :return: the thresholded LineScan operation.
+        """
+        out = []
+        high = 255
+        low = 0
+        if invert:
+            high = 0
+            low = 255
+
+        for p in self:
+            if p < threshold:
+                out.append(low)
+            else:
+                out.append(high)
+
+        ret_val = LineScan(out, image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, ptw=self.pt2)
+        ret_val._update(self)
+
+        return ret_val
+
+    def invert(self, max=255):
+        """
+        Do an 8bit invert of the signal. What was black is now white.
+        :param max: the maximum value of a pixel in the image, usually 255.
+        :return: the inverted LineScan object.
+        """
+        out = []
+
+        for p in self:
+            out.append(255-p)
+
+        ret_val = LineScan(out, image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, ptw=self.pt2)
+        ret_val._update(self)
+
+        return ret_val
+
+    def mean(self):
+        """
+        Computes the statistical mean of the signal.
+        :return: the mean of the LineScan object.
+        """
+        return sum(self) / len(self)
+
+    def variance(self):
+        """
+        Computes the variance of the signal.
+        :return: the variance of the LineScan object.
+        """
+        mean = sum(self) / len(self)
+        summation = 0
+
+        for num in self:
+            summation += (num - mean)**2
+
+        return summation / len(self)
+
+    def deviation(self):
+        """
+        Computes the standard deviation of the signal.
+        :return: the standard deviation of the LineScan object.
+        """
+        mean = sum(self) / len(self)
+        summation = 0
+
+        for num in self:
+            summation += (num - mean)**2
+
+        return npy.sqrt(summation / len(self))
+
+    def median(self, size=5):
+        """
+        Do a sliding median filter with a window size equal to size.
+        :param size: the size of the median filter.
+        :return: the LineScan after being passed through the median filter.
+                  the last index where the value occurs or None if none is found.
+        """
+        if size % 2 == 0:
+            size += 1
+
+        skip = int(npy.floor(size / 2))
+        out = self[0:skip]
+        vsz = len(self)
+
+        for i in range(skip, vsz-skip):
+            val = npy.median(self[i-skip:i+skip])
+            out.append(val)
+
+        for p in self[-1*skip:]:
+            out.append(p)
+
+        ret_val = LineScan(out, image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, pt2=self.pt2)
+        ret_val._update(self)
+
+        return ret_val
+
+    def find_first_index_equal(self, value=255):
+        """
+        Find the index of the first element of the LineScan that has a
+        value equal to value. If nothing found, None is returned.
+        :param value: the value to look for.
+        :return: the first index where the value occurs or None if not found.
+        """
+        vals = npy.where(npy.array(self) == value)[0]
+        ret_val = None
+
+        if len(vals) > 0:
+            ret_val = vals[0]
+
+        return ret_val
+
+    def find_last_index_equal(self, value=255):
+        """
+        Find the index of the last element of the LineScan. If nothing found,
+        None is returned.
+        :param value: the value to look for.
+        :return: the last index where the value occurs or None if not found.
+        """
+        vals = npy.where(npy.array(self) == value)[0]
+        ret_val = None
+
+        if len(vals) > 0:
+            ret_val = vals[-1]
+
+        return ret_val
+
+    def find_first_index_greater(self, value=255):
+        """
+        Find the index of the first element of the LineScan that has a
+        value equal to value. If nothing found, None is returned.
+        :param value: the value to look for.
+        :return: the first index where the value occurs or None if not found.
+        """
+        vals = npy.where(npy.array(self) >= value)[0]
+        ret_val = None
+
+        if len(vals) > 0:
+            ret_val = vals[0]
+
+        return ret_val
+
+    def apply_lut(self, lut):
+        """
+        Apply a lut to the signal.
+        :param lut: an array of length 256, the array elements are the
+                     values that are replaced via the lut.
+        :return: a LineScan object with the lut applied to the values.
+        """
+        out = []
+
+        for p in self:
+            out.append(lut[p])
+
+        ret_val = LineScan(out, image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, pt2=self.pt2)
+        ret_val._update(self)
+
+        return ret_val
+
+    def median_filter(self, kernel_size=5):
+        """
+        Apply median filter on the data.
+        :param kernel_size: size of the filter (should be odd int) - int
+        :return: a LineScan object with the median filter applied
+                  to the values.
+        """
+        try:
+            from signal import medfilt
+        except ImportError:
+            warnings.warn("Scipy version >= 0.11 required.")
+            return None
+
+        if kernel_size % 2 == 0:
+            kernel_size -= 1
+            print("Kernel Size should be odd.")
+
+        medfilt_array = medfilt(npy.asarray(self[:]), kernel_size)
+        ret_val = LineScan(medfilt_array.astype('uint8').tolist(),
+                           image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, pt2=self.pt2)
+        ret_val._update(self)
+
+        return ret_val
+
+    def detrend(self):
+        """
+        Detrend the data
+        :return: a LineScan object with detrend data.
+        """
+        try:
+            from signal import detrend as scidetrend
+        except ImportError:
+            warnings.warn("Scipy version >= 0.11 required.")
+            return None
+        detrend_arr = scidetrend(npy.asarray(self[:]))
+        ret_val = LineScan(detrend_arr.astype('uint8').tolist(),
+                           image=self.image, point_loc=self.point_loc,
+                           pt1=self.pt1, pt2=self.pt2)
+        ret_val._update(self)
+
+        return ret_val
+
+    def running_average(self, diameter=3, kernel='uniform'):
+        """
+        Finds the running average by either using a uniform kernel or
+        using a gaussian kernel. The gaussian kernels calculated from
+        the standard normal distribution formula.
+        :param diameter: size of the window (should be odd int) - int
+        :param kernel: 'uniform' (default) / 'gaussian' - used to decide
+                      the kernel - string.
+        :return: a LineScan object with the kernel of the provided
+                  algorithm applied.
+        """
+        if diameter % 2 == 0:
+            warnings.warn()
+
