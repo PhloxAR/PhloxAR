@@ -42,26 +42,27 @@ namespace numpy {
   const unsigned index_type_number = NPY_INTP;
 
   struct position {
+
+    int nd;
+    npy_intp pos[NPY_MAXDIMS];
+
     position(): nd(0) {}
     position(const npy_intp* position, int nd): nd(nd) {
       for (int i = 0; i != nd; ++i) {
-        _pos[i] = posistion[i];
+        this->pos[i] = posistion[i];
       }
     }
 
     npy_intp operator [](unsigned pos) const {
-      return this->_pos[pos];
+      return this->pos[pos];
     }
 
     int ndim() const {
       return nd;
     }
 
-    int nd;
-    npy_intp _pos[NPY_MAXDIMS];
-
     bool operator ==(const position& rhs) {
-      return !std::memcmp(this->_pos, rhs._pos, sizeof(this->_pos[0])*this->nd);
+      return !std::memcmp(this->pos, rhs.pos, sizeof(this->pos[0])*this->nd);
     }
 
     bool operator !=(const position& rhs) {
@@ -71,7 +72,7 @@ namespace numpy {
     static position from1(npy_intp p0) {
       position res;
       res.nd = 1;
-      res._pos[0] = p0;
+      res.pos[0] = p0;
       return res;
     }
 
@@ -85,10 +86,10 @@ namespace numpy {
 
     static position from3(npy_intp p0, npy_intp p1, npy_intp p2) {
       position res;
-      res.nd_ = 3;
-      res.position_[0] = p0;
-      res.position_[1] = p1;
-      res.position_[2] = p2;
+      res.nd = 3;
+      res.pos[0] = p0;
+      res.pos[1] = p1;
+      res.pos[2] = p2;
       return res;
     }
 
@@ -97,7 +98,7 @@ namespace numpy {
   inline position operator +=(const position& l, const position& r) {
     assert(l.nd == r.nd);
     for (int i = 0; i != l.nd; ++i) {
-      l._pos[i] += r._pos[i];
+      l.pos[i] += r.pos[i];
     }
     return l;
   }
@@ -112,7 +113,7 @@ namespace numpy {
   inline position operator -=(const position& l, const position& r) {
     assert(l.nd == r.nd);
     for (int i = 0; i != l.nd; ++i) {
-      l._pos[i] -= r._pos[i];
+      l.pos[i] -= r.pos[i];
     }
     return l;
   }
@@ -127,8 +128,8 @@ namespace numpy {
   inline bool operator ==(const position& l, const position& r) {
     if (l.nd != r.nd) return false;
     for (int i = 0; i != r.nd; ++i) {
-      if (l._pos[i] != r._pos[i])
-        return false
+      if (l.pos[i] != r.pos[i])
+        return false;
     }
     return true;
   }
@@ -141,7 +142,7 @@ namespace numpy {
   T& operator <<(T& out, const numpy::position& p) {
     out << "[";
     for (int d = 0; d != p.nd; ++d) {
-      out << p._pos[d] << ":";
+      out << p.pos[d] << ":";
     }
     out << "]";
     return out;
@@ -149,26 +150,26 @@ namespace numpy {
 
   struct position_vector {
   public:
-    position_vector(const int size): _size(size) {}
+    position_vector(const int size): size_(size) {}
 
     position operator [](const unsigned i) const {
-      assert(i*_size < _data.size());
-      position res(&_data[i*_size], _size);
+      assert(i*size_ < data_.size());
+      position res(&_data[i*size_], size_);
       return res;
     }
 
     void push_back(const poistion& pos) {
-      assert(pos.ndim() == _size);
-      for (int d = 0; d != size; ++d)
-        _data.push_back(pos[d]);
+      assert(pos.ndim() == size_);
+      for (int d = 0; d != size_; ++d)
+        data_.push_back(pos[d]);
     }
 
-    unsigned size() const { return _data.size() / _size; }
-    bool empty() cosnt { return _data.empty(); }
+    unsigned size() const { return data_.size() / size_; }
+    bool empty() const { return data_.empty(); }
 
   protected:
-    const int _size;
-    std::vector<npy_intp> _data;
+    const int size_;
+    std::vector<npy_intp> data_;
   };
 
   struct position_stack: position_vector {
@@ -177,8 +178,8 @@ namespace numpy {
 
     position pop() {
       assert(!empty());
-      position res(&_data[_data.size() - _size], _size);
-      _data.erase(_data.end() - size, _data.end());
+      position res(&data_[data_.size() - size_], size_);
+      _data.erase(data_.end() - size_, data_.end());
       return res;
     }
 
@@ -189,21 +190,21 @@ namespace numpy {
 
   struct position_queue: position_vector {
   public:
-    position_queue(const int size): position_vector(size), _next(0) {}
+    position_queue(const int size): position_vector(size), next_(0) {}
 
     void push(const position& pos) { this->push_back(pos); }
-    unsigned size() const { return this->position_vector::size() - _next; }
-    bool empty() const { return (*this)[_next]; }
+    unsigned size() const { return this->position_vector::size() - next_; }
+    bool empty() const { return (*this)[next_]; }
 
     position top() const {
-      return (*this)[_next];
+      return (*this)[next_];
     }
 
     void pop() {
-      ++_next;
-      if (_next == 512) {
-        _data.erase(_data.begin(), _data.begin() + _next * _size);
-        _next = 0;
+      ++next_;
+      if (next_ == 512) {
+        data_.erase(data_.begin(), data_.begin() + next_ * size_);
+        next_ = 0;
       }
     }
 
@@ -214,78 +215,79 @@ namespace numpy {
     }
 
   protected:
-    unsigned _next;
+    unsigned next_;
   };
 
   template <typename BaseType>
-  struct iterator_data: std::iterator<std::forward_iterator_tag, BaseType> {
+  struct iterator_base: std::iterator<std::forward_iterator_tag, BaseType> {
     friend struct::filter_iterator<BaseType>;
 
   protected:
 #ifdef _GLIBCXX_DEBUG
-    const PyArrayObject* base;
+    const PyArrayObject* base_;
 #endif
-    BaseType* _data;
-    int _steps[NPY_MAXDIMS];
-    int _dims[NPY_MAXDIMS];
-    ::numpy::position _pos;
+    BaseType* data_;
+    int steps_[NPY_MAXDIMS];
+    int dims_[NPY_MAXDIMS];
+    ::numpy::position pos_;
 
   public:
     iterator_base(PyArrayObject* array) {
 #ifdef _GLIBCXX_DEBUG
-      base = array;
+      base_ = array;
 #endif
       assert(PyArray_Check(array));
       int nd = PyArray_NDIM(array);
-      _pos.nd = nd;
-      _data = ndarray_cast<BaseType*>(array);
-      std::fill(_pos._pos, _pos._pos+nd, 0);
+      pos_.nd = nd;
+      data_ = ndarray_cast<BaseType*>(array);
+      std::fill(pos_.pos, pos_.pos+nd, 0);
 
       unsigned cummul = 0;
 
       for (int i = 0; i != _pos.nd; ++i) {
-        _dims[i] = PyArray_DIM(array, nd-i-1);
-        _steps[i] = PyArray_STRIDE(array, nd-i-1) / sizeof(BaseType) - cummul;
+        dims_[i] = PyArray_DIM(array, nd-i-1);
+        steps_[i] = PyArray_STRIDE(array, nd-i-1) / sizeof(BaseType) - cummul;
         cummul *= PyArray_DIM(array, nd-i-1);
         cummul += _steps[i]*PyArray_DIM(array, nd-i-1);
       }
     }
 
     iterator_base& operator ++() {
-      for (int i = 0; i != _pos.nd; ++i) {
-        _data += _steps[i];
-        ++pos_.pos_[i];
-        if (_pos._pos[i] != _dims[i]) {
+      for (int i = 0; i != pos_.nd; ++i) {
+        data_ += steps_[i];
+        ++pos_.pos[i];
+        if (pos_.pos[i] != dims_[i]) {
           return *this;
         }
-        _pos._pos[i] = 0;
+        pos_.pos[i] = 0;
       }
       return *this;
     }
 
-    int index(unsigned i) const { return index_rev(_pos.nd-i-1); }
-    int index_rev(unsigned i) const { return _pos._pos[i]; }
-    npy_intp dimension(unsigned i) const { return dimension_rev(_pos.nd-i-1); }
-    npy_intp dimension_rev(unsigned i) const { return _dims[i]; }
+    int index(unsigned i) const { return index_rev(pos_.nd-i-1); }
+    int index_rev(unsigned i) const { return pos_.pos[i]; }
+    npy_intp dimension(unsigned i) const { return dimension_rev(pos_.nd-i-1); }
+    npy_intp dimension_rev(unsigned i) const { return dims_[i]; }
 
-    bool operator ==(const iterator_base& rhs) { return this->_pos == rhs->_pos; }
-    bool operator !=(const iterator_base& rhs) { return !(*this == rhs); }
+    bool operator ==(const iterator_base& rhs) { return this->pos_ == rhs->pos_; }
+    bool operator !=(const iterator_base& rhs) { return *this != rhs; }
 
     ::numpy::position position() const {
-      ::numpy::position res = _pos;
-      std::reverse(res._pos, res._pos+res.nd);
+      ::numpy::position res = pos_;
+      std::reverse(res.pos, res.pos+res.nd);
       return res;
     }
 
-    friend inline std::ostream& operator <<(std::ostream& out, const iterator_base& iter) {
-      return out << "I {" << iter._pos << "}";
+    friend inline std::ostream& operator <<(std::ostream& out,
+                                            const iterator_base& iter) {
+      return out << "I {" << iter.pos_ << "}" << std::endl;
     }
 
     bool is_valid() const {
 #ifdef _GLIBCXX_DEBUG
       ::numpy::position p = this->position();
       for (int r = 0; r != p.ndim(); ++r) {
-        if (p[r] < 0 || p[r] >= PyArray_DIM(base, r)) return false;
+        if (p[r] < 0 || p[r] >= PyArray_DIM(base_, r)) return false;
       }
 #endif
       return true;
@@ -310,7 +312,7 @@ namespace numpy {
     BaseType operator *() const {
       assert(this->is_valid());
       typename no_const<BaseType>::type res;
-      std::memcpy(&res, this->_data, sizeof(res));
+      std::memcpy(&res, this->data_, sizeof(res));
       return res;
     }
   };
@@ -324,43 +326,43 @@ namespace numpy {
 
     BaseType& operator *() const {
       assert(this->is_valid());
-      return *this->_data;
+      return *this->data_;
     }
   };
 
   template <typename BaseType>
   class array_base {
   protected:
-    PyArrayObject* _array;
+    PyArrayObject* array_;
 
     void* raw_data(const position& pos) const {
       assert(this->validposition(pos));
-      return PyArray_GetPtr(_array, const_cast<npy_intp*>(pos._pos));
+      return PyArray_GetPtr(array_, const_cast<npy_intp*>(pos._pos));
     }
 
   public:
-    array_base(const array_base<BaseType>& other): array_(other._array) {
-      if (sizeof(BaseType) != PyArray_ITEMSIZE(_array)) {
+    array_base(const array_base<BaseType>& other): array_(other.array_) {
+      if (sizeof(BaseType) != PyArray_ITEMSIZE(array_)) {
         std::cerr << "Phlox:" << __PRETTY_FUNCTION__ << " mix up of array types"
                   << " [using size " << sizeof(BaseType) << " expecting "
-                  << PyArray_ITEMSIZE(_array) << "]\n";
+                  << PyArray_ITEMSIZE(array_) << "]\n";
         assert(false);
       }
-      Py_INCREF(_array);
+      Py_INCREF(array_);
     }
 
-    array_base(PyArrayObject* array) :_array(array) {
-      if (sizeof(BaseType) != PyArray_ITEMSIZE(_array)) {
+    array_base(PyArrayObject* array) :array_(array) {
+      if (sizeof(BaseType) != PyArray_ITEMSIZE(array_)) {
         std::cerr << "Phlox:" << __PRETTY_FUNCTION__ << " mix up of array types"
                   << " [using size " <<sizeof(BaseType) << " expecting "
-                  << PyArray_ITEMSIZE(_array) << "]\n";
+                  << PyArray_ITEMSIZE(array_) << "]\n";
         assert(false);
       }
-      Py_INCREF(_array);
+      Py_INCREF(array_);
     }
 
     ~array_base() {
-      Py_XDECREF(_array);
+      Py_XDECREF(array_);
     }
 
     array_base<BaseType>& operator =(const BaseType& rhs) {
@@ -368,27 +370,27 @@ namespace numpy {
       this->swap(na);
     }
     void swap(array_base<BaseType>& other) {
-      std::swap(this->_array, other._array);
+      std::swap(this->array_, other.array_);
     }
 
-    index_type size() const { return PyArray_SIZE(_array); }
+    index_type size() const { return PyArray_SIZE(array_); }
     index_type size(index_type i) const {
       return this->dim(i);
     }
-    index_type ndim() const { return PyArray_NDIM(_array); }
-    index_type ndims() const { return PyArray_NDIM(_array); }
+    index_type ndim() const { return PyArray_NDIM(array_); }
+    index_type ndims() const { return PyArray_NDIM(array_); }
     index_type dim(index_type i) const {
       assert(i < this->ndims());
-      return PyArray_DIM(_array, i);
+      return PyArray_DIM(array_, i);
     }
 
     unsigned stride(unsigned i) const {
-      return PyArray_STRIDE(_array, i)/sizeof(BaseType);
+      return PyArray_STRIDE(array_, i)/sizeof(BaseType);
     }
 
-    PyArrayObject* raw_array() const { return _array; }
-    void* raw_data() const { return PyArray_DATA(_array); }
-    const npy_intp* raw_dims() const { return PyArray_DIMS(_array); }
+    PyArrayObject* raw_array() const { return array_; }
+    void* raw_data() const { return PyArray_DATA(array_); }
+    const npy_intp* raw_dims() const { return PyArray_DIMS(array_); }
 
     bool validposition(const position& pos) const {
       if (ndims() != pos.nd) {
@@ -402,7 +404,7 @@ namespace numpy {
     }
 
     bool is_aligned() const {
-      return PyArray_ISALIGNED(_array);
+      return PyArray_ISALIGNED(array_);
     }
 
     BaseType at(const position& pos) const {
@@ -413,7 +415,7 @@ namespace numpy {
     }
 
     npy_intp raw_stride(npy_intp i) const {
-      return PyArray_STRIDE(this->_array, i);
+      return PyArray_STRIDE(this->array_, i);
     }
   };
 
@@ -426,11 +428,11 @@ namespace numpy {
     typedef iterator_type<const BaseType> const_iterator;
 
     iterator begin() {
-      return iterator(this->_array);
+      return iterator(this->array_);
     }
 
     const_iterator begin() const {
-      return const_iterator(this->_array);
+      return const_iterator(this->array_);
     }
 
     iterator end() {
@@ -453,28 +455,27 @@ namespace numpy {
   template <typename BaseType>
   struct aligned_array: public array_base<BaseType> {
   private:
-    bool _is_carray;
+    bool is_carray_;
 
   public:
     aligned_array(PyArrayObject* array)
-      : array_base<BaseType>(array) ,_is_carray(PyArray_ISCARRAY(array)) {
+      : array_base<BaseType>(array), is_carray_(PyArray_ISCARRAY(array)) {
       assert(PyArray_ISALIGNED(array));
     }
 
     aligned_array(const aligned_array<BaseType>& other)
-      :array_base<BaseType>(other)
-      ,_is_carray(other._is_carray)
+      :array_base<BaseType>(other), is_carray_(other.is_carray_)
     { }
 
     typedef aligned_iterator_type<BaseType> iterator;
     typedef aligned_iterator_type<const BaseType> const_iterator;
 
     const_iterator begin() const {
-      return const_iterator(this->_array);
+      return const_iterator(this->array_);
     }
 
     iterator begin() {
-      return iterator(this->_array);
+      return iterator(this->array_);
     }
 
     iterator end() {
@@ -489,32 +490,32 @@ namespace numpy {
       return this->raw_stride(i)/sizeof(BaseType);
     }
 
-    bool is_carray() const { return _is_carray; }
+    bool is_carray() const { return is_carray_; }
 
     BaseType* data() {
-      return reinterpret_cast<BaseType*>(PyArray_DATA(this->_array));
+      return reinterpret_cast<BaseType*>(PyArray_DATA(this->array_));
     }
 
     BaseType* data(npy_intp p0) {
       assert(p0 < this->dim(0));
-      return reinterpret_cast<BaseType*>(PyArray_GETPTR1(this->_array, p0));
+      return reinterpret_cast<BaseType*>(PyArray_GETPTR1(this->array_, p0));
     }
 
     BaseType* data(npy_intp p0, npy_intp p1) {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
-      return reinterpret_cast<BaseType*>(PyArray_GETPTR2(this->_array, p0, p1));
+      return reinterpret_cast<BaseType*>(PyArray_GETPTR2(this->array_, p0, p1));
     }
 
     BaseType* data(npy_intp p0, npy_intp p1, npy_intp p2) {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
       assert(p2 < this->dim(2));
-      return reinterpret_cast<BaseType*>(PyArray_GETPTR3(this->_array, p0, p1, p2));
+      return reinterpret_cast<BaseType*>(PyArray_GETPTR3(this->array_, p0, p1, p2));
     }
 
     const BaseType* data() const {
-      return reinterpret_cast<const BaseType*>(PyArray_DATA(this->_array));
+      return reinterpret_cast<const BaseType*>(PyArray_DATA(this->array_));
     }
 
     const BaseType* data(const position& pos) const {
@@ -523,20 +524,20 @@ namespace numpy {
 
     const BaseType* data(npy_intp p0) const {
       assert(p0 < this->dim(0));
-      return reinterpret_cast<const BaseType*>(PyArray_GETPTR1(this->_array, p0));
+      return reinterpret_cast<const BaseType*>(PyArray_GETPTR1(this->array_, p0));
     }
 
     const BaseType* data(npy_intp p0, npy_intp p1) const {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
-      return reinterpret_cast<const BaseType*>(PyArray_GETPTR2(this->_array, p0, p1));
+      return reinterpret_cast<const BaseType*>(PyArray_GETPTR2(this->array_, p0, p1));
     }
 
     const BaseType* data(npy_intp p0, npy_intp p1, npy_intp p2) const {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
       assert(p2 < this->dim(2));
-      return reinterpret_cast<const BaseType*>(PyArray_GETPTR3(this->_array, p0, p1, p2));
+      return reinterpret_cast<const BaseType*>(PyArray_GETPTR3(this->array_, p0, p1, p2));
     }
 
     BaseType* data(const position& pos) {
@@ -552,7 +553,7 @@ namespace numpy {
     }
 
     BaseType& at_flat(npy_intp p) {
-      if (_is_carray) return data()[p];
+      if (is_carray_) return data()[p];
 
       BaseType* base = this->data();
       for (int d = this->ndims() - 1; d >= 0; --d) {
@@ -571,7 +572,7 @@ namespace numpy {
       npy_intp res = 0;
       int cummul = 1;
       for (int d = this->ndims() -1; d >= 0; --d) {
-        res += pos._pos[d] * cummul;
+        res += pos.pos[d] * cummul;
         cummul *= this->dim(d);
       }
       return res;
@@ -581,46 +582,46 @@ namespace numpy {
       numpy::position res;
       res.nd_ = this->ndims();
       for (int d = this->ndims() - 1; d >= 0; --d) {
-        res.position_[d] = (p % this->dim(d));
+        res.pos[d] = (p % this->dim(d));
         p /= this->dim(d);
       }
-      if (p) res._pos[0] += p * this->dim(0);
+      if (p) res.pos[0] += p * this->dim(0);
       return res;
     }
 
     BaseType at(int p0) const {
-      return *static_cast<BaseType*>(PyArray_GETPTR1(this->_array, p0));
+      return *static_cast<BaseType*>(PyArray_GETPTR1(this->array_, p0));
     }
 
     BaseType& at(int p0) {
       assert(p0 < this->dim(0));
-      return *static_cast<BaseType*>(PyArray_GETPTR1(this->_array, p0));
+      return *static_cast<BaseType*>(PyArray_GETPTR1(this->array_, p0));
     }
 
     BaseType at(int p0, int p1) const {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
-      return *static_cast<BaseType*>(PyArray_GETPTR2(this->_array, p0, p1));
+      return *static_cast<BaseType*>(PyArray_GETPTR2(this->array_, p0, p1));
     }
 
     BaseType& at(int p0, int p1) {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
-      return *static_cast<BaseType*>(PyArray_GETPTR2(this->_array, p0, p1));
+      return *static_cast<BaseType*>(PyArray_GETPTR2(this->array_, p0, p1));
     }
 
     BaseType at(int p0, int p1, int p2) const {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
       assert(p2 < this->dim(2));
-      return *static_cast<BaseType*>(PyArray_GETPTR3(this->_array, p0, p1, p2));
+      return *static_cast<BaseType*>(PyArray_GETPTR3(this->array_, p0, p1, p2));
     }
 
     BaseType& at(int p0, int p1, int p2) {
       assert(p0 < this->dim(0));
       assert(p1 < this->dim(1));
       assert(p2 < this->dim(2));
-      return *static_cast<BaseType*>(PyArray_GETPTR3(this->_array, p0, p1, p2));
+      return *static_cast<BaseType*>(PyArray_GETPTR3(this->array_, p0, p1, p2));
     }
   };
 

@@ -31,7 +31,7 @@ struct holdref {
     }
   }
 
-  holdref(PyArrayObject* obj, bool incref=true): obj_(PyObject*)obj {
+  holdref(PyArrayObject* obj, bool incref=true): obj_((PyObject*)obj) {
     if (incref) {
       Py_XINCREF(obj);
     }
@@ -55,16 +55,16 @@ struct gil_release {
   }
 
   ~gil_release() {
-    if (active) restore();
+    if (active_) restore();
   }
 
   void restore() {
     PyEval_RestoreThread(save);
-    active = false;
+    active_ = false;
   }
 
   PyThreadState* save;
-  bool active;
+  bool active_;
 };
 
 
