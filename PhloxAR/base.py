@@ -96,7 +96,7 @@ except ImportError:
 # optional libraies
 PIL_ENABLED = True
 try:
-    from PIL import Image as pil
+    from PIL import Image as pilImage
     from PIL import ImageFont as pilImageFont
     from PIL import GifImagePlugin
     getheader = GifImagePlugin.getheader
