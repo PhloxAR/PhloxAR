@@ -348,6 +348,30 @@ class Image(object):
                "at memory location: {}>".format((self.width, self.height),
                                                 f, hex(id(self)))
 
+    @property
+    def exif_data(self):
+        """
+        Extracts the exif data from an image file. The data is
+        returned as a dict.
+        :return: a dict of key value pairs.
+
+        Note:
+        see: http://en.wikipedia.org/wiki/Exchangeable_image_file_format
+        """
+        import os, string
+        if len(self.filename) < 5 or self.filename is None:
+            return {}
+
+        fname, fext = os.path.splitext(self.filename)
+        fext = string.lower(fext)
+
+        if fext not in ('.jpeg', '.jpg', '.tiff', '.tif'):
+            return {}
+
+        raw = open(self.filename, 'rb')
+        data = process_file(raw)
+        return data
+
 
 class ImageSet(list):
     """
