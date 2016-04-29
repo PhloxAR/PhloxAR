@@ -12,6 +12,22 @@ def compute_harris_response(img, sigma=3):
     """
     Compute the Harris corner detector response function for each pixel in
     a gray level image.
+    1. Compute x and y derivatives of image
+       Ix = Gx*I  Iy = Gy*I
+    2. Compute products of derivatives at every pixel
+       Ix2 = Ix.Ix  Iy2 = Iy.Iy  Ixy = Ix.Iy
+    3. Compute the sums of the products of derivatives at each pixel
+       Sx2 = G*Ix2  Sy2 = G*Iy2  Sxy = G*Ixy
+    4. Define at each pixel (x, y) the matrix M
+       M = [ Sx2  Sxy]
+           [ Sxy  Sy2]
+    5. Compute the response of the detector at each pixel
+       R = Det(M) - k(Trace(M))^2
+       k is an empirically determined constant; k = 0.04 ~ 0.06
+       Det(M) = eigenvalue1 x eigenvalue2
+       Trace(M) = eigenvalue1 + eigenvalue2
+    6. Threshold on value of R. Compute nonmax suppression
+
     :param img: the image to compute
     :param sigma: for Gaussian kernel
     :return: an image with each pixel containing the value of the Harris
@@ -23,7 +39,8 @@ def compute_harris_response(img, sigma=3):
     iy = numpy.zeros(img.shape)
     filters.gaussian_filter(img, (sigma, sigma), (1, 0), iy)
 
-    # compute components of the Harris matrix
+    # compute components of the Harris matrix, gaussian function is used
+    # as window function
     wxx = filters.gaussian_filter(ix * ix, sigma)
     wxy = filters.gaussian_filter(ix * iy, sigma)
     wyy = filters.gaussian_filter(iy * iy, sigma)
@@ -97,7 +114,7 @@ def get_descriptors(img, filtered_coords, wid=5):
     :param img:
     :param filtered_coords:
     :param wid:
-    :return:
+    :return: descriptors
     """
     desc = []
 
