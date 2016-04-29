@@ -372,6 +372,16 @@ class Image(object):
         data = process_file(raw)
         return data
 
+    # TODO: more functions, need a display first.
+    def live(self):
+        """
+        A live view of the camera.
+        Left click will show mouse coordinates and color.
+        Right click will kill the live image.
+        :return: None.
+        """
+        start_time = time.time()
+
 
 class ImageSet(list):
     """
