@@ -1,0 +1,7 @@
+.idea/*
+MANIFEST
+PhloxAR/
+data/
+dist/
+docs/
+examples/
