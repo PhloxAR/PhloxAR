@@ -1,3 +1,4 @@
 SciPy
 Numpy
 PyGame
+Matplotlib
