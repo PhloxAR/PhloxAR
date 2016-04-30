@@ -10,7 +10,8 @@ import Queue
 
 PYGAME_INITIALIZED = False
 
-class Display:
+
+class Display(object):
     """
     WindowsStream opens a window (Pygame Display Surface) to which you
     can write images. The default resolution is (640, 480) but you can
@@ -82,6 +83,7 @@ class Display:
     rb_down = None
     rb_up = None
     display_type = None
+    do_clamp = None
     pressed = []
 
     def __init__(self, res=(640, 480), flags=0, title='PhloxAR',
@@ -127,6 +129,7 @@ class Display:
         self.mouse_raw_x = 0
         self.mouse_raw_y = 0
         self.res = res
+        self.do_clamp = False
 
         if not disptype == 'notebook':
             self.screen = pygame.display.set_mode(res, flags)
@@ -183,7 +186,7 @@ class Display:
         """
         return self.rb_down
 
-    def points2bounding_box(self, pt0, pt1):
+    def points2boundingbox(self, pt0, pt1):
         """
         Given two screen coordinates return the bounding box in x, y, w, h
         format. This is helpful for drawing regions on the display.
@@ -203,7 +206,7 @@ class Display:
         Copies the given Image object to the display, you can also use
         Image.save()
 
-        Write frame trys to fit the image to the display with the minimum
+        Write frame try to fit the image to the display with the minimum
         amount of distortion possible. When fit=True write frame will decide
         how to scale the image such that aspect ratio is maintained and the
         smallest amount of distortion possible is completed. This means the
