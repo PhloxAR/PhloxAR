@@ -668,8 +668,9 @@ class Image(object):
     def _get_edge_map(self, t1=50, t2=100):
         pass
 
-    def roate(self, angle, fixed=True, point=[-1, -1], scale=1.0):
-        pass
+    def roate(self, angle, fixed=True, point=None, scale=1.0):
+        if point is None:
+            point = [-1, -1]
 
     def transpose(self):
         pass
@@ -923,7 +924,7 @@ class Image(object):
                          grayscale=False):
         pass
 
-    def _inverse_DFT(self, input)
+    def _inverse_DFT(self, input):
         pass
 
     def inverse_dft(self, raw_dft_image):
@@ -988,7 +989,7 @@ class Image(object):
     def track(self, method="CAMShift", ts=None, img=None, bb=None, **kwargs):
         pass
 
-    def _to32f(self)
+    def _to32f(self):
         pass
 
     def __getstate__(self):
