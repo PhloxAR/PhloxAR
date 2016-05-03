@@ -19,13 +19,13 @@ class DFT(object):
     height       - height of the filter
     channels     - number of channels of the filter
     size         - size of the filter (width, height)
-    _numpy       - numpy array of the filter
+    _numpy_array       - numpy array of the filter
     _image       - SimpleCV.Image of the filter
     _dia         - diameter of the filter
                       (applicable for gaussian, butterworth, notch)
     _type        - Type of the filter
     _order       - order of the butterworth filter
-    _freq_pass   - frequency of the filter (lowpass, highpass, bandpass)
+    _fpass   - frequency of the filter (low pass, high pass, band pass)
     _x_cutoff_low  - Lower horizontal cut off frequency for lowpassfilter
     _y_cutoff_low  - Lower vertical cut off frequency for lowpassfilter
     _x_cutoff_high - Upper horizontal cut off frequency for highpassfilter
@@ -37,12 +37,12 @@ class DFT(object):
     width = 0
     height = 0
     channels = 1
-    _numpy = None
+    _numpy_array = None
     _image = None
     _dia = 0
     _type = ''
     _order = 0
-    _freq_pass = 0
+    _fpass = 0
     _x_cutoff_low = 0
     _x_cutoff_high = 0
     _y_cutoff_low = 0
@@ -59,8 +59,8 @@ class DFT(object):
             elif key == 'size':
                 self.width, self.height = kwargs[key]
             # numpy array
-            elif key == 'array':
-                self._numpy = kwargs[key]
+            elif key == 'narray':
+                self._numpy_array = kwargs[key]
             elif key == 'image':
                 self._image = kwargs[key]
             elif key == 'dia':
@@ -70,8 +70,8 @@ class DFT(object):
             elif key == 'order':
                 self._order = kwargs[key]
             # frequency
-            elif key == 'freq':
-                self._freq_pass = kwargs[key]
+            elif key == 'fpass':
+                self._fpass = kwargs[key]
             elif key == 'x_cutoff_low':
                 self._x_cutoff_low = kwargs[key]
             elif key == 'y_cutoff_low':
@@ -87,51 +87,331 @@ class DFT(object):
                                        self.height, self.channels))
 
     def __add__(self, other):
-        pass
+        if not isinstance(other, type(self)):
+            warnings.warn("Provide PhloxAR.DFT object.")
+            return None
+
+        if self.size() != other.size():
+            warnings.warn("Both PhloxAR.DFT object mush have the same size.")
+            return None
+
+        numpy_array = self._numpy_array + other._numpy_array
+        image = Image(numpy_array)
+        ret = DFT(array=numpy_array, image=image, size=image.size())
+
+        return ret
 
     def __invert__(self):
+        return self.invert()
+
+    def _update(self, flt):
+        """
+        Update filter's params.
+        :param flt: used to update
+        :return: None
+        """
+        self.channels = flt.channels
+        self._dia = flt._dia
+        self._type = flt._type
+        self._order = flt._order
+        self._freq_pass = flt._fpass
+        self._x_cutoff_high = flt._x_cutoff_high
+        self._x_cutoff_low = flt._x_cutoff_low
+        self._y_cutoff_high = flt._y_cutoff_high
+        self._y_cutoff_low = flt._y_cutoff_low
+
+    @classmethod
+    def create_filter(cls, ftype, **kwargs):
+        """
+        Create a filter according to specific type.
+        :param ftype: determines the shape of the filter and can be
+                      'gaussian', 'butterworth', 'notch', 'bandpass',
+                      'lowpass', 'highpass'
+        :param kwargs: other parameters
+        :return: DFT filter
+        """
+        if isinstance(ftype, str):
+            if isinstance(kwargs['dia'], list):
+                if len(kwargs['dia']) != 3 and len(kwargs['dia']) != 1:
+                    warnings.warn("Diameter list must be of size 1 or 3")
+                    return None
+            if ftype == 'gaussian':
+                return cls.gaussian(**kwargs)
+            elif ftype == 'butterworth':
+                return cls.butterworth(**kwargs)
+            elif ftype == 'notch':
+                return cls.notch(**kwargs)
+            elif ftype == 'bandpass':
+                return cls.band_pass(**kwargs)
+            elif ftype == 'lowpass':
+                return cls.band_pass(**kwargs)
+            elif ftype == 'highpass':
+                return cls.band_pass(**kwargs)
+            else:
+                warnings.warn("Not invalid filter type.")
+                return None
+        else:
+            warnings.warn("String type.")
+            return None
+
+    @classmethod
+    def gaussian(cls, dia=400, size=(64, 64), fpass='low'):
+        """
+        Create a gaussian filter of given size.
+        :param dia: (int) diameter of Gaussian filter
+                     (list) provide a list of three diameters to
+                     create a 3 channel filter
+        :param size: size of the filter (width, height)
+        :param fpass: 'high' - high-pass filter
+                      'low' - low-pass filter
+        :return: DFT filter.
+        """
+        stacked_filter = DFT()
+
+        if isinstance(dia, list):
+            for d in dia:
+                stacked_filter = stacked_filter._stack_filters(cls.gaussian(d, size, fpass))
+
+            image = Image(stacked_filter._numpy_array)
+            ret_val = DFT(narray=stacked_filter._numpy_array, image=image,
+                      dia=dia, channels=len(dia), size=size, type='gaussian',
+                      fpass=stacked_filter._freq_pass)
+            return ret_val
+        else:
+            cls._fpass = fpass
+            sx, sy = size
+            x0 = sx / 2
+            y0 = sy / 2
+            x, y = npy.meshgrid(npy.arange(sx), npy.arange(sy))
+            d = npy.sqrt((x - x0)**2 + (y - y0)**2)
+            flt = 255 * npy.exp(-0.5 * (d/dia)**2)
+
+            if fpass == 'high':
+                flt = 255 - flt
+
+            image = Image(flt)
+            ret_val = DFT(size=size, narray=flt, image=image, dia=dia,
+                          type='gaussian', fpass=fpass)
+
+    @classmethod
+    def butterworth(cls, dia=400, size=(64, 64), order=2, fpass='low'):
+        """
+        Create a butterworth filter of given size and order.
+        :param dia: (int) diameter of Gaussian filter
+                     (list) provide a list of three diameters to create
+                     a 3 channel filter
+        :param size: size of the filter (width, height)
+        :param order: order of the filter
+        :param fpass: 'high' - high-pass filter
+                      'low' - low-pass filter
+        :return: DFT filter
+        """
+        if isinstance(dia, list):
+            for d in dia:
+                stacked_filter = stacked_filter._stack_filters(
+                        cls.butterworth(d, size, fpass))
+
+            image = Image(stacked_filter._numpy_array)
+            ret_val = DFT(narray=stacked_filter._numpy_array, image=image,
+                          dia=dia, channels=len(dia), size=size,
+                          type='butterworth', fpass=stacked_filter._freq_pass)
+            return ret_val
+        else:
+            cls._fpass = fpass
+            sx, sy = size
+            x0 = sx / 2
+            y0 = sy / 2
+            x, y = npy.meshgrid(npy.arange(sx), npy.arange(sy))
+            d = npy.sqrt((x - x0)**2 + (y-y0)**2)
+            flt = 255 / (1.0 + (d / dia)**(order * 2))
+
+            if fpass == 'high':
+                flt = 255 - flt
+
+            image = Image(flt)
+            ret_val = DFT(size=size, narray=flt, image=image, dia=dia,
+                          type='butterworth', fpass=fpass)
+
+            return ret_val
+
+    @classmethod
+    def low_pass(cls, dia=400, size=(64, 64), high_pass=False):
         pass
 
     @classmethod
-    def create_filter(cls, type, **kwargs):
-        """
+    def high_pass(cls, dia=400, size=(64, 64), high_pass=False):
+        pass
 
-        :param type: determines the shape of the filter and can be
-                      'average', 'disk', 'gaussian', 'log', 'laplacian'
-                       'unsharp', 'motion', 'sobel', 'prewitt', 'kirsch'
-        :param kwargs:
+    @classmethod
+    def band_pass(cls, dia=400, size=(64, 64), high_pass=False):
+        pass
+
+    @classmethod
+    def notch(cls, dia1, dia2=None, cen=None, size=(64, 64), ftype='lowpass'):
+        """
+        Creates a disk shaped notch filter of given diameter at given center.
+        :param dia1: (int) diameter of the disk shaped notch
+                      (list) provide a list of three diameters to create a
+                      3 channel filter
+        :param dia2: (int) outer diameter of the disk shaped notch used for
+                      bandpass filter
+                      (list) provide a list of three diameters to create a
+                      3 channel filter
+        :param cen: tuple (x, y) center of the disk shaped notch
+        :param size: size of the filter (width, height)
+        :param ftype: lowpass or highpass filter
         :return:
         """
-        pass
+        if isinstance(dia1, list):
+            if len(dia1) != 3 and len(dia1) != 1:
+                warnings.warn("Diameter list must be of size 1 or 3")
+                return None
+
+            if isinstance(dia2, list):
+                if len(dia2) != 3 and len(dia2) != 1:
+                    warnings.warn("diameter list must be of size 3 or 1")
+                    return None
+                if len(dia2) == 1:
+                    dia2 = [dia2[0]] * len(dia1)
+            else:
+                dia2 = [dia2] * len(dia1)
+
+        if isinstance(cen, list):
+            if len(cen) != 3 and len(cen) != 1:
+                warnings.warn("center list must be of size 3 or 1")
+                return None
+            if len(cen) == 1:
+                cen = [cen[0]] * len(dia1)
+        else:
+            cen = [cen] * len(dia1)
+
+        stacked_filter = DFT()
+        for d1, d2, c in zip(dia1, dia2, cen):
+            stacked_filter = stacked_filter._stack_filters()
 
     def apply_filter(self, image, grayscale=False):
-        pass
+        """
+        Apply the DFT filter to given image.
+        :param image: PhloxAR.Image
+        :param grayscale: if True, perform the operation on the gray version
+                           of the image, if False, perform the operation on
+                           each channel and the recombine then to create
+                           the result.
+        :return: filtered image.
+        """
+        if self.width == 0 or self.height == 0:
+            warnings.warn("Empty filter. Returning the image.")
+            return image
+
+        w, h = image.size()
+
+        if grayscale:
+            image = image.to_gray()
+
+        img = self._image
+
+        if img.size() != image.size():
+            img = img.resize(w, h)
+
+        filtered = image.apply_DFT_filter(img)
+
+        return filtered
 
     def invert(self):
-        pass
+        """
+        Invert the filter. All values will be subtracted from 255.
+        :return: inverted filter
+        """
+        flt = self._numpy_array
+        flt = 255 - flt
+        image = Image(flt)
+        inverted = DFT(array=flt, image=image, size=self.size(), type=self._type)
+        inverted._update(self)
 
-    def get_image(self):
-        pass
+        return inverted
 
-    def get_numpy(self):
-        pass
+    @property
+    def image(self):
+        return self._image
 
-    def get_order(self):
-        pass
+    @property
+    def narray(self):
+        """
+        Get the numpy array of the filter
+        :return: numpy array of the filter
+        """
+        return self._numpy_array
 
-    def get_dia(self):
-        pass
+    @property
+    def order(self):
+        """
+        Get order of the butterworth filter
+        :return: order of the butterworth filter
+        """
+        return self._order
 
-    def get_type(self):
-        pass
+    @property
+    def dia(self):
+        """
+        Get diameter of the filter.
+        :return: diameter of the filter
+        """
+        return self._dia
+
+    @property
+    def type(self):
+        """
+        Get type of the filter.
+        :return: type of the filter
+        """
+        return self._type
 
     def stack_filters(self, flt1, flt2):
-        pass
+        """
+        Stack three single channel filters of the same size to create
+        a 3 channel filter.
+        :param flt1: second filter to be stacked
+        :param flt2: third filter to be stacked
+        :return: DFT filter
+        """
+        if not (self.channels == 1 and flt1.channels == 1 and flt2.channels == 1):
+            warnings.warn("Filters must have only 1 channel.")
+            return None
+
+        if not (self.size() == flt1.size() and self.size() == flt2.size()):
+            warnings.warn("All the filters must be of the same size.")
+            return None
+
+        numpy_filter = self._numpy_array
+        numpy_filter1 = flt1._numpy_array
+        numpy_filter2 = flt2._numpy_array
+        flt = npy.dstack((numpy_filter, numpy_filter1, numpy_filter2))
+        image = Image(flt)
+        stacked_filter = DFT(size=self.size(), array=flt, image=image, channels=3)
+
+        return stacked_filter
 
     def size(self):
         pass
 
     def _stack_filters(self, flt1):
-        pass
+        """
+        Stack two filters of same size.
+        :param flt1: second filter to be stacked.
+        :return: DFT filter
+        """
+        if isinstance(self._numpy_array, type(None)):
+            return flt1
 
+        if not self.size() == flt1.size():
+            warnings.warn("All the filters must be of same size.")
+            return None
 
+        numpy_array = self._numpy_array
+        numpy_array1 = flt1._numpy_array
+        flt = npy.dstack((numpy_array, numpy_array1))
+        stacked_filter = DFT(size=self.size(), array=numpy_array,
+                              channels=self.channels+flt1.channels,
+                              type=self._type, frequence=self._freq_pass)
+
+        return stacked_filter
