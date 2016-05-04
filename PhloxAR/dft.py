@@ -237,7 +237,7 @@ class DFT(object):
             return ret_val
 
     @classmethod
-    def low_pass(cls, xco, yco, size=(64, 64)):
+    def low_pass(cls, xco, yco=None, size=(64, 64)):
         """
         Create a low pass filter of given size.
         :param xco: x cutoff
@@ -296,7 +296,7 @@ class DFT(object):
 
 
     @classmethod
-    def high_pass(cls, xco, yco, size=(64, 64)):
+    def high_pass(cls, xco, yco=None, size=(64, 64)):
         """
         Creates a high pass filter of given size and order.
         :param xco: x cutoff
@@ -348,8 +348,33 @@ class DFT(object):
         return highpass_filter
 
     @classmethod
-    def band_pass(cls, dia=400, size=(64, 64), high_pass=False):
-        pass
+    def band_pass(cls, xco_low, xco_high, yco_low=None, yco_high=None,
+                  size=(64, 64)):
+        """
+        Create a band filter of given size and order.
+        Creates a high pass filter of given size and order.
+        :param xco_low: (int) horizontal cutoff frequency
+                        (list) provide a list of three cut off frequencies
+                        to create a 3 channel filter
+        :param yco: (int) vertical cutoff frequency
+                    (list) provide a list of three cutoff frequencies
+                    to create a 3 channel filter
+        :param size: size of the filter (width, height)
+        :return: DFT filter
+        """
+
+        lowpass = cls.low_pass(xco_low, yco_low, size)
+        highpass = cls.high_pass(xco_high, yco_high, size)
+        lowpassnumpy = lowpass._numpy_array
+        highpassnumpy = highpass._numpy_array
+        bandpassnumpy = lowpassnumpy + highpassnumpy
+        bandpassnumpy = npy.clip(bandpassnumpy, 0, 255)
+        img = Image(bandpassnumpy)
+        bandpass = DFT(size=size, image=img, narray=bandpassnumpy,
+                       type="bandpass", xco_low=xco_low, yco_low=yco_low,
+                       xco_high=xco_high, yco_high=yco_high, fpass="bandpass",
+                       channels=lowpass.channels)
+        return bandpass
 
     @classmethod
     def notch(cls, dia1, dia2=None, cen=None, size=(64, 64), ftype='lowpass'):
@@ -391,8 +416,17 @@ class DFT(object):
             cen = [cen] * len(dia1)
 
         stacked_filter = DFT()
+
         for d1, d2, c in zip(dia1, dia2, cen):
-            stacked_filter = stacked_filter._stack_filters()
+            stacked_filter = stacked_filter._stack_filters(cls.notch(d1, d2,
+                                                                     c, size,
+                                                                     ftype))
+        image = Image(stacked_filter._numpy)
+        ret_val = DFT(narray=stacked_filter._numpy_array, image=image,
+                     dia=dia1 + dia2, channels=len(dia1), size=size,
+                     type=stacked_filter._type, fpass=stacked_filter._fpass)
+
+        return ret_val
 
     def apply_filter(self, image, grayscale=False):
         """
