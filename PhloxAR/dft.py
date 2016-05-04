@@ -311,6 +311,42 @@ class DFT(object):
         :return: DFT filter
         """
 
+        if isinstance(xco, list):
+            if len(xco) != 3 and len(xco) != 1:
+                warnings.warn("xco list must be of size 3 or 1")
+                return None
+            if isinstance(yco, list):
+                if len(yco) != 3 and len(yco) != 1:
+                    warnings.warn("yco list must be of size 3 or 1")
+                    return None
+                if len(yco) == 1:
+                    yco = [yco[0]] * len(xco)
+            else:
+                yco = [yco] * len(xco)
+
+            stacked_filter = DFT()
+
+            for xfreq, yfreq in zip(xco, yco):
+                stacked_filter = stacked_filter._stack_filters(cls.high_pass(
+                        xfreq, yfreq, size))
+
+            image = Image(stacked_filter._numpy_array)
+            retVal = DFT(narray=stacked_filter._numpy_array, image=image,
+                         xco_low=xco, yco_low=yco, channels=len(xco), size=size,
+                         type=stacked_filter._type, order=cls._order,
+                         fpass=stacked_filter._fpass)
+            return retVal
+
+        lowpass = cls.low_pass(xco, yco, size)
+        w, h = lowpass.size()
+        flt = lowpass._numpy_array
+        flt = 255 - flt
+        img = Image(flt)
+        highpass_filter = DFT(size=size, narray=flt, image=img,
+                              type="highpass", xco_high=xco, yco_high=yco,
+                              fpass="highpass")
+        return highpass_filter
+
     @classmethod
     def band_pass(cls, dia=400, size=(64, 64), high_pass=False):
         pass
