@@ -471,6 +471,10 @@ class DFT(object):
 
     @property
     def image(self):
+        if self._image is None:
+            if self._numpy_array is None:
+                warnings.warn("Filter doesn't contain any image.")
+            self._image = Image(self._numpy_array)
         return self._image
 
     @property
@@ -479,6 +483,10 @@ class DFT(object):
         Get the numpy array of the filter
         :return: numpy array of the filter
         """
+        if self._numpy_array is None:
+            if self._image is None:
+                warnings.warn("Filter doesn't contain any image. ")
+            self._numpy_array = self._image.get_numpy()
         return self._numpy_array
 
     @property
