@@ -135,6 +135,8 @@ class DFT(object):
                 if len(kwargs['dia']) != 3 and len(kwargs['dia']) != 1:
                     warnings.warn("Diameter list must be of size 1 or 3")
                     return None
+                if len(kwargs['dia']) == 1:
+                    kwargs['dia'] = kwargs['dia'][0]
             if ftype == 'gaussian':
                 return cls.gaussian(**kwargs)
             elif ftype == 'butterworth':
@@ -235,12 +237,79 @@ class DFT(object):
             return ret_val
 
     @classmethod
-    def low_pass(cls, dia=400, size=(64, 64), high_pass=False):
-        pass
+    def low_pass(cls, xco, yco, size=(64, 64)):
+        """
+        Create a low pass filter of given size.
+        :param xco: x cutoff
+                    (int) horizontal cutoff frequency
+                    (list) provide a list of three cut off frequencies
+                    to create a 3 channel filter
+        :param yco: y cutoff
+                    (int) vertical cutoff frequency
+                    (list) provide a list of three cutoff frequencies
+                    to create a 3 channel filter
+        :param size: size of the filter (width, height)
+        :return: DFT filter
+        """
+        if isinstance(xco, list):
+            if len(xco) != 3 and len(xco) != 1:
+                warnings.warn("xco list must be of size 3 or 1")
+                return None
+            if isinstance(yco, list):
+                if len(yco) != 3 and len(yco) != 1:
+                    warnings.warn("yco list must be of size 3 or 1")
+                    return None
+                if len(yco) == 1:
+                    yco = [yco[0]] * len(xco)
+            else:
+                yco = [yco] * len(xco)
+
+            stacked_filter = DFT()
+
+            for xfreq, yfreq in zip(xco, yco):
+                stacked_filter = stacked_filter._stack_filters(cls.low_pass(
+                        xfreq, yfreq, size))
+
+            image = Image(stacked_filter._numpy_array)
+            retVal = DFT(narray=stacked_filter._numpy_array, image=image,
+                         xco_low=xco, yco_low=yco, channels=len(xco), size=size,
+                         type=stacked_filter._type, order=cls._order,
+                         fpass=stacked_filter._fpass)
+            return retVal
+
+        w, h = size
+        xco = npy.clip(int(xco), 0, w / 2)
+
+        if yco is None:
+            yco = xco
+
+        yco = npy.clip(int(yco), 0, h / 2)
+        flt = npy.zeros((w, h))
+        flt[0:xco, 0:yco] = 255
+        flt[0:xco, h - yco:h] = 255
+        flt[w - xco:w, 0:yco] = 255
+        flt[w - xco:w, h - yco:h] = 255
+        img = Image(flt)
+        lowpass_filter = DFT(size=size, narray=flt, image=img, type="lowpass",
+                      xco_low=xco, yco_low=yco, fpass="lowpass")
+        return lowpass_filter
+
 
     @classmethod
-    def high_pass(cls, dia=400, size=(64, 64), high_pass=False):
-        pass
+    def high_pass(cls, xco, yco, size=(64, 64)):
+        """
+        Creates a high pass filter of given size and order.
+        :param xco: x cutoff
+                    (int) horizontal cutoff frequency
+                    (list) provide a list of three cut off frequencies
+                    to create a 3 channel filter
+        :param yco: y cutoff
+                    (int) vertical cutoff frequency
+                    (list) provide a list of three cutoff frequencies
+                    to create a 3 channel filter
+        :param size: size of the filter (width, height)
+        :return: DFT filter
+        """
 
     @classmethod
     def band_pass(cls, dia=400, size=(64, 64), high_pass=False):
