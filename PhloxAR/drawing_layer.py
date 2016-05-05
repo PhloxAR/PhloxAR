@@ -82,6 +82,59 @@ class DrawingLayer(object):
     def svg(self):
         return self._svg.tostring()
 
+    @property
+    def font_bold(self):
+        return self._font_bold
+
+    @font_bold.setter
+    def font_bold(self, bold):
+        self._font_bold = bold
+        self._font.set_bold(bold)
+
+    @property
+    def font_italic(self):
+        return self._font_italic
+
+    @font_italic.setter
+    def font_italic(self, italic):
+        self._font_italic = italic
+        self._font.set_italic(italic)
+
+    @property
+    def font_underline(self):
+        return self._font_underline
+
+    @font_underline.setter
+    def font_underline(self, underline):
+        self._font_underline = underline
+        self._font.set_underline(underline)
+
+    @property
+    def font_size(self):
+        return self._font_size
+
+    @font_size.setter
+    def font_size(self, size):
+        self._font_size = size
+        self._font = pg.font.Font(self._font_name, self._font_size)
+
+    @property
+    def font(self):
+        return self._font
+
+    @font.setter
+    def font(self, fontface):
+        full = pg.font.match_font(fontface)
+        self._font_name = full
+        self._font = pg.font.Font(self._font_name, self._font_size)
+
+    def list_fonts(self):
+        """
+        Return a list of strings corresponding to the fonts available
+        on the current system.
+        """
+        return pg.font.get_fonts()
+
     def set_layer_alpha(self, alpha):
         """
         Sets the alpha value of the entire layer in a single
