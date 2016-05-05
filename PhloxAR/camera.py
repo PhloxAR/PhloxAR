@@ -70,7 +70,6 @@ class FrameSource(object):
         pass
 
 
-
 class Camera(FrameSource):
     pass
 
