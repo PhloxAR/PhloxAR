@@ -82,7 +82,7 @@ from cStringIO import StringIO
 from numpy import int32
 from numpy import uint8
 from PhloxAR.exif import *
-# from pygame import gfxdraw
+from pygame import gfxdraw
 from pickle import *
 
 try:
