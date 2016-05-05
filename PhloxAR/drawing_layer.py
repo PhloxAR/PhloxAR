@@ -6,8 +6,10 @@ import os
 import svgwrite
 from PhloxAR.color import *
 from PhloxAR.base import pg
+from PhloxAR.base import gfxdraw
 from PhloxAR.base import npy
 from PhloxAR.base import warnings
+from PhloxAR.image import Image
 
 
 class DrawingLayer(object):
@@ -323,14 +325,224 @@ class DrawingLayer(object):
                             points, width)
         return None
 
-    def circle(self):
-        pass
+    def circle(self, center, radius, color=Color.DEFAULT, width=1, filled=False,
+               alpha=-1, aalias=True):
+        """
+        Draw a circle given a location and a radius.
+        :param center:
+        :param radius:
+        :param color:
+        :param width:
+        :param filled:
+        :param alpha:
+        :param aalias:
+        :return:
+        """
+        if filled:
+            width = 0
+        if aalias == False or width > 1 or filled:
+            pg.draw.circle(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+                           center, int(radius), int(width))
+        else:
+            gfxdraw.aacircle(self._surface, int(center[0]), int(center[1]),
+                            int(radius), self._csv_rgb2_pygame_color(color, alpha))
 
-    def ellipse(self):
-        pass
+        cen = tuple(int(x) for x in center)
+        self._svg.add(self._svg.circle(center=cen, r=radius))
 
-    def bezier(self):
-        pass
+        return None
 
-    def text(self):
-        pass
+    def ellipse(self, center, size, color=Color.DEFAULT, width=1, filled=False,
+                alpha=-1):
+        """
+        Draw an ellipse given a location and a size.
+        :param center:
+        :param size:
+        :param color:
+        :param width:
+        :param filled:
+        :param alpha:
+        :return:
+        """
+        if filled:
+            width = 0
+
+        r = pg.Rect(center[0] - (size[0] / 2), center[1] - (size[1] / 2),
+                    size[0], size[1])
+        pg.draw.ellipse(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+                        r, width)
+
+        cen = tuple(int(x) for x in center)
+        sz = tuple(int(x) for x in size)
+        self._svg.add(self._svg.ellipse(center=cen, r=sz))
+
+        return None
+
+    def bezier(self, points, steps, color=Color.DEFAULT, alpha=-1):
+        """
+        Draw a bezier curve based on a control point and a number of steps
+        :param points:
+        :param steps:
+        :param color:
+        :param alpha:
+        :return:
+        """
+        gfxdraw.bezier(self._surface, points, steps, self._csv_rgb2_pygame_color(
+            color, alpha))
+
+        return None
+
+    def text_size(self, text):
+        """
+        Get text string height and width.
+        :param text:
+        :return:
+        """
+        text_surface = self._font.render(text, True, self._csv_rgb2_pygame_color(
+            Color.WHITE, 255
+        ))
+
+        return text_surface.get_width(), text_surface.get_height()
+
+    def text(self, text, location, color=Color.DEFAULT, alpha=-1):
+        """
+        Write a text string at a given location.
+        :param text:
+        :param location:
+        :param color:
+        :param alpha:
+        :return:
+        """
+        if len(text) < 0:
+            return None
+
+        text_surface = self._font.render(text, True, self._csv_rgb2_pygame_color(
+            color, alpha
+        ))
+
+        if alpha == -1:
+            alpha = self._default_alpha
+        # this is going to be slow, dumb no active support.
+        # get access to the alpha band of the image.
+        pixels_alpha = pg.surfarray.pixels_alpha(text_surface)
+        # do a floating point multiply, by alpha 100, on each alpha value.
+        # the truncate the values (convert to integer) and copy back
+        # into the surface
+        pixels_alpha[...] = (pixels_alpha * (alpha / 255.0)).astype(npy.uint8)
+        # unlock the surface
+        del pixels_alpha
+        self._surface.blit(text_surface, location)
+
+        # adjust for web
+        font_style = 'font-size: {}px;'.format(self._font_size - 7)
+
+        if self._font_bold:
+            font_style += 'font-weight: bold;'
+        if self._font_italic:
+            font_style += 'font-style: italic;'
+        if self._font_underline:
+            font_style += 'text-decoration: underline;'
+        if self._font_name:
+            font_style += 'text-family: \"{}\";'.format(self._font_name)
+
+        altered_location = (location[0], location[1] + self.text_size(text)[1])
+        alt = tuple(int(x) for x in altered_location)
+        self._svg.add(self._svg.text(text, insert=alt, style=font_style))
+
+    def ez_view_text(self, text, location, fgc=Color.WHITE, bgc=Color.BLACK):
+        """
+        :param text:
+        :param location:
+        :param fgc:
+        :param bgc:
+        :return:
+        """
+        if len(text) < 0:
+            return None
+
+        alpha = 255
+        text_surface = self._font.render(text, True, self._csv_rgb2_pygame_color(
+            fgc, alpha), self._csv_rgb2_pygame_color(bgc, alpha))
+        self._surface.blit(text_surface, location)
+        return None
+
+    def sprite(self, img, pos=(0, 0), scale=1.0, rot=0.0, alpha=255):
+        """
+        sprite draws a sprite (a second small image) onto the current layer.
+        The sprite can be loaded directly from a supported image file like a
+        gif, jpg, bmp, or png, or loaded as a surface or SCV image.
+
+        :param img:
+        :param pos:
+        :param scale:
+        :param rot:
+        :param alpha:
+        :return:
+        """
+        if not pg.display.get_init():
+            pg.display.init()
+
+        if isinstance(img, str):
+            image = pg.image.load(img, "RGB")
+        elif isinstance(img, Image):
+            image = img.get_surface()
+        else:
+            image = img  # we assume we have a surface
+
+        image = image.convert(self._surface)
+
+        if rot != 0.00:
+            image = pg.transform.rotate(image, rot)
+
+        if scale != 1.0:
+            image = pg.transform.scale(image, (int(image.get_width() * scale),
+                                               int(image.get_height() * scale)))
+        pixels_alpha = pg.surfarray.pixels_alpha(image)
+        pixels_alpha[...] = (pixels_alpha * (alpha / 255.0)).astype(npy.uint8)
+        del pixels_alpha
+
+        self._surface.blit(image, pos)
+
+    def blit(self, img, pos=(0, 0)):
+        """
+        Blit one image onto the drawing layer at upper left position
+        :param img:
+        :param pos:
+        :return:
+        """
+        self._surface.blit(img.get_surface(), pos)
+
+    def replace_overlay(self, overlay):
+        """
+        Allow user to set the surface manully.
+        :param overlay:
+        :return:
+        """
+        self._surface = overlay
+        return None
+
+    def clear(self):
+        """
+        Remove all of the drawing on this layer.
+        :return:
+        """
+        self._surface = pg.Surface((int(self.width), int(self.height)),
+                                   flags=pg.SRCALPHA)
+        return None
+
+    def render_to_surface(self, surface):
+        """
+        Blit this layer to another surface.
+        :param surface:
+        :return: pygame.Surface
+        """
+        surface.blit(self._surface, (0, 0))
+        return surface
+
+    def render_to_layer(self, other):
+        """
+        Add this layer to another layer.
+        :param other:
+        :return:
+        """
+        other._surface.blit(self._surface, (0, 0))
