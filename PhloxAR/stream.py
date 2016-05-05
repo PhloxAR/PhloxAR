@@ -10,6 +10,7 @@ from PhloxAR.base import socket
 from PhloxAR.base import re
 from PhloxAR.base import warnings
 from PhloxAR.base import threading
+from PhloxAR.base import cv
 
 
 _jpeg_streamers = {}
@@ -153,3 +154,109 @@ class JpegStreamer(object):
         :return: url
         """
         return self.url() + 'stream'
+
+
+class VideoStream(object):
+    """
+    Allow user save video files in different formats.
+
+    You can initialize it by specifying the file you want to output::
+        vs = VideoStream("hello.avi")
+
+    You can also specify a framerate, and if you want to "fill" in
+    missed frames. So if you want to record a realtime video you may
+    want to do this::
+        # note these are default values
+        vs = VideoStream("myvideo.avi", 25, True)
+
+    Where if you want to do a stop-motion animation, you would want to
+     turn fill off::
+        vs_animation = VideoStream("cartoon.avi", 15, False)
+
+    If you select a fill, the VideoStream will do its best to stay
+    close to "real time" by duplicating frames or dropping frames
+    when the clock doesn't sync up with the file writes.
+
+    You can save a frame to the video by using the Image.save() function::
+        my_camera.getImage().save(vs)
+    """
+    fps = 25
+    filename = ''
+    writer = ''
+    fourcc = ''
+    frame_fill = True
+    video_time = 0.0
+    start_time = 0.0
+    frame_count = 0
+
+    def __init__(self, filename, fps=25, frame_fill=True):
+        """
+        TODO: details
+        :param filename:
+        :param fps:
+        :param frame_fill:
+        """
+        rev_ext, rev_name = filename[::-1].split('.')
+        self.filename = filename
+        self.fps = fps
+        self.frame_fill = frame_fill
+        self.fourcc = cv.CV_FOURCC('I', 'Y', 'U', 'V')
+
+    def init_writer(self, size):
+        """
+        TODO: details
+        :param size:
+        :return:
+        """
+        self.writer = cv.CreateVideoWriter(self.filename, self.fourcc, self.fps,
+                                           size, 1)
+        self.video_time = 0.0
+        self.start_time = time.time()
+
+    def write_frame(self, img):
+        """
+        Write a frame to the display object. this is automatically called
+        by image.save() but you can use this function to save just the
+        bitmap as well so image markup is not implicit,typically you use
+        image.save() but this allows for more finer control
+        :param img:
+        :return: None
+        """
+        if not self.writer:
+            self.init_writer(img.size())
+            self.last_frame = img
+
+        frame_time = 1.0 / float(self.fps)
+        target_time = self.start_time + frame_time * self.frame_count
+        real_time = time.time()
+
+        if self.frame_fill:
+            # see if we need to do anything to adjust to real time
+            if target_time > real_time + frame_time:
+                # if we're more than one frame ahead,
+                # save the last_frame, but don't write to video out
+                self.last_frame = img
+                return
+            elif target_time < real_time - frame_time:
+                # we're at least one frame behind
+                frames_behind = int((real_time - target_time) * self.fps) + 1
+                # figure out how many frames behind we are
+
+                last_frames = frames_behind / 2
+                for i in range(0, last_frames):
+                    self.frame_count += 1
+                    cv.WriteFrame(self.writer, self.last_frame.get_bitmap())
+
+                frames = frames_behind - last_frames
+
+                for i in range(0, frames):
+                    self.frame_count += 1
+                    cv.WriteFrame(self.writer, img.get_bitmap())
+            else:
+                self.frame_count += 1
+                cv.WriteFrame(self.writer, img.get_bitmap())
+        else:
+            self.frame_count += 1
+            cv.WriteFrame(self.writer, img.get_bitmap())
+
+        self.last_frame = img
