@@ -7,6 +7,9 @@ from PhloxAR.base import SocketServer
 from PhloxAR.base import SimpleHTTPRequestHandler
 from PhloxAR.base import time
 from PhloxAR.base import socket
+from PhloxAR.base import re
+from PhloxAR.base import warnings
+from PhloxAR.base import threading
 
 
 _jpeg_streamers = {}
@@ -51,15 +54,15 @@ class JpegStreamHandler(SimpleHTTPRequestHandler):
             self.send_header('Pragma', 'no-cache')
             self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=--BOUNDARYSTRING')
             self.end_headers()
-            (host, port) = self.server.socket.getsockname()[:2]
+            host, port = self.server.socket.getsockname()[:2]
 
             count = 0
             timeout = 0.75
             last_time_served = 0
 
             while True:
-                if (_jpeg_streamers[port].refreshtime > last_time_served or
-                    time.time() - timeout > last_time_served):
+                if (_jpeg_streamers[port].refreshtime > last_time_served
+                    or time.time() - timeout > last_time_served):
                     try:
                         self.wfile.write('--BOUNDARYSTRING\r\n')
                         self.send_header('Content-type', 'image/jpeg')
@@ -82,7 +85,71 @@ class JpegTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     daemon_threads =  True
 
 # factory class for jpeg tcp server.
-class JpegStreamer():
+class JpegStreamer(object):
     """
+    Allow user to stream a jpeg encoded file to a HTTP port. Any
+    updates to the jpeg file will automatically be pushed to the
+    browser via multipart/replace content type.
+    initialization:
+    js = JpegStreamer()
 
+    update:
+    img.save(js)
+
+    open a browser and display:
+    import webbrowser
+    webbrowser.open(js.url)
+
+    Note 3 optional parameters on the constructor:
+    - port (default 8080) which sets the TCP port you need to connect to
+    - sleep time (default 0.1) how often to update.  Above 1 second seems
+      to cause dropped connections in Google chrome Once initialized,
+      the buffer and sleeptime can be modified and will function
+      properly -- port will not.
     """
+    server = ''
+    host = ''
+    port = ''
+    sleep_time = ''
+    frame_buffer = ''
+    counter = 0
+    refresh_time = 0
+
+    def __init__(self, host_port=8080, sleeptime=0.1):
+        global _jpeg_streamers
+
+        if isinstance(host_port, int):
+            self.port = host_port
+            self.host = 'localhost'
+        elif isinstance(host_port, str) and re.search(':', host_port):
+            self.host, self.port = host_port.split(':')
+            self.port = int(self.port)
+        elif isinstance(host_port, tuple):
+            self.host, self.port = host_port
+        else:
+            self.port = 8080
+            self.host = 'localhost'
+
+        self.sleep_time = sleeptime
+        self.server = JpegTCPServer((self.host, self.host), JpegStreamHandler)
+        self.server_thread = threading.Thread(target=self.server.serve_forever)
+        _jpeg_streamers[self.port] = self
+        self.server_thread.daemon = True
+        self.server_thread.start()
+        self.frame_buffer = self
+
+    def url(self):
+        """
+        Returns the JpegStreams Webbrowser-appropriate URL, if not provided
+        in the constructor, it defaults to "http://localhost:8080"
+        :return: url
+        """
+        return 'http://' + self.host + ':' + str(self.port) + '/'
+
+    def stream_url(self):
+        """
+        Returns the URL of the MJPEG stream. If host and port are not set in
+         the constructor, defaults to "http://localhost:8080/stream/"
+        :return: url
+        """
+        return self.url() + 'stream'
