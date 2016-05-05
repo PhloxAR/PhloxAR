@@ -24,7 +24,51 @@ _index = []
 
 
 class FrameSource(object):
-    pass
+    """
+    An abstract Camera-type class, for handling multiple types of video
+    input. Any sources of image inherit from it.
+    """
+    _cali_mat = ''  # intrinsic calibration matrix
+    _dist_coeff = ''  # distortion matrix
+    _thread_cap_time = ''  # the time the last picture was taken
+    capture_time = ''  # timestamp of the last aquired image
+
+    def __init__(self):
+        return
+
+    def get_property(self, p):
+        return None
+
+    def get_all_properties(self):
+        return {}
+
+    def get_image(self):
+        return None
+
+    def calibrate(self, image_list, grid_size=0.03, dimensions=(8, 5)):
+        pass
+
+    def get_camera_matrix(self):
+        """
+        Return a cvMat of the camera's intrinsic matrix.
+        """
+        return self._cali_mat
+
+    def undistort(self, image_or_2darray):
+        pass
+
+    def get_image_undisort(self):
+        return self.undistort(self.get_image())
+
+    def save_calibration(self, filename):
+        pass
+
+    def load_calibration(self, filename):
+        pass
+
+    def live(self):
+        pass
+
 
 
 class Camera(FrameSource):
