@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_camera.py
+# phlox-libdc1394/dc1394/_camera.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -24,7 +24,15 @@
 from __future__ import unicode_literals
 from ctypes import c_int, c_uint16, c_uint32, c_uint64, c_char_p
 from ctypes import POINTER, Structure
-from phlox1394._types import VIDEO_MODE_FORMAT7_NUM, bool_t
+from ._types import VIDEO_MODE_FORMAT7_NUM, bool_t
+
+__all__ = [
+    'iidc_version', 'iidc_version_t', 'IIDC_VERSION_MAX', 'IIDC_VERSION_MIN',
+    'IIDC_VERSION_NUM', 'power_classes', 'power_class_t', 'POWER_CLASS_MAX',
+    'POWER_CLASS_MIN', 'POWER_CLASS_NUM', 'phy_delays', 'phy_delay_t',
+    'PHY_DELAY_MAX', 'PHY_DELAY_MIN', 'PHY_DELAY_NUM', 'camera_id_t',
+    'camera_list_t', 'camera_t'
+]
 
 # List of IIDC versions.
 # Currently, the following versions exist: 1.04, 1.20, PTGREY, 1.30 and 1.31
@@ -100,7 +108,7 @@ class camera_t(Structure):
         ('PIO_control_csr', c_uint64),
         ('SIO_control_csr', c_uint64),
         ('strobe_control_csr', c_uint64),
-        ('fromat7_csr', (c_uint64) * VIDEO_MODE_FORMAT7_NUM),
+        ('format7_csr', c_uint64 * VIDEO_MODE_FORMAT7_NUM),
         ('iidc_version', iidc_version_t),
         ('vendor', c_char_p),
         ('model', c_char_p),
@@ -117,7 +125,7 @@ class camera_t(Structure):
     ]
 
 
-# A unique idnetifier for a functional camera unit.
+# A unique identifier for a functional camera unit.
 # Since a single camera can contain several functional units (think stereo
 # cameras), the GUID is not enough to identify an IIDC camera.
 class camera_id_t(Structure):

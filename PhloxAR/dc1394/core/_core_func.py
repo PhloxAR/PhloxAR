@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_core.py
+# phlox-libdc1394/dc1394/core/_core.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -29,14 +29,18 @@ from __future__ import division, print_function, unicode_literals
 from ctypes import *
 from ctypes.util import find_library
 from ctypes import POINTER as PTR
-from phlox1394._camera import *
-from phlox1394._capture import *
-from phlox1394._convesions import *
-from phlox1394._control import *
-from phlox1394._format7 import *
-from phlox1394._log import *
-from phlox1394._types import *
-from phlox1394._video import *
+from ._camera import *
+from ._capture import *
+from ._conversions import *
+from ._control import *
+from ._format7 import *
+from ._log import *
+from ._types import *
+from ._video import *
+
+__all__ = [
+    'dll'
+]
 
 # REMINDER:
 #  By default the ctypes API does not know or care about how a dll function
@@ -54,7 +58,7 @@ except Exception as e:
 # Global Error checking functions
 def _errcheck(rtype, func, arg):
     """
-    This function checks for the errortypes declared by the error_t.
+    This function checks for the error types declared by the error_t.
     Use it for functions with restype = error_t to receive correct error
     messages from the library.
     """
@@ -65,7 +69,7 @@ def _errcheck(rtype, func, arg):
 
 # ------------------------ Startup functions: camera.h ------------------------
 #   Creates a new context in which cameras can be searched and used. This
-#   should be called before using any other libdc1394 funcions.
+#   should be called before using any other libdc1394 functions.
 _dll.dc1394_new.argtypes = None
 _dll.dc1394_new.restype = c_void_p
 
@@ -265,7 +269,7 @@ _dll.dc1394_feature_set_absolute_value.errcheck = _errcheck
 # The status of absolute control of a feature(ON/OFF): get/set
 _dll.dc1394_feature_get_absolute_control.argtypes = [PTR(camera_t), feature_t, PTR(switch_t)]
 _dll.dc1394_feature_get_absolute_control.restype = error_t
-_dll.dc1394_feature_get_absolute_control.errcheck = _errcheckp
+_dll.dc1394_feature_get_absolute_control.errcheck = _errcheck
 
 _dll.dc1394_feature_set_absolute_control.argtypes = [PTR(camera_t), feature_t, switch_t]
 _dll.dc1394_feature_set_absolute_control.restype = error_t
@@ -529,9 +533,10 @@ _dll.dc1394_capture_enqueue.errcheck = _errcheck
 _dll.dc1394_capture_is_frame_corrupt.argtypes = [PTR(camera_t), PTR(video_frame_t)]
 _dll.dc1394_capture_is_frame_corrupt.restype = bool_t
 
+# TODO: capture_callback_t
 # Set a callback if supported by the platform (OS X only for now).
-_dll.dc1394_capture_set_callback.argtypes = [PTR(camer_t), capture_callback_t, c_void_p]
-_dll.dc1394_capture_set_callback.restype = c_void
+# _dll.dc1394_capture_set_callback.argtypes = [PTR(camera_t), capture_callback_t, c_void_p]
+# _dll.dc1394_capture_set_callback.restype = c_void
 
 
 # ----------------------- Conversion functions: conversions.h -----------------
@@ -772,7 +777,7 @@ _dll.dc1394_format7_get_color_filter.errcheck = _errcheck
 # Get the parameters of the packet size: its maximal size and its unit size.
 # The packet size is always a multiple of the unit bytes and cannot be zero.
 # parameters: *camera, video_mode, *unit_bytes, *max_bytes
-_dll.dc1394_format7_get_packet_parameters.argtypes = [PTR(camera_t), video_mode_t, PTR(c_uint32), PNTR(c_uint32)]
+_dll.dc1394_format7_get_packet_parameters.argtypes = [PTR(camera_t), video_mode_t, PTR(c_uint32), PTR(c_uint32)]
 _dll.dc1394_format7_get_packet_parameters.restype = error_t
 _dll.dc1394_format7_get_packet_parameters.errcheck = _errcheck
 
@@ -814,8 +819,7 @@ _dll.dc1394_format7_get_frame_interval.errcheck = _errcheck
 # Gets the number of pixels per image frame
 # parameters: &camera, video_mode, &pixnum
 _dll.dc1394_format7_get_pixel_number.restype = error_t
-_dll.dc1394_format7_get_pixel_number.argtypes = [ POINTER(camera_t), video_mode_t,\
-                                            POINTER( c_uint32 ) ]
+_dll.dc1394_format7_get_pixel_number.argtypes = [PTR(camera_t), video_mode_t, PTR(c_uint32)]
 _dll.dc1394_format7_get_pixel_number.errcheck = _errcheck
 
 # Get the total number of bytes per frame. This includes padding
@@ -832,7 +836,7 @@ _dll.dc1394_format7_get_modeset.restype = error_t
 _dll.dc1394_format7_get_modeset.errcheck = _errcheck
 
 # Gets the properties of a Format_7 mode
-_dll.dc1394_format7_get_mode_info.argtypes = [PTR(camera_t), video_mode_t,PTR(format7mode_t)]
+_dll.dc1394_format7_get_mode_info.argtypes = [PTR(camera_t), video_mode_t, PTR(format7mode_t)]
 _dll.dc1394_format7_get_mode_info.restype = error_t
 _dll.dc1394_format7_get_mode_info.errcheck = _errcheck
 
@@ -1022,7 +1026,7 @@ _dll.dc1394_log_register_handler.errcheck = _errcheck
 
 # dc1394_log_set_default_handler: set the log handler to the default handler
 # At boot time, debug logging is OFF (handler is NULL). Using this function
-# for the debug statements will start logging of debug statements usng the
+# for the debug statements will start logging of debug statements using the
 # default handler.
 _dll.dc1394_log_set_default_handler.argtypes = [log_t]
 _dll.dc1394_log_set_default_handler.restype = error_t
@@ -1051,3 +1055,5 @@ _dll.dc1394_log_warning.argtypes = [c_char_p]
 # DC1394_DEBUG has been set before the program starts.
 _dll.dc1394_log_debug.restype = None
 _dll.dc1394_log_debug.argtypes = [c_char_p]
+
+dll = _dll

@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_types.py
+# phlox-libdc1394/dc1394/core/_types.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -28,6 +28,16 @@ A few type definitions.
 from __future__ import unicode_literals
 from ctypes import c_int, c_uint32, Structure
 
+__all__ = [
+    'video_modes', 'video_mode_t', 'video_modes_t', 'video_modes_detailed',
+    'VIDEO_MODE_MAX', 'VIDEO_MODE_MIN', 'VIDEO_MODE_NUM', 'VIDEO_MODE_FORMAT7_MAX'
+    'VIDEO_MODE_FORMAT7_MIN', 'VIDEO_MODE_FORMAT7_NUM', 'color_coding_t',
+    'color_codings', 'COLOR_CODING_MAX', 'COLOR_CODING_MIN', 'COLOR_CODING_NUM',
+    'color_filter_t', 'color_filters', 'COLOR_FILTER_MAX', 'COLOR_FILTER_MIN',
+    'COLOR_FILTER_NUM', 'byte_order_t', 'byte_orders', 'BYTE_ORDER_MAX',
+    'BYTE_ORDER_MIN', 'BYTE_ORDER_NUM', 'color_codings_t', 'video_modes_t',
+    'bool_t', 'switch_t'
+]
 
 # --------------------------------- enums ------------------------------------
 # def enum(seq, start=0):

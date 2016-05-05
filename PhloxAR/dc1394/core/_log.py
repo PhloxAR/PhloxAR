@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_log.py
+# phlox-libdc1394/dc1394/core/_log.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -25,8 +25,15 @@
 Functions to log errors, warning and debug messages.
 """
 
+from __future__ import unicode_literals
 from ctypes import c_int
-from phlox1394._types import invert
+from ._types import invert
+
+__all__ = [
+    'QUERY_FROM_CAMERA', 'USE_MAX_AVAIL', 'USE_RECOMMANDED', 'format7mode_t',
+    'format7modeset_t', 'error_t', 'errors', 'err_val', 'log_t', 'logs',
+    'ERROR_NUM', 'ERROR_MIN', 'ERROR_MAX', 'LOG_NUM', 'LOG_MAX', 'LOG_MIN'
+]
 
 # Error codes.
 # General rule: 0 is success, negative denotes a problem.

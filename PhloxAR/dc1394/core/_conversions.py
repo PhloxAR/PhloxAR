@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_coversions.py
+# phlox-libdc1394/dc1394/core/_conversions.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -27,6 +27,12 @@ Functions to convert video formats.
 
 from __future__ import unicode_literals
 from ctypes import c_int
+
+__all__ = [
+    'bayer_method_t', 'bayer_methods', 'stereo_method_t', 'stereo_methods',
+    'BAYER_METHOD_MAX', 'BAYER_METHOD_MIN', 'BAYER_METHOD_NUM',
+    'STEREO_METHOD_MAX', 'STEREO_METHOD_MIN', 'STEREO_METHOD_NUM'
+]
 
 # A list of de-mosaicing techniques for Bayer-patterns.
 # The speed of the techniques can vary greatly, as well as their quality.

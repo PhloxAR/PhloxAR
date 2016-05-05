@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_capture.py
+# phlox-libdc1394/dc1394/core/_capture.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -21,7 +21,14 @@
 # License along with phlox-libdc1394. If not,
 # see <http://www.gnu.org/licenses/>.
 # -----------------------------------------------------------------------------
+from __future__ import unicode_literals
 from ctypes import c_int
+
+__all__ = [
+    'capture_policies', 'capture_policy_t', 'capture_flags', 'CAPTURE_POLICY_MAX',
+    'CAPTURE_POLICY_MIN', 'CAPTURE_POLICY_NUM'
+]
+
 
 # The capture policy.
 # Can be blocking (wait for a frame forever) or polling (returns if no frames

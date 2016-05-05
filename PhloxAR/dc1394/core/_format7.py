@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_format7.py
+# phlox-libdc1394/dc1394/core/_format7.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -27,14 +27,17 @@ Functions to control Format_7 (aka scalable format, ROI)
 
 from __future__ import unicode_literals
 from ctypes import c_uint32, c_uint64, Structure
-from phlox1394._types import bool_t, color_coding_t, color_codings_t, color_filter_t
-from phlox1394._types import VIDEO_MODE_FORMAT7_NUM
+from ._types import bool_t, color_coding_t, color_codings_t, color_filter_t
+from ._types import VIDEO_MODE_FORMAT7_NUM
 
+__all__ = [
+    'QUERY_FROM_CAMERA', 'USE_MAX_AVAIL', 'USE_RECOMMANDED', 'format7mode_t',
+    'format7modeset_t'
+]
 
 QUERY_FROM_CAMERA = -1
 USE_MAX_AVAIL = -2
 USE_RECOMMANDED = -3
-
 
 # A struct containing information about a mode of format_7,
 # the scalable image format.

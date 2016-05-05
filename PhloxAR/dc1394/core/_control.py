@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phlox1394/_control.py
+# phlox-libdc1394/dc1394/core/_control.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -27,7 +27,19 @@ Libdc1394-control.h wrapper.
 
 from __future__ import unicode_literals
 from ctypes import c_int, c_uint32, c_float, Structure
-from phlox1394._types import bool_t, switch_t
+from ._types import bool_t, switch_t
+
+
+__all__ = [
+    'feature_info_t', 'feature_mode_t', 'feature_modes_t', 'feature_t',
+    'featureset_t', 'feature_modes', 'features', 'FEATURE_MAX', 'FEATURE_MIN',
+    'FEATURE_NUM', 'FEATURE_MODE_MAX', 'FEATURE_MODE_MIN', 'FEATURE_MODE_NUM',
+    'trigger_mode_t', 'trigger_modes_t', 'trigger_polarity_t', 'trigger_source_t',
+    'trigger_sources_t', 'trigger_polarity_t', 'trigger_modes', 'trigger_sources',
+    'TRIGGER_ACTIVE_MAX', 'TRIGGER_ACTIVE_MIN', 'TRIGGER_ACTIVE_NUM',
+    'TRIGGER_MODE_MAX', 'TRIGGER_MODE_MIN', 'TRIGGER_MODE_NUM',
+    'TRIGGER_SOURCE_MAX', 'TRIGGER_SOURCE_MIN', 'TRIGGER_SOURCE_NUM'
+]
 
 # Enumeration of trigger modes.
 trigger_modes = {
@@ -149,7 +161,7 @@ class trigger_sources_t(Structure):
 class feature_info_t(Structure):
     _fields_ = [
         ('id', feature_t),
-        ('abailable', bool_t),
+        ('available', bool_t),
         ('readout_capable', bool_t),
         ('on_off_capable', bool_t),
         ('polarity_capable', bool_t),
