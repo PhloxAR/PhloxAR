@@ -291,8 +291,37 @@ class DrawingLayer(object):
 
             return None
 
-    def polygon(self):
-        pass
+    def polygon(self, points, color=Color.DEFAULT, width=1, filled=False,
+                aalias=True, alpha=-1):
+        """
+        Draw a polygon from a list of (x, y).
+        :param points:
+        :param color: the object's color as a simple CVColor object, if no
+                       is specified the default is used
+        :param width: line width
+        :param filled: the rectangle is to be filled or not
+        :param alpha: the alpha blending for the object. If this value is -1
+                       then the layer default value is used. A value of 255 means
+                       opaque, while 0 means transparent.
+        :param aalias: draw the edges of the object anti-aliased. Note this
+                        does not work when the object is filled.
+        :return: None
+        """
+        # TODO: simplify
+        if filled:
+            width = 0
+
+        if not filled:
+            if aalias and width == 1:
+                pg.draw.aalines(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+                                True, points, width)
+            else:
+                pg.draw.lines(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+                              True, points, width)
+        else:
+            pg.draw.polygon(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+                            points, width)
+        return None
 
     def circle(self):
         pass
