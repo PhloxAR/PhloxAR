@@ -33,11 +33,12 @@ import copy
 # used for ENUMs
 class ColorSpace(object):
     UNKNOWN = 0
-    BGR = 1
-    GRAY = 2
+    RGB = 1
+    BGR = 2
+    GRAY = 3
     HLS = 4
     HSV = 5
-    RGB = 3
+    XYZ = 6
     YCrCb = 7
 
 
@@ -434,25 +435,208 @@ class Image(object):
         pass
 
     def to_rgb(self):
-        pass
+        """
+        Convert the image to RGB color space.
+        :return: image in RGB
+        """
+        img = self.zeros()
+
+        if self.is_bgr() or self._color_space == ColorSpace.UNKNOWN:
+            cv.CvtColor(self.bitmap, img, cv.CV_BGR2RGB)
+        elif self.is_hsv():
+            cv.CvtColor(self.bitmap, img, cv.CV_HSV2RGB)
+        elif self.is_hls():
+            cv.CvtColor(self.bitmap, img, cv.CV_HLS2RGB)
+        elif self.is_xyz():
+            cv.CvtColor(self.bitmap, img, cv.CV_XYZ2RGB)
+        elif self.is_ycrcb():
+            cv.CvtColor(self.bitmap, img, cv.CV_YCrCb2RGB)
+        elif self.is_rgb():
+            img = self.bitmap
+        else:
+            logger.warning("Image.to_rgb: conversion no supported.")
+
+        return Image(img, color_space=ColorSpace.RGB)
 
     def to_bgr(self):
-        pass
+        """
+        Convert the image to BGR color space.
+        :return: image in BGR
+        """
+        img = self.zeros()
+
+        if self.is_rgb() or self._color_space == ColorSpace.UNKNOWN:
+            cv.CvtColor(self.bitmap, img, cv.CV_RGB2BGR)
+        elif self.is_hsv():
+            cv.CvtColor(self.bitmap, img, cv.CV_HSV2BGR)
+        elif self.is_hls():
+            cv.CvtColor(self.bitmap, img, cv.CV_HLS2BGR)
+        elif self.is_xyz():
+            cv.CvtColor(self.bitmap, img, cv.CV_XYZ2BGR)
+        elif self.is_ycrcb():
+            cv.CvtColor(self.bitmap, img, cv.CV_YCrCb2BGR)
+        elif self.is_bgr():
+            img = self.bitmap
+        else:
+            logger.warning("Image.to_bgr: conversion no supported.")
+
+        return Image(img, color_space=ColorSpace.BGR)
 
     def to_hls(self):
-        pass
+        """
+            Convert the image to HLS color space.
+            :return: image in HLS
+            """
+        img = img_tmp = self.zeros()
+
+        if self.is_rgb() or self._color_space == ColorSpace.UNKNOWN:
+            cv.CvtColor(self.bitmap, img, cv.CV_RGB2HLS)
+        elif self.is_bgr():
+            cv.CvtColor(self.bitmap, img, cv.CV_BGR2HLS)
+        elif self.is_hsv():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HSV2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2HLS)
+        elif self.is_xyz():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_XYZ2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2HLS)
+        elif self.is_ycrcb():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_YCrCb2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2HLS)
+        elif self.is_hls():
+            img = self.bitmap
+        else:
+            logger.warning("Image.to_rgb: conversion no supported.")
+
+        return Image(img, color_space=ColorSpace.HLS)
 
     def to_hsv(self):
-        pass
+        """
+            Convert the image to HSV color space.
+            :return: image in HSV
+            """
+        img = img_tmp = self.zeros()
+
+        if self.is_rgb() or self._color_space == ColorSpace.UNKNOWN:
+            cv.CvtColor(self.bitmap, img, cv.CV_RGB2HSV)
+        elif self.is_bgr():
+            cv.CvtColor(self.bitmap, img, cv.CV_BGR2HSV)
+        elif self.is_hls():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HLS2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2HSV)
+        elif self.is_xyz():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_XYZ2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2HSV)
+        elif self.is_ycrcb():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_YCrCb2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2HSV)
+        elif self.is_hsv():
+            img = self.bitmap
+        else:
+            logger.warning("Image.to_rgb: conversion no supported.")
+
+        return Image(img, color_space=ColorSpace.HSV)
 
     def to_xyz(self):
-        pass
+        """
+            Convert the image to XYZ color space.
+            :return: image in XYZ
+            """
+        img = img_tmp = self.zeros()
+
+        if self.is_rgb() or self._color_space == ColorSpace.UNKNOWN:
+            cv.CvtColor(self.bitmap, img, cv.CV_RGB2XYZ)
+        elif self.is_bgr():
+            cv.CvtColor(self.bitmap, img, cv.CV_BGR2XYZ)
+        elif self.is_hsv():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HSV2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2XYZ)
+        elif self.is_hls():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HLS2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2XYZ)
+        elif self.is_ycrcb():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_YCrCb2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2XYZ)
+        elif self.is_xyz():
+            img = self.bitmap
+        else:
+            logger.warning("Image.to_rgb: conversion no supported.")
+
+        return Image(img, color_space=ColorSpace.XYZ)
 
     def to_gray(self):
-        pass
+        """
+        Convert the image to GRAY color space.
+        :return: image in GRAY
+        """
+        img = img_tmp = self.zeros(1)
+
+        if self.is_rgb() or self._color_space == ColorSpace.UNKNOWN:
+            cv.CvtColor(self.bitmap, img, cv.CV_RGB2GRAY)
+        elif self.is_bgr():
+            cv.CvtColor(self.bitmap, img, cv.CV_BGR2GRAY)
+        elif self.is_hls():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HLS2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2GRAY )
+        elif self.is_hsv():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HSV2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2GRAY)
+        elif self.is_xyz():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_XYZ2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2GRAY)
+        elif self.is_ycrcb():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_YCrCb2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2GRAY)
+        elif self.is_gray():
+            img = self.bitmap
+        else:
+            logger.warning("Image.to_rgb: conversion no supported.")
+
+        return Image(img, color_space=ColorSpace.GRAY)
 
     def to_ycrcb(self):
-        pass
+        """
+        Convert the image to RGB color space.
+        :return: image in RGB
+        """
+        img = img_tmp = self.zeros()
+
+        if self.is_rgb() or self._color_space == ColorSpace.UNKNOWN:
+            cv.CvtColor(self.bitmap, img, cv.CV_RGB2YCrCb)
+        elif self.is_bgr():
+            cv.CvtColor(self.bitmap, img, cv.CV_BGR2YCrCb)
+        elif self.is_hsv():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HSV2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2YCrCb)
+        elif self.is_xyz():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_XYZ2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2YCrCb)
+        elif self.is_hls():
+            cv.CvtColor(self.bitmap, img_tmp, cv.CV_HLS2RGB)
+            cv.CvtColor(img_tmp, img, cv.CV_RGB2YCrCb)
+        elif self.is_ycrcb():
+            img = self.bitmap
+        else:
+            logger.warning("Image.to_rgb: conversion no supported.")
+
+        return Image(img, color_space=ColorSpace.YCrCb)
+
+    def cvt_color(self, color_space=None):
+        if color_space == ColorSpace.RGB:
+            self.to_rgb()
+        elif color_space == ColorSpace.BGR:
+            self.to_bgr()
+        elif color_space == ColorSpace.GRAY:
+            self.to_gray()
+        elif color_space == ColorSpace.HLS:
+            self.to_hls()
+        elif color_space == ColorSpace.HSV:
+            self.to_hsv()
+        elif color_space == ColorSpace.XYZ:
+            self.to_xyz()
+        elif color_space == ColorSpace.YCrCb:
+            self.to_ycrcb()
+        else:
+            logger.warning("Image.cvt_color: conversion not supported.")
 
     def zeros(self, channels=3):
         """
