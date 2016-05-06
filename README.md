@@ -5,7 +5,7 @@ Rapid prototyping framework for Augmented Reality in Python.
 + Scipy
 + Numpy
 
-# PhloxAR-Kit
+# PhloxARKit
 ## requirements
 + PhloxAR
 + Kivy
