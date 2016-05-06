@@ -31,11 +31,6 @@ class Vector2(object):
         self._x = x
         self._y = y
 
-    def __copy__(self):
-        return self.__class__(self._x, self._y)
-
-    copy = __copy__
-
     def __repr__(self):
         return '<Vector2(%.2f, %.2f)>'% (self._x, self._y)
 
@@ -168,7 +163,9 @@ class Vector2(object):
     def __neg__(self):
         return Vector2(-self._x, -self._y)
 
-    __pos__ == __copy__
+    @property
+    def copy(self):
+        return self.__class__(self._x, self._y)
 
     @property
     def magnitude(self):
@@ -188,15 +185,15 @@ class Vector2(object):
         d = self.magnitude
         if d:
             return Vector2(self._x / d, self._y / d)
-        return self.copy()
+        return self.copy
 
     def dot(self, other):
         assert isinstance(other, Vector2)
         return self._x * other.x + self._y * other.y
 
     # to improve
-    def cross(self):
-        return Vector2(self._y, -self._x)
+    def cross(self, other):
+        return Vector3(0, 0, self._x * other.y - self._y * other.x)
 
     def reflect(self, normal):
         # assume normal is normalized
@@ -233,11 +230,6 @@ class Vector3(object):
         self._x = x
         self._y = y
         self._z = z
-
-    def __copy__(self):
-        return self.__class__(self._x, self._y, self._z)
-
-    copy = __copy__
 
     def __repr__(self):
         return '<Vector3 (%.2f, %.2f, %.2f)>' % (self._x, self._y, self._z)
@@ -389,7 +381,9 @@ class Vector3(object):
     def __neg__(self):
         return Vector3(-self._x, -self._y, -self._z)
 
-    __pos__ == __copy__
+    @property
+    def copy(self):
+        return self.__class__(self._x, self._y, self._z)
 
     @property
     def magnitude(self):
@@ -411,7 +405,7 @@ class Vector3(object):
         d = self.magnitude
         if d:
             Vector3(self._x / d, self._y / d, self._z / d)
-        return self.copy()
+        return self.copy
 
     def dot(self, other):
         assert isinstance(other, Vector3)
@@ -483,7 +477,65 @@ class Vector3(object):
 
 
 class Matrix3(object):
-    pass
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        pass
+
+    def __getattr__(self, key):
+        pass
+
+    def __setitem__(self, key, value):
+        pass
+
+    def __mul__(self, other):
+        pass
+
+    def __imul__(self, other):
+        pass
+
+    @property
+    def copy(self):
+        pass
+
+    @property
+    def identity(self):
+        pass
+
+    def scale(self, x, y):
+        pass
+
+    def translate(self, x, y):
+        pass
+
+    def rotate(self, angle):
+        pass
+
+    @classmethod
+    def new_identity(cls):
+        pass
+
+    @classmethod
+    def new_scale(cls):
+        pass
+
+    @classmethod
+    def new_translate(cls):
+        pass
+
+    @classmethod
+    def new_rotate(cls):
+        pass
+
+    @property
+    def determinant(self):
+        pass
+
+    @property
+    def inverse(self):
+        pass
+
 
 
 class Matrix4(object):
