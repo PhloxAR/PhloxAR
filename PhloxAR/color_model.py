@@ -43,7 +43,7 @@ class ColorModel(object):
         ret = ''
 
         if data.__class__.__name__ == 'Image':
-            ret = data.get_numpy().reshape(-1, 3)
+            ret = data.narray().reshape(-1, 3)
         elif data.__class__.__name__ == 'cvmat':
             ret = npy.array(data).reshape(-1, 3)
         elif data.__class__.__name__ == 'list':
@@ -109,7 +109,7 @@ class ColorModel(object):
             b = 0
 
         # bit shift down and reshape to Nx3
-        rs = npy.right_shift(image.get_numpy(), self._bits).reshape(-1, 3)
+        rs = npy.right_shift(image.narray(), self._bits).reshape(-1, 3)
         mapped = npy.array(map(self._data.has_key, map(npy.ndarray.tostring, rs)))
         thresh = npy.where(mapped, a, b)
 
