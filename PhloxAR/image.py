@@ -948,7 +948,24 @@ class Image(object):
         return self.size == (0, 0)
 
     def split(self, cols, rows):
-        pass
+        """
+        Break an image into a series of image chunks. Given number of cols
+        ans row, splits the image into a cols x rows 2D array.
+        :param cols: integer number of rows
+        :param rows: integer number of cols
+        :return: a list of Images
+        """
+        crops = []
+        w_ratio = self.width / cols
+        h_ratio = self.height / rows
+
+        for i in range(rows):
+            row = []
+            for j in range(cols):
+                row.append(self.crop(j * w_ratio, i * h_ratio, w_ratio, h_ratio))
+            crops.append(row)
+
+        return crops
 
     def split_channels(self, grayscale=True):
         pass
@@ -1001,7 +1018,17 @@ class Image(object):
         return hist.tolist()
 
     def hue_histogram(self, bins=179, dynamic_range=True):
-        pass
+        """
+        Returns the histogram of the hue channel for the image.
+        :param bins: integer number of bins in a histogram
+        :param dynamic_range:
+        :return:
+        """
+        if dynamic_range:
+            return npy.histogram(self.to_hsv().narray[:, :, 2], bins=bins)[0]
+        else:
+            return npy.histogram(self.to_hsv().narray[:, :, 2], bins=bins,
+                                 range=(0.0, 360.0))[0]
 
     def hue_peaks(self, bins=179):
         pass
@@ -1037,7 +1064,7 @@ class Image(object):
         pass
 
     def __invert__(self):
-        pass
+        return self.invert()
 
     def max(self, other):
         pass
