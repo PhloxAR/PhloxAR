@@ -931,10 +931,21 @@ class Image(object):
 
     @property
     def size(self):
-        pass
+        """
+        Returns a tuple of image's width and height
+        :return: tuple
+        """
+        if self.width and self.height:
+            return cv.GetSize(self.bitmap)
+        else:
+            return 0, 0
 
     def is_empty(self):
-        pass
+        """
+        Check if the image is empty.
+        :return: Bool
+        """
+        return self.size == (0, 0)
 
     def split(self, cols, rows):
         pass
@@ -976,8 +987,18 @@ class Image(object):
     def morph_gradient(self):
         pass
 
-    def histogram(self, numbins=50):
-        pass
+    def histogram(self, bins=50):
+        """
+        Return a numpy array of the 1D histogram of intensity for pixels in the
+        image.
+        :param bins: integer number of bins in a histogram
+        :return: a list of histogram bin values
+        """
+        gray = self._gray_bitmap_func()
+
+        hist, bin_edges = npy.histogram(npy.asarray(cv.GetMat(gray)), bins=bins)
+
+        return hist.tolist()
 
     def hue_histogram(self, bins=179, dynamic_range=True):
         pass
