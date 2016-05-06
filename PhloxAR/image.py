@@ -30,19 +30,7 @@ import scipy.linalg as linalg
 import copy
 
 
-#def enum(*seq):
-#    n = 0
-#    enums = {}
-#    if isinstance(seq, dict):
-#        enums = seq
-#    else:
-#        for elem in seq:
-#            enums[elem] = n
-#            n += 1
-#    return type('Enum', (), enums)
-
-#ColorSpace = enum('UNKNOWN', 'BGR', 'GRAY', 'RGB', 'HLS', 'HSV', 'XYZ', 'YCrCb')
-
+# used for ENUMs
 class ColorSpace(object):
     UNKNOWN = 0
     BGR = 1
@@ -83,18 +71,21 @@ class Image(object):
     # these are buffer frames for various operations on the image
     _bitmap = ''  # the bitmap (iplimage) representation of the image
     _matrix = ''  # the matrix (cvmat) representation
+    _pilimg = ''  # holds a PIL Image object in buffer
+    _surface = ''  # pygame surface representation of the image
+    _narray = ''  # numpy array representation of the image
+    _cv2narray = None  # Numpy array which compatible with OpenCV >= 2.3
+
     _gray_matrix = ''  # the gray scale (cvmat) representation
+    _gray_bitmap = ''  # the 8-bit gray scale bitmap
+    _gray_narray = ''  # gray scale numpy array for key point stuff
+    _gray_cv2narray = None  # grayscale numpy array for OpenCV >= 2.3
+
     _equalize_gray_bitmap = ''  # the normalized bitmap
     _blob_label = ''  # the label image for blobbing
     _edge_map = ''  # holding reference for edge map
     _canny_param = ''  # parameters that created _edge_map
-    _pilimage = ''  # holds a PIL object in buffer
-    _numpy = ''  # numpy form buffer
-    _gray_numpy = ''  # gray scale numpy for key point stuff
     _color_space = ColorSpace.UNKNOWN
-    _surface = ''
-    _cv2numpy = None  # numpy array for OpenCV >= 2.3
-    _cv2gray_numpy = None  # grayscale numpy array for OpenCV >= 2.3
     _grid_layer = [None, [0, 0]]
 
     # for DFT caching
@@ -118,7 +109,7 @@ class Image(object):
         '_edge_map': '',
         '_canny_param': (0, 0),
         '_pilimage': '',
-        '_numpy': '',
+        '_narray': '',
         '_gray_numpy': '',
         '_pygame_surface': '',
         '_cv2gray_numpy': '',
@@ -219,7 +210,7 @@ class Image(object):
         elif type(src) == npy.ndarray:  # handle a numpy array conversion
             if type(src[0, 0]) == npy.ndarray:  # a 3 channel array
                 src = src.astype(npy.uint8)
-                self._numpy = src
+                self._narray = src
                 # if the numpy array is not from cv2, then it must be transposed
                 if not cv2image:
                     inv_src = src[:, :, ::-1].transpose([1, 0, 2])
@@ -428,35 +419,172 @@ class Image(object):
     def to_ycrcb(self):
         pass
 
-    def get_empty(self, channels=3):
+    def zeros(self, channels=3):
+        """
+        Create a new empty OpenCV bitmap with the specified number of channels.
+        This method basically creates an empty copy of the image. This is handy for
+        interfacing with OpenCV functions directly.
+        :param channels: the number of channels in the returned OpenCV image.
+        :return: a black OpenCV IplImage that matches the width, height, and
+                  color depth of the source image.
+        """
+        bitmap = cv.CreateImage(self.size, cv.IPL_DEPTH_8U, channels)
+        cv.SetZero(bitmap)
+
+        return bitmap
+
+    @property
+    def bitmap(self):
+        """
+        Retrieve the bitmap (iplImage) of the Image. This is useful if you want
+        to use functions from OpenCV with PhloxAR's image class
+        :return: black OpenCV IPlImage from this image.
+        Example:
+        >>> img = Image('lena')
+        >>> raw_img = Image.bitmap
+        """
+        if self._bitmap:
+            return self._bitmap
+        elif self._matrix:
+            self._bitmap = cv.GetImage(self._matrix)
+
+        return self._bitmap
+
+    @property
+    def matrix(self):
+        """
+        Get the matrix (cvMat) version of the image, required for some
+        OpenCV algorithms.
+        :return: the OpenCV CvMat version of this image.
+        """
+        if self._matrix:
+            return self._matrix
+        else:
+            self._matrix = cv.GetMat(self._bitmap)
+            return self._matrix
+
+    @property
+    def gray_matrix(self):
+        """
+        Get the grayscale matrix (CvMat) version of the image, required for
+        some OpenCV algorithms.
+        :return: the OpenCV CvMat version of image.
+        """
+        if self._gray_matrix:
+            return self._gray_matrix
+        else:
+            self._gray_matrix = cv.GetMat(self._gray_bitmap())
+            return self._gray_matrix
+
+    @property
+    def float_matrix(self):
+        """
+        Converts the standard int bitmap to a floating point bitmap.
+        Handy for OpenCV function.
+        :return: the floating point OpenCV CvMat version of this image.
+        """
+        img = cv.CreateImage((self.width, self.height), cv.IPL_DEPTH_32F, 3)
+        cv.Convert(self.bitmap, img)
+
+        return img
+
+    @property
+    def pilimg(self):
+        """
+        Get PIL Image object for use with the Python Image Library.
+        Handy for PIL functions.
+        :return: PIL Image
+        """
+        if not PIL_ENABLED:
+            return None
+
+        if not self._pilimg:
+            pass
         pass
 
-    def get_bitmap(self):
-        pass
+    @property
+    def narray(self):
+        """
+        Get a Numpy array of the image in width x height x RGB dimensions
+        :return: the image, converted first to grayscale and then converted
+                  to a 3D Numpy array.
+        """
+        if self._narray != '':
+            return self._narray
 
-    def get_matrix(self):
-        pass
+        self._narray = npy.array(self.matrix)[:, :, ::-1].transpose([1, 0, 2])
 
-    def get_FP_matrix(self):
-        pass
+        return self._narray
 
-    def get_pilimage(self):
-        pass
+    @property
+    def gray_narray(self):
+        """
+        Return a grayscale numpy array of the image.
+        :return: the image, converted first to grayscale and the converted to
+                  a 2D numpy array.
+        """
+        if self._gray_narray != '':
+            return self._gray_narray
+        else:
+            self._gray_narray = uint8(npy.array(cv.GetMat(
+                    self._gray_bitmap()
+            )).transpose())
 
-    def get_gray_numpy(self):
-        pass
+    @property
+    def cv2narray(self):
+        """
+        Get a Numpy array of the image, compatible with OpenCV >= 2.3
+        :return: 3D Numpy array of the image.
+        """
+        if not isinstance(self._cv2narray, npy.ndarray):
+            self._cv2narray = npy.array(self.matrix)
 
-    def get_numpy(self):
-        pass
+        return self._cv2narray
 
-    def get_numpy_cv2(self):
-        pass
+    @property
+    def gray_cv2narray(self):
+        """
+        Get a grayscale Numpy array of the image, compatible with OpenCV >= 2.3
+        :return: the 3D Numpy array of the image.
+        """
+        if not isinstance(self._gray_cv2narray, npy.ndarray):
+            self._gray_cv2narray = npy.array(self.gray_matrix)
 
-    def get_gray_numpy_cv2(self):
-        pass
+        return self._gray_cv2narray
 
-    def _get_grayscale_bitmap(self):
-        pass
+    def _gray_bitmap(self):
+        """
+        Gray scaling the image.
+        :return: gray scaled image.
+        """
+        if self._gray_bitmap:
+            return self._gray_bitmap
+
+        self._gray_bitmap = self.zeros(1)
+        tmp = self.zeros(3)
+
+        if (self._color_space == ColorSpace.BGR or
+            self._color_space == ColorSpace.UNKNOWN):
+            cv.CvtColor(self.bitmap, self._gray_bitmap, cv.CV_BGR2GRAY)
+        elif self._color_space == ColorSpace.RGB:
+            cv.CvtColor(self.bitmap, self._gray_bitmap, cv.CV_RGB2GRAY)
+        elif self._color_space == ColorSpace.HLS:
+            cv.CvtColor(self.bitmap, tmp, cv.CV_HLS2RGB)
+            cv.CvtColor(tmp, self._gray_bitmap, cv.CV_RGB2GRAY)
+        elif self._color_space == ColorSpace.HSV:
+            cv.CvtColor(self.bitmap, tmp, cv.CV_HSV2RGB)
+            cv.CvtColor(tmp, self._gray_bitmap, cv.CV_RGB2GRAY)
+        elif self._color_space == ColorSpace.XYZ:
+            cv.CvtColor(self.bitmap, tmp, cv.CV_XYZ2RGB)
+            cv.CvtColor(tmp, self._gray_bitmap, cv.CV_RGB2GRAY)
+        elif self._color_space == ColorSpace.GRAY:
+            cv.Split(self.bitmap, self._gray_bitmap, self._gray_bitmap,
+                     self._gray_bitmap, None)
+        else:
+            logger.warning("Image._gray_bitmap: There is no supported conversion"
+                           "to gray colorspace.")
+
+        return self._gray_bitmap
 
     def get_grayscale_matrix(self):
         pass
@@ -555,6 +683,7 @@ class Image(object):
     def draw_line(self, pt1, pt2, color=(0, 0, 0), thickness=1):
         pass
 
+    @property
     def size(self):
         pass
 
