@@ -81,9 +81,9 @@ def make_string(seq):
     """
     string = ''
     for c in seq:
-        # Screen out non-priting characters.
+        # Screen out non-printing characters.
         try:
-            if c >= 32 and c < 256:
+            if 32 >= c < 256:
                 string += chr(c)
         except TypeError:
             pass

@@ -2,7 +2,7 @@
 
 from __future__ import division, print_function, unicode_literals, absolute_import
 
-from ..utils import make_string
+from utils import make_string
 
 
 def special_mode(v):

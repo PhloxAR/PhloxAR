@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from utils import s2n_motorola, s2n_intel, Ratio, get_logger
+from __future__ import unicode_literals
+from .utils import s2n_motorola, s2n_intel, Ratio, get_logger, make_string
 from tags import *
 import makernote
 
@@ -57,9 +58,9 @@ class ExifHeader(object):
     """
     Handle an EXIF header.
     """
-    def __init__(self, file, endian, offset, fake_exif, strict,
+    def __init__(self, filename, endian, offset, fake_exif, strict,
                  debug=False, detailed=True):
-        self._file = file
+        self._file = filename
         self._endian = endian
         self._offset = offset
         self._fake_exif = fake_exif
@@ -69,12 +70,12 @@ class ExifHeader(object):
 
     def s2n(self, offset, length, signed=0):
         """
-        Convert slice to integer, base on signe and endian flags.
+        Convert slice to integer, base on sign and endian flags.
 
         Usually this offset is assumed to be relative to the beginning of
         the start of the EXIF information.
         For some cameras that use relative tags, this offset may be
-        relative to some other strarting point.
+        relative to some other starting point.
         """
         self._file.seek(self._offset + offset)
         sliced = self._file.read(length)
@@ -87,7 +88,7 @@ class ExifHeader(object):
         if signed:
             msb = 1 << (8 * length - 1)
             if val & msb:
-                val -= (msv << 1)
+                val -= (msb << 1)
 
         return val
 
@@ -102,7 +103,7 @@ class ExifHeader(object):
             else:
                 s = chr(offset & 0xFF) + s
 
-            offset = offset >> 8
+            offset >>= 8
 
         return s
 
@@ -114,7 +115,7 @@ class ExifHeader(object):
 
     def _next_ifd(self, ifd):
         """
-        Returns the pointer to nect IFD.
+        Returns the pointer to next IFD.
         """
         entries = self.s2n(ifd, 2)
         next_ifd = self.s2n(ifd + 2 + 12 * entries, 4)
@@ -375,8 +376,7 @@ class ExifHeader(object):
             thumb_offset = self._tags.get('MakerNote JPEGThumbnail')
             if thumb_offset:
                 self._file.seek(self._offset + thumb_offset._values[0])
-                self._tags['JPEGThumbnail'] = self._file.read(thumb_offset.
-                                                              _field_length)
+                self._tags['JPEGThumbnail'] = self._file.read(thumb_offset._field_length)
 
     def decode_maker_note(self):
         """
@@ -462,9 +462,9 @@ class ExifHeader(object):
             return
 
         # Apple
-        if make == 'Apple' and \
-                note.values[0:10] == [65, 112, 112, 108, 101,
-                                      32, 105, 79, 83, 0]:
+        if (make == 'Apple' and note.values[0:10] == [
+            65, 112, 112, 108, 101, 32, 105, 79, 83, 0
+        ]):
             t = self._offset
             self._offset += note._field_offset+14
             self.dump_ifd(0, 'MakerNote',
