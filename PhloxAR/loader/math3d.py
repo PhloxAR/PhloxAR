@@ -738,7 +738,7 @@ class Point2(Vector2, Geometry):
     pass
 
 
-class Point3(object):
+class Point3(Vector3, Geometry):
     pass
 
 
