@@ -81,7 +81,8 @@ class Image(object):
     _gray_narray = ''  # gray scale numpy array for key point stuff
     _gray_cv2narray = None  # grayscale numpy array for OpenCV >= 2.3
 
-    _equalize_gray_bitmap = ''  # the normalized bitmap
+    _equalized_gray_bitmap = ''  # the normalized bitmap
+
     _blob_label = ''  # the label image for blobbing
     _edge_map = ''  # holding reference for edge map
     _canny_param = ''  # parameters that created _edge_map
@@ -374,28 +375,62 @@ class Image(object):
         start_time = time.time()
         pass
 
-    def get_color_space(self):
-        pass
+    @property
+    def color_space(self):
+        """
+        Returns Image's color space.
+        :return: integer corresponding to the color space.
+        """
+        return self._color_space
 
     def is_rgb(self):
-        pass
+        """
+        Returns true if the image uses the RGB color space.
+        :return: Bool
+        """
+        return self._color_space == ColorSpace.RGB
 
     def is_bgr(self):
-        pass
+        """
+        Returns true if the image uses the BGR color space.
+        :return: Bool
+        """
+        return self._color_space == ColorSpace.BGR
 
     def is_hsv(self):
-        pass
+        """
+        Returns true if the image uses the HSV color space.
+        :return: Bool
+        """
+        return self._color_space == ColorSpace.HSV
 
     def is_hls(self):
-        pass
+        """
+        Returns true if the image uses the HLS color space.
+        :return: Bool
+        """
+        return self._color_space == ColorSpace.HLS
 
     def is_xyz(self):
-        pass
+        """
+        Returns true if the image uses the XYZ color space.
+        :return: Bool
+        """
+        return self._color_space == ColorSpace.XYZ
 
     def is_gray(self):
-        pass
+        """
+        Returns true if the image uses the grayscale color space.
+        :return: Bool
+        """
+        return self._color_space == ColorSpace.GRAY
 
     def is_ycrcb(self):
+        """
+        Returns true if the image uses the YCrCb color space.
+        :return: Bool
+        """
+        return self._color_space == ColorSpace.YCrCb
         pass
 
     def to_rgb(self):
@@ -473,7 +508,7 @@ class Image(object):
         if self._gray_matrix:
             return self._gray_matrix
         else:
-            self._gray_matrix = cv.GetMat(self._gray_bitmap())
+            self._gray_matrix = cv.GetMat(self._gray_bitmap_func())
             return self._gray_matrix
 
     @property
@@ -527,7 +562,7 @@ class Image(object):
             return self._gray_narray
         else:
             self._gray_narray = uint8(npy.array(cv.GetMat(
-                    self._gray_bitmap()
+                    self._gray_bitmap_func()
             )).transpose())
 
     @property
@@ -552,7 +587,7 @@ class Image(object):
 
         return self._gray_cv2narray
 
-    def _gray_bitmap(self):
+    def _gray_bitmap_func(self):
         """
         Gray scaling the image.
         :return: gray scaled image.
@@ -586,20 +621,49 @@ class Image(object):
 
         return self._gray_bitmap
 
-    def get_grayscale_matrix(self):
-        pass
-
-    def _get_equalized_grayscale_bitmap(self):
-        pass
-
     def equalize(self):
-        pass
+        """
+        Perform histogram equalization on the image.
+        :return: return a grayscale Image
+        """
+        return Image(self._equalize_gray_bitmap())
 
-    def get_surface(self):
-        pass
+    def _equalize_gray_bitmap(self):
+        """
+        Perform histogram equalization on gray scale bitmap
+        :return: equalized gracyscale bitmap
+        """
+        if self._equalized_gray_bitmap:
+            return self._equalized_gray_bitmap
+
+        self._equalized_gray_bitmap = self.zeros(1)
+        cv.EqualizeHist(self._gray_bitmap_func(), self._equalized_gray_bitmap)
+
+        return self._equalized_gray_bitmap
+
+    @property
+    def surface(self):
+        """
+        Returns the image as a Pygame Surface. Used for rendering the display.
+        :return: a pygame Surface object used for rendering.
+        """
+        if self._surface:
+            return self._surface
+        else:
+            if self.is_gray():
+                self._surface = pg.image.fromstring(self.bitmap.tostring(),
+                                                    self.size, 'RGB')
+            else:
+                self._surface = pg.image.fromstring(self.to_rgb().bitmap.tostring(),
+                                                    self.size, 'RGB')
+            return self._surface
 
     def to_string(self):
-        pass
+        """
+        Returns the image as a string, useful for moving data around.
+        :return: the image, converted to rgb, the converted to a string.
+        """
+        return self.to_rgb().bitmap.tostring()
 
     def save(self, handle_or_name='', mode='', verbose=False, tmp=False,
              path=None, clean=False, **kwargs):
@@ -608,8 +672,6 @@ class Image(object):
     def copy(self):
         pass
 
-    def upload(self, dest, api_key=None, api_secret=None, verbose=True):
-        pass
 
     def scale(self, width, height=-1, interpolation=cv2.INTER_LINEAR):
         pass
