@@ -537,13 +537,197 @@ class Matrix3(object):
         pass
 
 
-
 class Matrix4(object):
-    pass
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        pass
+
+    def __getitem__(self, key):
+        pass
+
+    def __setitem__(self, key, value):
+        pass
+
+    def __mul__(self, other):
+        pass
+
+    def __imul__(self, other):
+        pass
+
+    @property
+    def copy(self):
+        pass
+
+    def transform(self, other):
+        pass
+
+    @property
+    def identity(self):
+        pass
+
+    def scale(self, x, y, z):
+        pass
+
+    def translate(self, x, y, z):
+        pass
+
+    def rotate_x(self, angle):
+        pass
+
+    def rotate_y(self, angle):
+        pass
+
+    def rotate_z(self, angle):
+        pass
+
+    def rotate_axis(self, angle, axis):
+        pass
+
+    def rotate_euler(self, heading, attitude, bank):
+        pass
+
+    def rotate_triple_axis(self, x, y, z):
+        pass
+
+    def transpose(self):
+        pass
+
+    def transposed(self):
+        pass
+
+    @classmethod
+    def new(cls, *vals):
+        pass
+
+    @classmethod
+    def new_identiry(cls):
+        pass
+
+    @classmethod
+    def new_scale(cls, x, y, z):
+        pass
+
+    @classmethod
+    def new_translate(cls, x, y, z):
+        pass
+
+    @classmethod
+    def new_rotate_x(cls, angle):
+        pass
+
+    @classmethod
+    def new_rotate_y(cls, angle):
+        pass
+
+    @classmethod
+    def new_rotate_z(cls, angle):
+        pass
+
+    @classmethod
+    def new_rotate_axis(cls, angle, axis):
+        pass
+
+    @classmethod
+    def new_rotate_euler(cls, heading, attitude, bank):
+        pass
+
+    @classmethod
+    def new_rotate_triple_axis(cls, x, y, z):
+        pass
+
+    @classmethod
+    def new_look_at(cls, eye, at, up):
+        pass
+
+    @classmethod
+    def new_perspective(cls, fov_y, aspect, near, far):
+        pass
+
+    @property
+    def determinant(self):
+        pass
+
+    @property
+    def inverse(self):
+        pass
 
 
 class Quaternion(object):
-    pass
+    def __init__(self, w=1, x=0, y=0, z=0):
+        pass
+
+    def __repr__(self):
+        pass
+
+    def __mul__(self, other):
+        pass
+
+    def __imul__(self, other):
+        pass
+
+    @property
+    def copy(self):
+        pass
+
+    @property
+    def magnitude(self):
+        pass
+
+    @property
+    def identity(self):
+        pass
+
+    def rotate_axis(self, angle, axis):
+        pass
+
+    def rotate_euler(self, heading, attitude, bank):
+        pass
+
+    def rotate_matrix(self, mat):
+        pass
+
+    def conjugate(self):
+        pass
+
+    def normalize(self):
+        pass
+
+    def normalized(self):
+        pass
+
+    @property
+    def angel_axis(self):
+        pass
+
+    @property
+    def euler(self):
+        pass
+
+    @property
+    def matrix(self):
+        pass
+
+    @classmethod
+    def new_identity(cls):
+        pass
+
+    @classmethod
+    def new_rotate_axis(cls, angle, axis):
+        pass
+
+    @classmethod
+    def new_rotate_euler(cls, heading, attitude, bank):
+        pass
+
+    @classmethod
+    def new_rotate_matrix(cls, mat):
+        pass
+
+    @classmethod
+    def new_interpolate(cls, q1, q2, t):
+        pass
 
 
 class Geometry(object):
