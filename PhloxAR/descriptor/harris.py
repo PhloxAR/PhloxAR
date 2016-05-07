@@ -218,6 +218,6 @@ def plot_matches(img1, img2, loc1, loc2, match_scores, show_below=True):
 
     for i, m in enumerate(match_scores):
         if m > 0:
-            pylab.plot([loc1[i][1], loc2[m][1] + col1], [loc1[i][0], loc2[m][0]],
-                       'c')
+            pylab.plot([loc1[i][1], loc2[m][1] + col1],
+                       [loc1[i][0], loc2[m][0]], 'c')
     pylab.axis('off')
