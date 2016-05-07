@@ -2,3 +2,4 @@ SciPy
 Numpy
 PyGame
 Pyglet
+multipledispatch
