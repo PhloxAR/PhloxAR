@@ -2,4 +2,6 @@ SciPy
 Numpy
 PyGame
 Pyglet
+Matplotlib
+Pillow
 multipledispatch
