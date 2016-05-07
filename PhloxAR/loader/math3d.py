@@ -1159,79 +1159,322 @@ class Matrix4(object):
 
 
 class Quaternion(object):
+    # All methods and naming conventions based off
+    # http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions
+    # w is the real part, (x, y, z) are the imaginary parts
     def __init__(self, w=1, x=0, y=0, z=0):
-        pass
+        self.w = w
+        self.x = x
+        self.y = y
+        self.z = z
 
     def __repr__(self):
-        pass
+        return '<Quaternion(real=%.2f, imagine=<%.2f, %.2f, %.2f>)>' % \
+               (self.w, self.x, self.y, self.z)
 
     def __mul__(self, other):
-        pass
+        if isinstance(other, Quaternion):
+            ax = self.x
+            ay = self.y
+            az = self.z
+            aw = self.w
+            bx = other.x
+            by = other.y
+            bz = other.z
+            bw = other.w
+            q = Quaternion()
+            q.x = ax * bw + ay * bz - az * by + aw * bx
+            q.y = -ax * bz + ay * bw + az * bx + aw * by
+            q.z = ax * by - ay * bx + az * bw + aw * bz
+            q.w = -ax * bx - ay * by - az * bz + aw * bw
+            return q
+        elif isinstance(other, Vector3):
+            w = self.w
+            x = self.x
+            y = self.y
+            z = self.z
+            vx = other.x
+            vy = other.y
+            vz = other.z
+            ww = w * w
+            w2 = w * 2
+            wx2 = w2 * x
+            wy2 = w2 * y
+            wz2 = w2 * z
+            xx = x * x
+            x2 = x * 2
+            xy2 = x2 * y
+            xz2 = x2 * z
+            yy = y * y
+            yz2 = 2 * y * z
+            zz = z * z
+            return other.__class__(ww * vx + wy2 * vz - wz2 * vy +
+                                   xx * vx + xy2 * vy + xz2 * vz -
+                                   zz * vx - yy * vx,
+                                   xy2 * vx + yy * vy + yz2 * vz +
+                                   wz2 * vx - zz * vy + ww * vy -
+                                   wx2 * vz - xx * vy,
+                                   xz2 * vx + yz2 * vy +
+                                   zz * vz - wy2 * vx - yy * vz +
+                                   wx2 * vy - xx * vz + ww * vz)
+
+        else:
+            other = other.copy()
+            other._apply_transform(self)
+            return other
 
     def __imul__(self, other):
-        pass
+        ax = self.x
+        ay = self.y
+        az = self.z
+        aw = self.w
+        bx = other.x
+        by = other.y
+        bz = other.z
+        bw = other.w
+
+        self.x = ax * bw + ay * bz - az * by + aw * bx
+        self.y = -ax * bz + ay * bw + az * bx + aw * by
+        self.z = ax * by - ay * bx + az * bw + aw * bz
+        self.w = -ax * bx - ay * by - az * bz + aw * bw
+
+        return self
 
     @property
     def copy(self):
-        pass
+        q = Quaternion()
+        q.w = self.w
+        q.x = self.x
+        q.y = self.y
+        q.z = self.z
+        return q
 
     @property
     def magnitude(self):
-        pass
+        return math.sqrt(self.w ** 2 + self.x ** 2 + self.y ** 2 + self.z ** 2)
 
     @property
+    def magnitude_squared(self):
+        return self.w ** 2 + self.x ** 2 + self.y ** 2 + self.z ** 2
+
     def identity(self):
-        pass
+        self.w = 1
+        self.x = 0
+        self.y = 0
+        self.z = 0
+        return self
 
     def rotate_axis(self, angle, axis):
-        pass
+        self *= Quaternion.new_rotate_axis(angle, axis)
+        return self
 
     def rotate_euler(self, heading, attitude, bank):
-        pass
+        self *= Quaternion.new_rotate_euler(heading, attitude, bank)
+        return self
 
     def rotate_matrix(self, mat):
-        pass
+        self *= Quaternion.new_rotate_matrix(m)
+        return self
 
-    def conjugate(self):
-        pass
+    def conjugated(self):
+        q = Quaternion()
+        q.w = self.w
+        q.x = -self.x
+        q.y = -self.y
+        q.z = -self.z
+        return q
 
     def normalize(self):
-        pass
+        d = self.magnitude
+        if d != 0:
+            self.w /= d
+            self.x /= d
+            self.y /= d
+            self.z /= d
+        return self
 
     def normalized(self):
-        pass
+        d = self.magnitude
+        if d != 0:
+            Q = Quaternion()
+            Q.w = self.w / d
+            Q.x = self.x / d
+            Q.y = self.y / d
+            Q.z = self.z / d
+            return Q
+        else:
+            return self.copy
 
     @property
     def angel_axis(self):
-        pass
+        if self.w > 1:
+            self = self.normalized()
+        angle = 2 * math.acos(self.w)
+        s = math.sqrt(1 - self.w ** 2)
+        if s < 0.001:
+            return angle, Vector3(1, 0, 0)
+        else:
+            return angle, Vector3(self.x / s, self.y / s, self.z / s)
 
     @property
     def euler(self):
-        pass
+        t = self.x * self.y + self.z * self.w
+        if t > 0.4999:
+            heading = 2 * math.atan2(self.x, self.w)
+            attitude = math.pi / 2
+            bank = 0
+        elif t < -0.4999:
+            heading = -2 * math.atan2(self.x, self.w)
+            attitude = -math.pi / 2
+            bank = 0
+        else:
+            sqx = self.x ** 2
+            sqy = self.y ** 2
+            sqz = self.z ** 2
+            heading = math.atan2(2 * self.y * self.w - 2 * self.x * self.z,
+                                 1 - 2 * sqy - 2 * sqz)
+            attitude = math.asin(2 * t)
+            bank = math.atan2(2 * self.x * self.w - 2 * self.y * self.z,
+                              1 - 2 * sqx - 2 * sqz)
+        return heading, attitude, bank
 
     @property
     def matrix(self):
-        pass
+        xx = self.x ** 2
+        xy = self.x * self.y
+        xz = self.x * self.z
+        xw = self.x * self.w
+        yy = self.y ** 2
+        yz = self.y * self.z
+        yw = self.y * self.w
+        zz = self.z ** 2
+        zw = self.z * self.w
+        m = Matrix4()
+        m.a = 1 - 2 * (yy + zz)
+        m.b = 2 * (xy - zw)
+        m.c = 2 * (xz + yw)
+        m.e = 2 * (xy + zw)
+        m.f = 1 - 2 * (xx + zz)
+        m.g = 2 * (yz - xw)
+        m.i = 2 * (xz - yw)
+        m.j = 2 * (yz + xw)
+        m.k = 1 - 2 * (xx + yy)
+        return m
 
     @classmethod
     def new_identity(cls):
-        pass
+        return cls()
 
     @classmethod
     def new_rotate_axis(cls, angle, axis):
-        pass
+        assert (isinstance(axis, Vector3))
+        axis = axis.normalized()
+        s = math.sin(angle / 2)
+        q = cls()
+        q.w = math.cos(angle / 2)
+        q.x = axis.x * s
+        q.y = axis.y * s
+        q.z = axis.z * s
+        return q
 
     @classmethod
     def new_rotate_euler(cls, heading, attitude, bank):
-        pass
+        q = cls()
+        c1 = math.cos(heading / 2)
+        s1 = math.sin(heading / 2)
+        c2 = math.cos(attitude / 2)
+        s2 = math.sin(attitude / 2)
+        c3 = math.cos(bank / 2)
+        s3 = math.sin(bank / 2)
+
+        q.w = c1 * c2 * c3 - s1 * s2 * s3
+        q.x = s1 * s2 * c3 + c1 * c2 * s3
+        q.y = s1 * c2 * c3 + c1 * s2 * s3
+        q.z = c1 * s2 * c3 - s1 * c2 * s3
+        return q
 
     @classmethod
     def new_rotate_matrix(cls, mat):
-        pass
+        if mat[0 * 4 + 0] + mat[1 * 4 + 1] + mat[2 * 4 + 2] > 0.00000001:
+            t = mat[0 * 4 + 0] + mat[1 * 4 + 1] + mat[2 * 4 + 2] + 1.0
+            s = 0.5 / math.sqrt(t)
+
+            return cls(
+                    s * t,
+                    (mat[1 * 4 + 2] - mat[2 * 4 + 1]) * s,
+                    (mat[2 * 4 + 0] - mat[0 * 4 + 2]) * s,
+                    (mat[0 * 4 + 1] - mat[1 * 4 + 0]) * s
+            )
+
+        elif mat[0 * 4 + 0] > mat[1 * 4 + 1] and mat[0 * 4 + 0] > mat[2 * 4 + 2]:
+            t = mat[0 * 4 + 0] - mat[1 * 4 + 1] - mat[2 * 4 + 2] + 1.0
+            s = 0.5 / math.sqrt(t)
+
+            return cls(
+                    (mat[1 * 4 + 2] - mat[2 * 4 + 1]) * s,
+                    s * t,
+                    (mat[0 * 4 + 1] + mat[1 * 4 + 0]) * s,
+                    (mat[2 * 4 + 0] + mat[0 * 4 + 2]) * s
+            )
+
+        elif mat[1 * 4 + 1] > mat[2 * 4 + 2]:
+            t = -mat[0 * 4 + 0] + mat[1 * 4 + 1] - mat[2 * 4 + 2] + 1.0
+            s = 0.5 / math.sqrt(t)
+
+            return cls(
+                    (mat[2 * 4 + 0] - mat[0 * 4 + 2]) * s,
+                    (mat[0 * 4 + 1] + mat[1 * 4 + 0]) * s,
+                    s * t,
+                    (mat[1 * 4 + 2] + mat[2 * 4 + 1]) * s
+            )
+
+        else:
+            t = -mat[0 * 4 + 0] - mat[1 * 4 + 1] + mat[2 * 4 + 2] + 1.0
+            s = 0.5 / math.sqrt(t)
+
+            return cls(
+                    (mat[0 * 4 + 1] - mat[1 * 4 + 0]) * s,
+                    (mat[2 * 4 + 0] + mat[0 * 4 + 2]) * s,
+                    (mat[1 * 4 + 2] + mat[2 * 4 + 1]) * s,
+                    s * t
+            )
 
     @classmethod
     def new_interpolate(cls, q1, q2, t):
-        pass
+        assert isinstance(q1, Quaternion) and isinstance(q2, Quaternion)
+        q = cls()
+
+        costheta = q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z
+        if costheta < 0.:
+            costheta = -costheta
+            q1 = q1.conjugated()
+        elif costheta > 1:
+            costheta = 1
+
+        theta = math.acos(costheta)
+        if abs(theta) < 0.01:
+            q.w = q2.w
+            q.x = q2.x
+            q.y = q2.y
+            q.z = q2.z
+            return q
+
+        sintheta = math.sqrt(1.0 - costheta * costheta)
+        if abs(sintheta) < 0.01:
+            q.w = (q1.w + q2.w) * 0.5
+            q.x = (q1.x + q2.x) * 0.5
+            q.y = (q1.y + q2.y) * 0.5
+            q.z = (q1.z + q2.z) * 0.5
+            return q
+
+        ratio1 = math.sin((1 - t) * theta) / sintheta
+        ratio2 = math.sin(t * theta) / sintheta
+
+        q.w = q1.w * ratio1 + q2.w * ratio2
+        q.x = q1.x * ratio1 + q2.x * ratio2
+        q.y = q1.y * ratio1 + q2.y * ratio2
+        q.z = q1.z * ratio1 + q2.z * ratio2
+        return q
 
 
 class Geometry(object):
