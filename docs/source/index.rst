@@ -1,10 +1,10 @@
-.. Phlox documentation master file, created by
+.. PhloxAR documentation master file, created by
    sphinx-quickstart on Thu Apr 14 19:58:42 2016.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Phlox's documentation!
-=================================
+Welcome to PhloxAR's documentation!
+===================================
 
 Contents:
 
