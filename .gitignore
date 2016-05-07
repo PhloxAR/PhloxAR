@@ -69,7 +69,6 @@ paper/
 */tmp/*
 
 # for now, unavailable
-docs/
 data/
 examples/
 
@@ -78,3 +77,6 @@ MANIFEST
 
 # PyCharm
 .idea/
+
+# Benchmark
+bench/
