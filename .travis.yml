@@ -9,7 +9,16 @@ python:
   - pypy3
 
 install:
-  - pip install .
-  - pip install -r requirements.txt
+  - pip install -r requirements.txt --use-mirrors
+  - pip install coverage
+  - pip install coveralls
 
 script:
+  - coverage run --srouce=PhloxAR setup.py test
+
+after_success:
+  - coveralls
+
+branches:
+  only:
+    - master
