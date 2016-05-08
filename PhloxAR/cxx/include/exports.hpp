@@ -16,11 +16,18 @@
  *
  */
 
-#ifndef PHLOXAR_PHLOXAR_HPP
-#define PHLOXAR_PHLOXAR_HPP
+#ifndef PHLOXAR_EXPORTS_HPP
+#define PHLOXAR_EXPORTS_HPP
 
-#include "marker_detector.hpp"
-#include "board_detector.hpp"
-#include "cv_drawing_utils.hpp"
+#if !defined _CRT_SECURE_NO_DEPRECATE && _MSC_VER > 1300
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
 
-#endif //PHLOXAR_PHLOXAR_HPP
+
+#if (defined WIN32 || defined _WIN32 || defined WINCE)   && defined DSO_EXPORTS
+#define PHLOXAR_EXPORTS __declspec(dllexport)
+#else
+#define PHLOXAR_EXPORTS
+#endif
+
+#endif //PHLOXAR_EXPORTS_HPP
