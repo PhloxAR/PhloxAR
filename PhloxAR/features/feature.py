@@ -5,6 +5,8 @@ from __future__ import absolute_import, unicode_literals
 from ..base import *
 from ..color import *
 
+# TODO: FeatureSet class.
+
 
 class Feature(object):
     """
