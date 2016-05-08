@@ -1,4 +1,4 @@
-/*
+/**
  * This file contains much code ported from dlib
  * DLIB is under the following copyright and license:
  *     Copyright (c) 2009 Davis E. King (davis@dlib.net)

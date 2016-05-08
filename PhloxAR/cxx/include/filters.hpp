@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2003-2005 Peter J. Verveer
  * Copyright (c) 2010-2013 Luis Pedro Coelho
  * Copyright 2016(c) Matthias Y. Chen

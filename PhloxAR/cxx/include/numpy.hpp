@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2016(c) Matthias Y. Chen
  * <matthiasychen@gmail.com/matthias_cy@outlook.com>
  *
