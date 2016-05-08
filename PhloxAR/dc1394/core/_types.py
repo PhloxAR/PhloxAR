@@ -30,13 +30,13 @@ from ctypes import c_int, c_uint32, Structure
 
 __all__ = [
     'video_modes', 'video_mode_t', 'video_modes_t', 'video_modes_detailed',
-    'VIDEO_MODE_MAX', 'VIDEO_MODE_MIN', 'VIDEO_MODE_NUM', 'VIDEO_MODE_FORMAT7_MAX'
-    'VIDEO_MODE_FORMAT7_MIN', 'VIDEO_MODE_FORMAT7_NUM', 'color_coding_t',
-    'color_codings', 'COLOR_CODING_MAX', 'COLOR_CODING_MIN', 'COLOR_CODING_NUM',
-    'color_filter_t', 'color_filters', 'COLOR_FILTER_MAX', 'COLOR_FILTER_MIN',
-    'COLOR_FILTER_NUM', 'byte_order_t', 'byte_orders', 'BYTE_ORDER_MAX',
-    'BYTE_ORDER_MIN', 'BYTE_ORDER_NUM', 'color_codings_t', 'video_modes_t',
-    'bool_t', 'switch_t'
+    'VIDEO_MODE_MAX', 'VIDEO_MODE_MIN', 'VIDEO_MODE_NUM',
+    'VIDEO_MODE_FORMAT7_MAX', 'VIDEO_MODE_FORMAT7_MIN', 'VIDEO_MODE_FORMAT7_NUM',
+    'color_coding_t', 'color_codings', 'COLOR_CODING_MAX', 'COLOR_CODING_MIN',
+    'COLOR_CODING_NUM', 'color_filter_t', 'color_filters', 'COLOR_FILTER_MAX',
+    'COLOR_FILTER_MIN', 'COLOR_FILTER_NUM', 'byte_order_t', 'byte_orders',
+    'BYTE_ORDER_MAX', 'BYTE_ORDER_MIN', 'BYTE_ORDER_NUM', 'color_codings_t',
+    'video_modes_t', 'bool_t', 'switch_t', 'invert'
 ]
 
 # --------------------------------- enums ------------------------------------
@@ -207,7 +207,7 @@ BYTE_ORDER_NUM = BYTE_ORDER_MAX - BYTE_ORDER_MIN + 1
 class color_codings_t(Structure):
     _fields_ = [
         ('num', c_uint32),
-        ('codings', (color_coding_t) * COLOR_CODING_NUM),
+        ('codings', color_coding_t * COLOR_CODING_NUM),
     ]
 
 
@@ -215,10 +215,8 @@ class color_codings_t(Structure):
 class video_modes_t(Structure):
     _fields_ = [
         ('num', c_uint32),
-        ('modes', (video_mode_t) * VIDEO_MODE_NUM),
+        ('modes', video_mode_t * VIDEO_MODE_NUM),
     ]
 
 bool_t = c_int
 switch_t = c_int
-
-del invert
