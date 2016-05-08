@@ -642,33 +642,33 @@ _dll.dc1394_get_registers.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32), c_
 _dll.dc1394_get_registers.restype = error_t
 _dll.dc1394_get_registers.errcheck = _errcheck
 
-_dll.dc1394_get_register.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32)]
-_dll.dc1394_get_register.restype = error_t
-_dll.dc1394_get_register.errcheck = _errcheck
+# _dll.dc1394_get_register.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32)]
+# _dll.dc1394_get_register.restype = error_t
+# _dll.dc1394_get_register.errcheck = _errcheck
 
 _dll.dc1394_set_registers.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32), c_uint32]
 _dll.dc1394_set_registers.restype = error_t
 _dll.dc1394_set_registers.errcheck = _errcheck
 
-_dll.dc1394_set_register.argtypes = [PTR(camera_t), c_uint64, c_uint32]
-_dll.dc1394_set_register.restype = error_t
-_dll.dc1394_set_register.errcheck = _errcheck
+# _dll.dc1394_set_register.argtypes = [PTR(camera_t), c_uint64, c_uint32]
+# _dll.dc1394_set_register.restype = error_t
+# _dll.dc1394_set_register.errcheck = _errcheck
 
 _dll.dc1394_get_adv_control_registers.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32), c_uint32]
 _dll.dc1394_get_adv_control_registers.restype = error_t
 _dll.dc1394_get_adv_control_registers.errcheck = _errcheck
 
-_dll.dc1394_get_adv_control_register.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32)]
-_dll.dc1394_get_adv_control_register.restype = error_t
-_dll.dc1394_get_adv_control_register = _errcheck
+# _dll.dc1394_get_adv_control_register.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32)]
+# _dll.dc1394_get_adv_control_register.restype = error_t
+# _dll.dc1394_get_adv_control_register = _errcheck
 
 _dll.dc1394_set_adv_control_registers.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32), c_uint32]
 _dll.dc1394_set_adv_control_registers.restype = error_t
 _dll.dc1394_set_adv_control_registers.errcheck = _errcheck
 
-_dll.dc1394_set_adv_control_register.argtypes = [PTR(camera_t), c_uint64, c_uint32]
-_dll.dc1394_set_adv_control_register.restype = error_t
-_dll.dc1394_set_adv_control_register.errcheck = _errcheck
+# _dll.dc1394_set_adv_control_register.argtypes = [PTR(camera_t), c_uint64, c_uint32]
+# _dll.dc1394_set_adv_control_register.restype = error_t
+# _dll.dc1394_set_adv_control_register.errcheck = _errcheck
 
 # ---- Get/set format_7 registers ----
 # parameters: *camera, mode, offset, *value:

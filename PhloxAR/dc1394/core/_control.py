@@ -83,7 +83,7 @@ features = {
     'FEATURE_TILT': 434,
     'FEATURE_OPTICAL_FILTER': 435,
     'FEATURE_CAPTURE_SIZE': 436,
-    'FEATURE_CAPTURE_QUALIT': 437,
+    'FEATURE_CAPTURE_QUALITY': 437,
 }
 
 feature_t = c_int
