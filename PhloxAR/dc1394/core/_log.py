@@ -30,8 +30,7 @@ from ctypes import c_int
 from ._types import invert
 
 __all__ = [
-    'QUERY_FROM_CAMERA', 'USE_MAX_AVAIL', 'USE_RECOMMANDED', 'format7mode_t',
-    'format7modeset_t', 'error_t', 'errors', 'err_val', 'log_t', 'logs',
+    'error_t', 'errors', 'err_val', 'log_t', 'logs',
     'ERROR_NUM', 'ERROR_MIN', 'ERROR_MAX', 'LOG_NUM', 'LOG_MAX', 'LOG_MIN'
 ]
 

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright 2016(c) Matthias Y. Chen
  * <matthiasychen@gmail.com/matthias_cy@outlook.com>
  *
@@ -29,10 +29,10 @@ namespace numpy {
   inline npy_intp dtype_code();
 
 #define DECLARE_DTYPE_CODE(type, constant) \
-  template <> inline npy_intp dtype_code<type>() {return constant;} \
-  template <> inline npy_intp dtype_code<const type>() {return constant;} \
-  template <> inline npy_intp dtype_code<volatile type>() {return constant;} \
-  template <> inline npy_intp dtype_code<volatile const type>() {return constant;}
+  template <> inline npy_intp dtype_code<type>() { return constant; } \
+  template <> inline npy_intp dtype_code<const type>() { return constant; } \
+  template <> inline npy_intp dtype_code<volatile type>() { return constant; } \
+  template <> inline npy_intp dtype_code<volatile const type>() { return constant; }
 
   DECLARE_DTYPE_CODE(bool, NPY_BOOL)
   DECLARE_DTYPE_CODE(float, NPY_FLOAT)
@@ -41,6 +41,7 @@ namespace numpy {
   DECLARE_DTYPE_CODE(short, NPY_SHORT)
   DECLARE_DTYPE_CODE(unsigned short, NPY_USHORT)
   DECLARE_DTYPE_CODE(int, NPY_INT)
+  DECLARE_DTYPE_CODE(unsigned int, NPY_UINT)
   DECLARE_DTYPE_CODE(long, NPY_LONG)
   DECLARE_DTYPE_CODE(unsigned long, NPY_ULONG)
   DECLARE_DTYPE_CODE(long long, NPY_LONGLONG)
@@ -49,19 +50,18 @@ namespace numpy {
 #if defined(NPY_FLOAT128)
   DECLARE_DTYPE_CODE(npy_float128, NPY_FLOAT128)
 #endif  // NPY_FLOAT128
-  DECLARE_DTYPE_CODE(std::complex<float>, NPY_CFLOAT)
-  DECLARE_DTYPE_CODE(std::complex<double>, NPY_CDOUBLE)
-  DECLARE_DTYPE_CODE(unsigned int, NPY_UINT)
+  DECLARE_DTYPE_CODE(std::complex<float>(), NPY_CFLOAT)
+  DECLARE_DTYPE_CODE(std::complex<double>(), NPY_CDOUBLE)
 
   template <typename T>
   bool check_type(PyArrayObject* o) {
     return PyArray_EquivTypenums(PyArray_TYPE(o), dtype_code<T>());
-  }
+  };
 
   template <typename T>
   bool check_type(PyObject* o) {
     return check_type<T>(reinterpret_cast<PyArrayObject*>(o));
-  }
+  };
 
   template <typename T>
   struct no_ptr {
@@ -84,14 +84,14 @@ namespace numpy {
     assert(PyArray_ISALINGNED(o));
     void* as_voidp = PyArray_DATA(o);
     return const_cast<T>(static_cast<T>(as_voidp));
-  }
+  };
 
   template <typename T>
   T ndarray_cast(PyObject* po) {
     assert(PyArray_Check(po));
     return ndarray_cast<T>((PyArrayObject*)po);
-  }
+  };
 
-}
+}  // namespace numpy
 
 #endif  // PHLOX_NUMPY_HPP
