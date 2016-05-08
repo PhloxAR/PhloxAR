@@ -442,16 +442,184 @@ class Feature(object):
             return None
 
     def contains(self, other):
-        pass
+        ret_val = False
+        bounds = self._points
+        if isinstance(other, Feature):  # A feature
+            ret_val = True
+            for p in other._points:  # this isn't completely correct - only tests if points lie in poly, not edges.
+                p2 = (int(p[0]), int(p[1]))
+                ret_val = self._point_inside_polygon(p2, bounds)
+                if not ret_val:
+                    break
+        # a single point
+        elif ((isinstance(other, tuple) and len(other) == 2) or
+                  (isinstance(other, npy.ndarray) and other.shape[0] == 2)):
+            ret_val = self._point_inside_polygon(other, bounds)
+
+        elif isinstance(other, tuple) and len(other) == 3:  # A circle
+            # assume we are in x,y, r format
+            ret_val = True
+            rr = other[2] * other[2]
+            x = other[0]
+            y = other[1]
+            for p in bounds:
+                tst = ((x - p[0]) * (x - p[0])) + ((y - p[1]) * (y - p[1]))
+                if tst < rr:
+                    ret_val = False
+                    break
+
+        elif (isinstance(other, tuple) and len(other) == 4 and
+                  (isinstance(other[0], float) or isinstance(other[0], int))):
+            ret_val = (self.max_x() <= other[0] + other[2] and
+                       self.min_x() >= other[0] and
+                       self.max_y() <= other[1] + other[3] and
+                       self.min_y() >= other[1])
+        elif isinstance(other, list) and len(other) >= 4:  # an arbitrary polygon
+            # everything else ....
+            ret_val = True
+            for p in other:
+                tst = self._point_inside_polygon(p, bounds)
+                if (not tst):
+                    ret_val = False
+                    break
+        else:
+            logger.warning("Did not recognize.")
+            return False
+
+        return ret_val
 
     def overlaps(self, other):
-        pass
+        ret_val = False
+        bounds = self._points
+
+        if isinstance(other, Feature):  # A feature
+            ret_val = True
+            for p in other._points:  # this isn't completely correct - only tests if points lie in poly, not edges.
+                ret_val = self._point_inside_polygon(p, bounds)
+                if ret_val:
+                    break
+
+        elif ((isinstance(other, tuple) and len(other) == 2) or
+                  (isinstance(other, npy.ndarray) and other.shape[0] == 2)):
+            ret_val = self._point_inside_polygon(other, bounds)
+
+        elif (isinstance(other, tuple) and len(other) == 3 and
+                  not isinstance(other[0], tuple)):  # A circle
+            # assume we are in x,y, r format
+            ret_val = False
+            rr = other[2] * other[2]
+            x = other[0]
+            y = other[1]
+            for p in bounds:
+                tst = ((x - p[0]) * (x - p[0])) + ((y - p[1]) * (y - p[1]))
+                if tst < rr:
+                    ret_val = True
+                    break
+
+        elif (isinstance(other, tuple) and len(other) == 4 and
+                  (isinstance(other[0], float) or isinstance(other[0], int))):
+            ret_val = (self.contains((other[0], other[1])) or  # see if we contain any corner
+                       self.contains((other[0] + other[2], other[1])) or
+                       self.contains((other[0], other[1] + other[3])) or
+                       self.contains((other[0] + other[2], other[1] + other[3])))
+        elif isinstance(other, list) and len(other) >= 3:  # an arbitrary polygon
+            # everything else ....
+            ret_val = False
+            for p in other:
+                tst = self._point_inside_polygon(p, bounds)
+                if tst:
+                    ret_val = True
+                    break
+        else:
+            logger.warning(
+                "Did not recognize.")
+            return False
+
+        return ret_val
 
     def is_contained_within(self, other):
-        pass
+        """
+        Return true if the feature is contained withing  the object other,
+        where other can be a bounding box, bounding circle, a list of tuples
+        in a closed polygon, or any other features.
+        :param other: bounding box - (x, y, w, h) where (x, y) is the top left
+                       bounding circle - (x, y, r)
+                       a list of (x, y) tuples defining a closed polygon
+                       any two dimensional feature (e.g. blobs, circle ...
+        :return: Bool
+        """
+        ret_val = True
+        bounds = self._points
+
+        if isinstance(other, Feature):  # another feature do the containment test
+            ret_val = other.contains(self)
+        elif isinstance(other, tuple) and len(other) == 3:  # a circle
+            # assume we are in x,y, r format
+            rr = other[2] * other[2]  # radius squared
+            x = other[0]
+            y = other[1]
+            for p in bounds:
+                tst = ((x - p[0]) * (x - p[0])) + ((y - p[1]) * (y - p[1]))
+                if test > rr:
+                    ret_val = False
+                    break
+        elif (isinstance(other, tuple) and len(other) == 4 and  # a bounding box
+                  (isinstance(other[0], float) or isinstance(other[0],
+                                                             int))):  # we assume a tuple of four is (x,y,w,h)
+            ret_val = (self.max_x() <= other[0] + other[2] and
+                       self.min_x() >= other[0] and
+                       self.max_y() <= other[1] + other[3] and
+                       self.min_y() >= other[1])
+        elif isinstance(other, list) and len(other) > 2:  # an arbitrary polygon
+            # everything else ....
+            ret_val = True
+            for p in bounds:
+                tst = self._point_inside_polygon(p, other)
+                if not tst:
+                    ret_val = False
+                    break
+        else:
+            logger.warning("Did not recognize.")
+            ret_val = False
+        return ret_val
 
     def _point_inside_polygon(self, point, polygon):
-        pass
+        """
+        returns true if tuple point (x,y) is inside polygon of the
+        form ((a,b),(c,d),...,(a,b)) the polygon should be closed
+        """
+        if len(polygon) < 3:
+            logger.warning("feature._point_inside_polygon - not a valid polygon")
+            return False
+
+        if not isinstance(polygon, list):
+            logger.warning("feature._point_inside_polygon - not a valid polygon")
+            return False
+
+        counter = 0
+        ret_val = True
+        p1 = None
+        poly = copy.deepcopy(polygon)
+        poly.append(polygon[0])
+        # for p2 in poly:
+        N = len(poly)
+        p1 = poly[0]
+        for i in range(1, N + 1):
+            p2 = poly[i % N]
+            if point[1] > npy.min((p1[1], p2[1])):
+                if point[1] <= npy.max((p1[1], p2[1])):
+                    if point[0] <= npy.max((p1[0], p2[0])):
+                        if p1[1] != p2[1]:
+                            tst = (float((point[1] - p1[1]) * (p2[0] - p1[0])) /
+                                   float(((p2[1] - p1[1]) + p1[0])))
+                            if p1[0] == p2[0] or point[0] <= tst:
+                                counter += 1
+            p1 = p2
+
+        if counter % 2 == 0:
+            ret_val = False
+            return ret_val
+        return ret_val
 
     def bcir(self):
         """
