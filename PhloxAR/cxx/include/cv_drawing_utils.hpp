@@ -16,18 +16,14 @@
  *
  */
 
-#ifndef PHLOXAR_EXPORTS_HPP
-#define PHLOXAR_EXPORTS_HPP
+#ifndef PHLOXAR_CV_DRAWING_UTILS_HPP
+#define PHLOXAR_CV_DRAWING_UTILS_HPP
 
-#if !defined _CRT_SECURE_NO_DEPRECATE && _MSC_VER > 1300
-#define _CRT_SECURE_NO_DEPRECATE
-#endif
+#include "exports.hpp"
 
+namespace phloxar {
+    class PHLOXAR_EXPROTS CvDrawingUtils {
+    };
+}
 
-#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined DSO_EXPORTS
-#define PHLOXAR_EXPORTS __declspec(dllexport)
-#else
-#define PHLOXAR_EXPORTS
-#endif
-
-#endif //PHLOXAR_EXPORTS_HPP
+#endif //PHLOXAR_CV_DRAWING_UTILS_HPP
