@@ -4,7 +4,7 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from .core import *
-from ctypes import c_int32, c_uint32, c_uint64, c_float, byref
+from ctypes import c_int32, c_uint32, c_uint64, c_float, byref, pointer
 
 
 __all__ = [
@@ -270,7 +270,6 @@ class Format7(Mode):
             byref(x), byref(y), byref(w), byref(h))
         return ((w.value, h.value), (x.value, y.value),
                 color_codings[cco.value], packet_size.value)
-
 
     @roi.setter
     def roi(self, args):
