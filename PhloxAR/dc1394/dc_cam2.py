@@ -85,3 +85,341 @@ class Context(object):
 
 class Feature(object):
     pass
+
+
+class Trigger(Feature):
+    pass
+
+
+class WhiteBalance(Feature):
+    pass
+
+
+class Temperature(Feature):
+    pass
+
+
+class WhiteShading(Feature):
+    pass
+
+
+class Mode(object):
+    def __init__(self, cam, mode_id):
+        pass
+
+    @property
+    def mode_id(self):
+        pass
+
+    @property
+    def name(self):
+        pass
+
+    @property
+    def rates(self):
+        pass
+
+    @property
+    def image_size(self):
+        pass
+
+    @property
+    def color_coding(self):
+        pass
+
+    @property
+    def scalable(self):
+        pass
+
+    @property
+    def dtype(self):
+        pass
+
+    def __str__(self):
+        pass
+
+
+class Exif(Mode):
+    pass
+
+
+class Format7(Mode):
+    @property
+    def max_image_size(self):
+        pass
+
+    @property
+    def image_size(self):
+        pass
+
+    @image_size.setter
+    def image_size(self, value):
+        pass
+
+    @property
+    def image_position(self):
+        pass
+
+    @image_position.setter
+    def image_position(self, value):
+        pass
+
+    @property
+    def color_codings(self):
+        pass
+
+    @property
+    def color_coding(self):
+        pass
+
+    @color_coding.setter
+    def color_coding(self, color):
+        pass
+
+    @property
+    def unit_position(self):
+        pass
+
+    @property
+    def unit_size(self):
+        pass
+
+    @property
+    def roi(self):
+        pass
+
+    @roi.setter
+    def roi(self, args):
+        pass
+
+    @property
+    def recommanded_packet_size(self):
+        pass
+
+    @property
+    def packet_params(self):
+        pass
+
+    @property
+    def packet_size(self):
+        pass
+
+    @packet_size.setter
+    def packet_size(self, size):
+        pass
+
+    @property
+    def total_bytes(self):
+        pass
+
+    @property
+    def data_depth(self):
+        pass
+
+    @property
+    def pixel_number(self):
+        pass
+
+    def setup(self, image_size=(QUERY_FROM_CAMERA, QUERY_FROM_CAMERA),
+              image_position=(QUERY_FROM_CAMERA, QUERY_FROM_CAMERA),
+              color_coding=QUERY_FROM_CAMERA, packet_size=USE_RECOMMANDED):
+        pass
+
+
+class DCCamera2(object):
+    _cam = None
+    _context = None
+
+    def __init__(self, guid, context=None, handle=None, iso_speed=None,
+                 mode=None, rate=None, **features):
+        pass
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        pass
+
+    def power(self, on=True):
+        pass
+
+    def reset_bus(self):
+        pass
+
+    def reset_camera(self):
+        pass
+
+    def memory_save(self, channel):
+        pass
+
+    def memory_load(self, channel):
+        pass
+
+    @property
+    def memory_busy(self):
+        pass
+
+    def flush(self):
+        pass
+
+    def dequeue(self, poll=False):
+        pass
+
+    def start_capture(self, buf_size=4, capture_flags='DEFAULT'):
+        pass
+
+    def stop_capture(self):
+        pass
+
+    def start_video(self):
+        pass
+
+    def stop_video(self):
+        pass
+
+    def start_one_shot(self):
+        pass
+
+    def stop_one_shot(self):
+        pass
+
+    def start_multi_shot(self, n):
+        pass
+
+    def stop_multi_shot(self):
+        pass
+
+    @property
+    def fileno(self):
+        pass
+
+    def _load_features(self):
+        pass
+
+    @property
+    def features(self):
+        pass
+
+    def setup(self, active=True, mode='manual', absolute=True, **features):
+        pass
+
+    def _load_modes(self):
+        pass
+
+    @property
+    def modes(self):
+        pass
+
+    @property
+    def modes_dict(self):
+        pass
+
+    def get_register(self, offset):
+        pass
+
+    def set_register(self, offset, value):
+        pass
+
+    __getitem__ = get_register
+    __setitem__ = set_register
+
+    @property
+    def broadcast(self):
+        pass
+
+    @broadcast.setter
+    def broadcast(self, value):
+        pass
+
+    @property
+    def model(self):
+        pass
+
+    @property
+    def guid(self):
+        pass
+
+    @property
+    def vendor(self):
+        pass
+
+    def __str__(self):
+        pass
+
+    @property
+    def mode(self):
+        pass
+
+    @mode.setter
+    def mode(self, mode):
+        pass
+
+    @property
+    def rate(self):
+        pass
+
+    @rate.setter
+    def rate(self, framerate):
+        pass
+
+    @property
+    def iso_speed(self):
+        pass
+
+    @iso_speed.setter
+    def iso_speed(self, speed):
+        pass
+
+    @property
+    def operation_mode(self):
+        pass
+
+    @operation_mode.setter
+    def operation_mode(self, mode):
+        pass
+
+    @property
+    def iso_channel(self):
+        pass
+
+    @iso_channel.setter
+    def iso_channel(self, channel):
+        pass
+
+    @property
+    def data_depth(self):
+        pass
+
+    @property
+    def bandwidth_usage(self):
+        pass
+
+    def get_strobe(self, offset):
+        pass
+
+    def set_strobe(self, offset, value):
+        pass
+
+    def __eq__(self, other):
+        pass
+
+    @property
+    def node(self):
+        pass
+
+
+class ThreadedCamera(DCCamera2):
+    def start(self, queue=0, mark_corrupt=True):
+        pass
+
+    def run(self):
+        pass
+
+    def next_image(self):
+        pass
+
+    def current_image(self, new=False):
+        pass
+
+    def stop(self):
+        pass
