@@ -15,7 +15,14 @@ class DCError(Exception):
     """
     Base class for exceptions.
     """
-    pass
+    func = None
+    args = None
+    errs = None
+
+    def __repr__(self):
+        return "DCError: {}{} -> {}{}".format(self.func.__name__,
+                                              self.args, self.errs,
+                                              err_val[self.errs])
 
 
 class DCCameraError(DCError, RuntimeError):
@@ -1043,3 +1050,86 @@ class DCCamera(object):
         directly access them then.
         """
         return self._all_features
+
+
+class SynchronizedCams(object):
+    """
+    This class synchronizes two (not more!) cameras by droping frames
+    from one until the timestamps of the acquired pictures are in sync.
+    Make sure that the cameras are in the same mode (framerate, shutter)
+    """
+    _cam0 = None
+    _cam1 = None
+
+    def __init__(self, cam0, cam1):
+        """
+        Assumes point gray cameras which can do auto sync
+        """
+        self._cam0 = cam0
+        self._cam1 = cam1
+
+    def close(self):
+        """
+        Close both cameras.
+        """
+        self._cam0.close()
+        self._cam1.close()
+
+    @property
+    def cams(self):
+        return self._cam0, self._cam1
+
+    @property
+    def cam0(self):
+        return self._cam0
+
+    @property
+    def cam1(self):
+        return self._cam1
+
+    def start(self, buffers=4):
+        self._cam0.start(buffers)
+        self._cam1.start(buffers)
+        self.sync()
+
+    def stop(self):
+        self._cam0.stop()
+        self._cam1.stop()
+
+    def shot(self):
+        """
+        This function acquires two synchronized pictures from
+        the cameras. Use this if you need pictures which were
+        acquired around the same time. Do not use the cams individual shot
+        functions. If you need a current image you can use cam.current_image
+        at all times. You can also wait for the Condition cam.new_image
+        and then use cam.current_image.
+        note that the user has to check for themselves if the cameras
+        are out of sync and must make sure they get back in sync.
+        """
+        i1 = self._cam0.shot()
+        i2 = self._cam1.shot()
+
+        return i1, i2
+
+    def sync(self):
+        """
+        Try to sync the two cameras to each other. This will only work if both
+        cameras synchronize on the bus time.
+        """
+        ldiff = 100000000
+        while True:
+            t1 = self._cam0.shot().timestamp
+            t2 = self._cam1.shot().timestamp
+
+            diff = t1 - t2
+
+            if abs(diff) < 500:
+                break
+
+            if diff < 0:
+                self._cam0.shot()
+            else:
+                self._cam1.shot()
+
+            ldiff = diff
