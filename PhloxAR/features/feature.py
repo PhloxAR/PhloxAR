@@ -651,3 +651,7 @@ class Feature(object):
 
     def contour(self):
         return []
+
+
+class FeatureSet(list):
+    pass
