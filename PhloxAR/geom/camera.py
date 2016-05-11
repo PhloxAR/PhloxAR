@@ -57,3 +57,22 @@ class Camera(object):
             self.factor()
             self._c = -npy.dot(self._mat_r.T, self._mat_t)
             return self._c
+
+
+def rotation_matrix(v):
+    """
+    Create a 3D rotation matrix for rotation around the axis of the vector v
+    """
+    r = npy.eye(4)
+    r[:3, :3] = linalg.expm([[0, -v[2], v[1]],
+                             [v[2], 0, -v[0]],
+                             [-v[1], v[0], 0]])
+
+
+def rq(a):
+    q, r = linalg.qr(npy.flipud(a).T)
+    r = npy.flipud(r.T)
+    q = q.T
+
+    return r[:, ::-1], q[::-1, :]
+
