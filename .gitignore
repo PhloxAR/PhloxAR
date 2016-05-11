@@ -78,3 +78,6 @@ MANIFEST
 
 # PyCharm
 .idea/
+*.pgm
+*.sift
+*.pkl
