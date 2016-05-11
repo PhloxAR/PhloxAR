@@ -143,7 +143,7 @@ class Line(Feature):
         if dx == 0.0:
             return self._image[pt1[0]:pt1[0] + 1, ymin:ymax].mean_color()
         if dy == 0.0:
-            return self._image[xmin:xmax, pt1[1]:pt[1] + 1].mean_color()
+            return self._image[xmin:xmax, pt1[1]:pt1[1] + 1].mean_color()
 
         error = 0.0
         derr = dy / dx  # this is how much 'error' will increase in every step
@@ -172,7 +172,7 @@ class Line(Feature):
 
                 if error >= 0.5:
                     y += 1
-                    error = error - 1.0
+                    error -= 1.0
         else:
             # this is a 'steep' line, so we iterate over x
             # copy and paste. ugh, sorry.
@@ -207,45 +207,454 @@ class Line(Feature):
         return float(tmp[0]), float(tmp[1]), float(tmp[2])
 
     def find_intersection(self, line):
-        """"""
+        """
+        Returns the intersection point of two lines.
+
+        :param line: the other line to compute intersection
+        :return: a point tuple
+
+        :Example:
+        >>> img = Image('lena')
+        >>> l = img.find_lines()
+        >>> c = l[0].find_intersection(l[1])
+        """
+        # TODO: NEEDS TO RETURN A TUPLE OF FLOATS
+        if self._slope == float('inf'):
+            x = self._end_pts[0][0]
+            y = line.slope * (x - line._end_pts[1][0]) + line._end_pts[1][1]
+            return x, y
+
+        if line.slope == float("inf"):
+            x = line._end_pts[0][0]
+            y = self.slope * (x - self._end_pts[1][0]) + self._end_pts[1][1]
+            return x, y
+
+        m1 = self._slope
+        x12, y12 = self._end_pts[1]
+        m2 = line.slope
+        x22, y22 = line._end_pts[1]
+
+        x = (m1 * x12 - m2 * x22 + y22 - y12) / float(m1 - m2)
+        y = (m1 * m2 * (x12 - x22) - m2 * y12 + m1 * y22) / float(m1 - m2)
+
+        return x, y
+
+    def is_parallel(self, line):
+        """
+        Checks whether two lines are parallel or not.
+
+        :param line: the other line to be compared
+        :return: Bool
+
+         :Example:
+         >>> img = Image('lena')
+         >>> l = img.find_lines()
+         >>> c = l[0].is_parallel(l[1])
+        """
+        if self._slope == line.slope:
+            return True
+
+        return False
+
+    def is_perpendicular(self, line):
+        """
+        Checks whether two lines are perpendicular or not.
+
+        :param line: the other line to be compared
+        :return: Bool.
+
+         :Example:
+         >>> img = Image('lena')
+         >>> l = img.find_lines()
+         >>> c = l[0].is_perpendicular(l[1])
+        """
+        if self._slope == float('inf'):
+            if line.slope == 0:
+                return True
+            return False
+
+        if line.slope == float('inf'):
+            if self.slope == 0:
+                return True
+            return False
+
+        if self._slope * line.slope == -1:
+            return True
+
+        return False
+
+    def image_intersections(self, img):
+        """
+        Returns a set of pixels where the line intersects with the binary image.
+
+        :param img: binary image
+        :return: a list of points
+
+        :Example:
+        >>> img = Image('lena')
+        >>> l = img.find_lines()
+        >>> c = l[0].image_intersections(img.binarize())
+        """
+        pixels = []
+        if self._slope == float('inf'):
+            for y in range(self._end_pts[0][1], self._end_pts[1][1] + 1):
+                pixels.append((self._end_pts[0][0], y))
+        else:
+            for x in range(self._end_pts[0][0], self._end_pts[1][0] + 1):
+                pixels.append((x, int(self._end_pts[1][1] +
+                                      self._slope * (x - self._end_pts[1][0]))))
+            for y in range(self._end_pts[0][1], self._end_pts[1][1] + 1):
+                pixels.append((int(((y - self._end_pts[1][1]) / self._slope) +
+                                   self._end_pts[1][0]), y))
+
+        pixels = list(set(pixels))
+        matched_pixels = []
+        for pixel in pixels:
+            if img[pixel[0], pixel[1]] == (255.0, 255.0, 255.0):
+                matched_pixels.append(pixel)
+        matched_pixels.sort()
+
+        return matched_pixels
+
+    def angle(self):
+        """
+        Angle of the line, from the left most point to right most point.
+        Returns angel (theta), with 0 = horizontal,
+        -pi/2 = vertical positive slope, pi/2 = vertical negative slope.
+
+        :return: an angle value in degrees.
+
+        :Example:
+        >>> img = Image('lena')
+        >>> ls = img.find_lines()
+        >>> for l in ls:
+        >>>     if l.angle() == 0:
+        >>>         print("Horizontal!")
+        """
+        # first find left most point
+        a = 0
+        b = 1
+        if self._end_pts[a][0] > self._end_pts[b][0]:
+            b = 0
+            a = 1
+
+        dx = self._end_pts[b][0] - self._end_pts[a][0]
+        dy = self._end_pts[b][1] - self._end_pts[a][1]
+
+        # internal standard if degrees
+        return float(360.0 * (atan2(dy, dx) / (2 * npy.pi)))
+
+    def crop2image_edges(self):
         pass
+
+    def get_vector(self):
+        pass
+
+    def dot(self, other):
+        pass
+
+    def cross(self, other):
+        pass
+
+    def get_y_intercept(self):
+        pass
+
+    def extend2image_edges(self):
+        pass
+
+    @property
+    def slope(self):
+        return self._slope
 
 
 class Barcode(Feature):
-    pass
+    def __init__(self, img, zbsymbol):
+        pass
+
+    def __repr__(self):
+        pass
+
+    def draw(self, color=Color.GREEN, width=1):
+        pass
+
+    def length(self):
+        pass
+
+    def area(self):
+        pass
 
 
 class HaarFeature(Feature):
-    pass
+    def __init__(self, img, haar_obj, haar_classifier=None, cv2flag=True):
+        pass
+
+    def draw(self, color=Color.GREEN):
+        pass
+
+    def __getstate__(self):
+        pass
+
+    def mean_color(self):
+        pass
+
+    def area(self):
+        pass
 
 
 class Chessboard(Feature):
-    pass
+    def __init__(self, img, dim, subpixelscorners):
+        pass
+
+    def draw(self, no_need_color=None):
+        pass
+
+    def area(self):
+        pass
 
 
 class TemplateMatch(Feature):
-    pass
+    def __init__(self, img, template, location, quality):
+        pass
+
+    def _template_overlaps(self, other):
+        pass
+
+    def consume(self, other):
+        pass
+
+    def rescale(self, w, h):
+        pass
+
+    def crop(self):
+        pass
+
+    def draw(self, color=Color.GREEN, width=1):
+        pass
 
 
 class Circle(Feature):
-    pass
+    def __init__(self):
+        pass
+
+    def draw(self, color=Color.GREEN, width=1):
+        pass
+
+    def show(self, color=Color.GREEN):
+        pass
+
+    def distance_from(self, point=(-1, -1)):
+        pass
+
+    def mean_color(self):
+        pass
+
+    def area(self):
+        pass
+
+    def perimeter(self):
+        pass
+
+    def width(self):
+        pass
+
+    def height(self):
+        pass
+
+    def radius(self):
+        pass
+
+    def diameter(self):
+        pass
+
+    def crop(self):
+        pass
 
 
 class KeyPoint(Feature):
-    pass
+    def __init__(self, img, keypoint, descriptor=None, flavor='SURF'):
+        pass
+
+    def get_object(self):
+        pass
+
+    def descriptor(self):
+        pass
+
+    def quality(self):
+        pass
+
+    def ocatve(self):
+        pass
+
+    def flavor(self):
+        pass
+
+    def angle(self):
+        pass
+
+    def draw(self, color=Color.GREEN, width=1):
+        pass
+
+    def show(self, color=Color.GREEN):
+        pass
+
+    def distance_from(self, point=(-1, -1)):
+        pass
+
+    def mean_color(self):
+        pass
+
+    def color_distance(self, color=(0, 0, 0)):
+        pass
+
+    def perimeter(self):
+        pass
+
+    def width(self):
+        pass
+
+    def height(self):
+        pass
+
+    def radius(self):
+        pass
+
+    def diameter(self):
+        pass
+
+    def crop(self, no_mask=False):
+        pass
 
 
 class Motion(Feature):
-    pass
+    def __init__(self, img, x, y, dx, dy, wndw):
+        pass
+
+    def draw(self, color=Color.GREEN, width=1, normalize=True):
+        pass
+
+    def normalize2(self, max_mag):
+        pass
+
+    def magnitude(self):
+        pass
+
+    def unit_vec(self):
+        pass
+
+    def vector(self):
+        pass
+
+    def window_size(self):
+        pass
+
+    def mean_color(self):
+        pass
+
+    def crop(self):
+        pass
 
 
 class KeyPointMatch(Feature):
-    pass
+    def __init__(self):
+        pass
+
+    def draw(self, color=Color.GREEN, width=1):
+        pass
+
+    def draw_rect(self, color=Color.GREEN, width=1):
+        pass
+
+    def crop(self):
+        pass
+
+    def mean_color(self):
+        pass
+
+    def get_min_rect(self):
+        pass
+
+    def get_homography(self):
+        pass
 
 
 class ShapeContextDescriptor(Feature):
-    pass
+    def __init__(self):
+        pass
+
+    def draw(self, color=Color.GREEN, width=1):
+        pass
 
 
 class ROI(Feature):
-    pass
+    def __init__(self):
+        pass
+
+    def resize(self, w, h=None, percentage=True):
+        pass
+
+    def overlaps(self, other):
+        pass
+
+    def translate(self, x=0, y=0):
+        pass
+
+    def to_xywh(self):
+        pass
+
+    def to_tl_br(self):
+        pass
+
+    def to_points(self):
+        pass
+
+    def to_unit_xywh(self):
+        pass
+
+    def to_unit_tl_br(self):
+        pass
+
+    def to_unit_points(self):
+        pass
+
+    def coord_transform_x(self, x, intype='ROI', output='SRC'):
+        pass
+
+    def coord_transform_y(self, y, intype='ROI', output='SRC'):
+        pass
+
+    def coord_transform_pts(self, pts, intype='ROI', output='SRC'):
+        pass
+
+    def _transform(self, x, img_size, roi_size, offset, intype, output):
+        pass
+
+    def split_x(self, x, unit_vals=False, src_vals=False):
+        pass
+
+    def split_y(self, y, init_vals=False, src_vals=False):
+        pass
+
+    def merge(self, regions):
+        pass
+
+    def rebase(self, x, y=None, w=None, h=None):
+        pass
+
+    def draw(self, color=Color.GREEN, width=3):
+        pass
+
+    def show(self, color=Color.GREEN, width=2):
+        pass
+
+    def mean_color(self):
+        pass
+
+    def _rebase(self, roi):
+        pass
+
+    def _standardize(self, x, y=None, w=None, h=None):
+        pass
+
+    def crop(self):
+        pass
