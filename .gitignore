@@ -79,3 +79,6 @@ MANIFEST
 # PyCharm
 .idea/
 trunk/
+*.pgm
+*.sift
+*.pkl
