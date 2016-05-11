@@ -385,31 +385,149 @@ class Barcode(Feature):
 
 
 class HaarFeature(Feature):
-    def __init__(self, img, haar_obj, haar_classifier=None, cv2flag=True):
-        pass
+    """
+    The HaarFeature is a rectangle returned by the find_feature function.
+    - The x,y coordinates are defined by the center of the bounding rectangle.
+    - The classifier property refers to the cascade file used for detection .
+    - Points are the clockwise points of the bounding rectangle, starting in
+      upper left.
+    """
+    classifier = None
+    _width = None
+    _height = None
+    neighbors = None
+    feature_name = 'None'
 
-    def draw(self, color=Color.GREEN):
-        pass
+    def __init__(self, img, haar_obj, haar_classifier=None, cv2flag=True):
+        if cv2flag is False:
+            x, y, width, height, self.neighbors = haar_obj
+        elif cv2flag is True:
+            x, y, width, height = haar_obj
+
+        at_x = x + width / 2
+        at_y = y + height / 2  # set location of feature to middle of rectangle.
+        points = ((x, y), (x + width, y),
+                  (x + width, y + height), (x, y + height))
+
+        # set bounding points of the rectangle
+        self.classifier = haar_classifier
+        if haar_classifier is not None:
+            self.feature_name = haar_classifier.get_name()
+
+        super(HaarFeature, self).__init__(img, at_x, at_y, points)
+
+    def draw(self, color=Color.GREEN, width=1):
+        """
+        Draw the bounding rectangle, default color is Color.GREEN
+
+        :param color: a RGB color tuple
+        :param width: if width is less than zero we draw the feature filled in, otherwise we draw the
+                       contour using the specified width.
+        :return: None, modify the source images drawing layer.
+        """
+        self._image.draw_line(self._points[0], self._points[1], color, width)
+        self._image.draw_line(self._points[1], self._points[2], color, width)
+        self._image.draw_line(self._points[2], self._points[3], color, width)
+        self._image.draw_line(self._points[3], self._points[0], color, width)
 
     def __getstate__(self):
-        pass
+        d = self.__dict__.copy()
+        if 'classifier' in d:
+            del d['classifier']
+        return d
 
     def mean_color(self):
-        pass
+        """
+        Find the mean color of the boundary rectangle
+
+        :return: a RGB tuple that corresponds to the mean color of the feature.
+
+        :Example:
+        >>> img = Image('lena')
+        >>> face = HaarCascade('face.xml')
+        >>> faces = img.find_haar_features(face)
+        >>> print(faces[-1].mean_color())
+        """
+        crop = self._image[self._points[0][0]:self._points[1][0],
+                           self._points[0][1]:self._points[2][1]]
+        return crop.mean_color()
 
     def area(self):
-        pass
+        """
+        Returns the area of the feature in pixels
+
+        :return: area of feature in pixels.
+
+        :Example:
+        >>> img = Image('lena')
+        >>> face = HaarCascade('face.xml')
+        >>> faces = img.find_haar_features(face)
+        >>> print(faces[-1].area())
+        """
+        return self.width * self.height
 
 
 class Chessboard(Feature):
+    """
+    Used for Calibration, it uses a chessboard to calibrate from pixels
+    to real world measurements.
+    """
+    _spcorners = None
+    _dims = None
+
     def __init__(self, img, dim, subpixelscorners):
-        pass
+        self._dims = dim
+        self._spcorners = subpixelscorners
+        x = npy.average(npy.array(self._spcorners)[:, 0])
+        y = npy.average(npy.array(self._spcorners)[:, 1])
+
+        posdiagsorted = sorted(self._spcorners,
+                               key=lambda corner: corner[0] + corner[1])
+        # sort corners along the x + y axis
+        negdiagsorted = sorted(self._spcorners,
+                               key=lambda corner: corner[0] - corner[1])
+        # sort corners along the x - y axis
+
+        points = (posdiagsorted[0], negdiagsorted[-1],
+                  posdiagsorted[-1], negdiagsorted[0])
+        super(Chessboard, self).__init__(img, x, y, points)
 
     def draw(self, no_need_color=None):
-        pass
+        """
+        Draws the chessboard corners.
+
+        :param no_need_color:
+        :return: None
+        """
+        cv.DrawChessboardCorners(self._image.bitmap, self._dims,
+                                 self._spcorners, 1)
 
     def area(self):
-        pass
+        """
+        **SUMMARY**
+        Returns the mean of the distance between corner points in the chessboard
+        Given that the chessboard is of a known size, this can be used as a
+        proxy for distance from the camera
+
+        :return: the mean distance between the corners.
+
+        :Example:
+        >>> img = Image("corners.jpg")
+        >>> feats = img.findChessboardCorners()
+        >>> print feats[-1].area()
+        """
+        # note, copying this from barcode means we probably need a subclass of
+        # feature called "quandrangle"
+        sqform = spsd.squareform(spsd.pdist(self._points, "euclidean"))
+        a = sqform[0][1]
+        b = sqform[1][2]
+        c = sqform[2][3]
+        d = sqform[3][0]
+        p = sqform[0][2]
+        q = sqform[1][3]
+        s = (a + b + c + d) / 2.0
+        return 2 * sqrt((s - a) * (s - b) * (s - c) * (s - d) -
+                        (a * c + b * d + p * q) * (a * c + b * d - p * q) / 4)
 
 
 class TemplateMatch(Feature):

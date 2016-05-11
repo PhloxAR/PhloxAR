@@ -918,7 +918,7 @@ class Image(object):
     def get_skintone_mask(self, dilate_iter=0):
         pass
 
-    def find_harr_features(self, cascade, scale_factor=1.2, min_neighbors=2,
+    def find_haar_features(self, cascade, scale_factor=1.2, min_neighbors=2,
                            use_cammy=cv.CV_HAAR_DO_CANNY_PRUNING,
                            min_size=(20, 20), max_size=(1000, 1000)):
         pass
