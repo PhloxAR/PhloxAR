@@ -57,7 +57,7 @@ import glob  # for directory scanning
 import abc  # abstract base class
 import colorsys
 import logging
-# import pygame as pg
+# import pygame as sdl2
 import scipy.ndimage as ndimage
 import scipy.stats.stats as sss  # for auto white balance
 import scipy.cluster.vq as scv
@@ -188,7 +188,7 @@ class InitOptionsHandler(object):
 init_options_handler = InitOptionsHandler()
 
 try:
-    import pygame as pg
+    import pygame as sdl2
 except ImportError:
     init_options_handler.set_headless()
 
@@ -448,8 +448,8 @@ def system():
             print("Orange module not installed.")
 
         try:
-            import pygame as pg
-            print("PyGame version: %s." % pg.__version__)
+            import pygame as sdl2
+            print("PyGame version: %s." % sdl2.__version__)
         except ImportError:
             print("PyGame module not installed")
 
