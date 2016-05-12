@@ -837,8 +837,81 @@ class DigitalCamera(FrameSource):
     pass
 
 
-class ScreenCamera(FrameSource):
-    pass
+class ScreenCamera(object):
+    """
+    **SUMMARY**
+    ScreenCapture is a camera class would allow you to capture all or part of
+    the screen and return it as a color image. Requires the pyscreenshot
+    Library: https://github.com/vijaym123/pyscreenshot
+
+    :Example:
+    >>> sc = ScreenCamera()
+    >>> res = sc.get_resolution()
+    >>> print(res)
+    >>> img = sc.get_image()
+    >>> img.show()
+    """
+    _roi = None
+
+    def __init__(self):
+        if not PYSCREENSHOT_ENABLED:
+            warn("Initializing pyscreenshot failed. Install pyscreenshot from"
+                 " https://github.com/vijaym123/pyscreenshot")
+            return
+
+    def get_resolution(self):
+        """
+        returns the resolution of the screenshot of the screen.
+
+        :Example:
+        >>> img = ScreenCamera()
+        >>> res = img.get_resolution()
+        >>> print(res)
+        """
+        return Image(pyscreenshot.grab()).size()
+
+    @property
+    def roi(self):
+        return self._roi
+
+    @roi.setter
+    def roi(self, roi):
+        """
+        To set the region of interest.
+
+        :param roi: a tuple of size 4. where region of interest is to the
+                     center of the screen.
+
+        :Examples:
+        >>> sc = ScreenCamera()
+        >>> res = sc.get_resolution()
+        >>> sc.roi = (res[0]/4, res[1]/4, res[0]/2, res[1]/2)
+        >>> img = sc.get_image()
+        >>> img.show()
+        """
+        if isinstance(roi, tuple) and len(roi) == 4:
+            self._roi = roi
+
+    def get_image(self):
+        """
+        Returns a Image object capturing the current screenshot of the screen.
+
+        :return: the region of interest if ROI is set, otherwise returns
+                  the original capture of the screenshot.
+
+        :Examples:
+        >>> sc = ScreenCamera()
+        >>> img = sc.get_image()
+        >>> img.show()
+        """
+        img = Image(pyscreenshot.grab())
+        try:
+            if self._roi:
+                img = img.crop(self._roi, centered=True)
+        except Exception:
+            print("Error croping the image. ROI specified is not correct.")
+            return None
+        return img
 
 
 class StereoImage(object):
@@ -866,7 +939,153 @@ class AVTFrame(ctypes.Structure):
 
 
 class GigECamera(Camera):
-    pass
+    """
+    GigE Camera driver via Aravis
+    """
+    def __init__(self, camera_id=None, properties={}, threaded=False):
+        super(GigECamera, self).__init__()
+        try:
+            from gi.repository import Aravis
+        except ImportError:
+            print("GigE is supported by the Aravis library, download and "
+                  "build from https://github.com/sightmachine/aravis")
+            print("Note that you need to set GI_TYPELIB_PATH=$GI_TYPELIB_PATH:"
+                  "(PATH_TO_ARAVIS)/src for the GObject Introspection")
+            sys.exit()
+
+        self._cam = Aravis.Camera.new(None)
+
+        self._pixel_mode = "RGB"
+        if properties.get("mode", False):
+            self._pixel_mode = properties.pop("mode")
+
+        if self._pixel_mode == "gray":
+            self._cam.set_pixel_format(Aravis.PIXEL_FORMAT_MONO_8)
+        else:
+            self._cam.set_pixel_format(
+                Aravis.PIXEL_FORMAT_BAYER_BG_8)  # we'll use bayer (basler cams)
+            # TODO, deal with other pixel formats
+
+        if properties.get("roi", False):
+            roi = properties['roi']
+            self._cam.set_region(*roi)
+            # TODO, check sensor size
+
+        if properties.get("width", False):
+            # TODO, set internal function to scale results of getimage
+            pass
+
+        if properties.get("framerate", False):
+            self._cam.set_frame_rate(properties['framerate'])
+
+        self._stream = self._cam.create_stream(None, None)
+
+        payload = self._cam.get_payload()
+        self._stream.push_buffer(Aravis.Buffer.new_allocate(payload))
+        [x, y, width, height] = self._cam.get_region()
+        self._height, self._width = height, width
+
+    def get_image(self):
+
+        camera = self._cam
+        camera.start_acquisition()
+        buff = self._stream.pop_buffer()
+        self._cap_time = buff.timestamp_ns / 1000000.0
+        img = npy.fromstring(ctypes.string_at(buff.data_address(), buff.size),
+                             dtype=npy.uint8).reshape(self._height, self._width)
+        rgb = cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR)
+        self._stream.push_buffer(buff)
+        camera.stop_acquisition()
+        # TODO, we should handle software triggering (separate capture and get image events)
+
+        return Image(rgb)
+
+    def get_property_list(self):
+        l = [
+            'available_pixel_formats',
+            'available_pixel_formats_as_display_names',
+            'available_pixel_formats_as_strings',
+            'binning',
+            'device_id',
+            'exposure_time',
+            'exposure_time_bounds',
+            'frame_rate',
+            'frame_rate_bounds',
+            'gain',
+            'gain_bounds',
+            'height_bounds',
+            'model_name',
+            'payload',
+            'pixel_format',
+            'pixel_format_as_string',
+            'region',
+            'sensor_size',
+            'trigger_source',
+            'vendor_name',
+            'width_bounds'
+        ]
+        return l
+
+    def get_property(self, p=None):
+        """
+        This function get's the properties available to the camera
+        Usage:
+          > camera.getProperty('region')
+          > (0, 0, 128, 128)
+  
+        Available Properties:
+          see function camera.get_property_list()
+        """
+        if p is None:
+            print("You need to provide a property, available properties are:")
+            print("")
+            for p in self.get_property_list():
+                print(p)
+            return
+
+        stringval = "get_{}".format(p)
+        try:
+            return getattr(self._cam, stringval)()
+        except Exception:
+            print('Property {} does not appear to exist'.format(p))
+            return None
+
+    def set_property(self, p=None, *args):
+        """
+        This function sets the property available to the camera
+        Usage:
+          > camera.setProperty('region',(256,256))
+        Available Properties:
+          see function camera.get_property_list()
+        """
+
+        if p is None:
+            print("You need to provide a property, available properties are:")
+            print("")
+            for p in self.get_property_list():
+                print(p)
+            return
+
+        if len(args) <= 0:
+            print("You must provide a value to set")
+            return
+
+        stringval = "set_{}".format(p)
+
+        try:
+            return getattr(self._cam, stringval)(*args)
+        except Exception:
+            print('Property {} does not appear to exist or value is not '
+                  'in correct format'.format(p))
+            return None
+
+    def get_all_properties(self):
+        """
+        This function just prints out all the properties available to the camera
+        """
+
+        for p in self.get_property():
+            print("{}: {}".format(p, self.get_property(p)))
 
 
 class VimbaCamera(FrameSource):
@@ -874,7 +1093,44 @@ class VimbaCamera(FrameSource):
 
 
 class VimbaCameraThread(threading.Thread):
-    pass
+    vimba_cam = None
+    run = True
+    verbose = False
+    lock = None
+    logger = None
+    framerate = 0
+
+    def __init__(self, camera):
+        super(VimbaCameraThread, self).__init__()
+        self._stop = threading.Event()
+        self.vimba_cam = camera
+        self.lock = threading.Lock()
+        self.name = 'Thread-Camera-ID-' + str(self.camera.uniqueid)
+
+    def run(self):
+        counter = 0
+        timestamp = time.time()
+
+        while self.run:
+            self.lock.acquire()
+
+            img = self.vimba_cam.capture_frame(1000)
+            self.vimba_cam.buffer.appendleft(img)
+
+            self.lock.release()
+            counter += 1
+            time.sleep(0.01)
+
+            if time.time() - timestamp >= 1:
+                self.vimba_cam.framerate = counter
+                counter = 0
+                timestamp = time.time()
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
 
 
 
