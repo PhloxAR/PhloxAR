@@ -20,7 +20,7 @@ from PhloxAR.exif import *
 
 
 if not init_options_handler.headless:
-    import pygame as pg
+    import pygame as sdl2
 
 
 import scipy.ndimage as ndimage
@@ -294,11 +294,11 @@ class Image(object):
 
                 # TODO, on IOError fail back to PIL
                 self._colorSpace = ColorSpace.BGR
-        elif type(src) == pg.Surface:
+        elif type(src) == sdl2.Surface:
             self._surface = src
             self._bitmap = cv.CreateImageHeader(self._surface.get_size(),
                                                 cv.IPL_DEPTH_8U, 3)
-            cv.SetData(self._bitmap, pg.image.tostring(self._surface, 'RGB'))
+            cv.SetData(self._bitmap, sdl2.image.tostring(self._surface, 'RGB'))
             cv.CvtColor(self._bitmap, self._bitmap, cv.CV_RGB2BGR)
             self._color_space = ColorSpace
 
@@ -835,11 +835,11 @@ class Image(object):
             return self._surface
         else:
             if self.is_gray():
-                self._surface = pg.image.fromstring(self.bitmap.tostring(),
-                                                    self.size, 'RGB')
+                self._surface = sdl2.image.fromstring(self.bitmap.tostring(),
+                                                      self.size, 'RGB')
             else:
-                self._surface = pg.image.fromstring(self.to_rgb().bitmap.tostring(),
-                                                    self.size, 'RGB')
+                self._surface = sdl2.image.fromstring(self.to_rgb().bitmap.tostring(),
+                                                      self.size, 'RGB')
             return self._surface
 
     def to_string(self):
