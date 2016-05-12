@@ -15,67 +15,380 @@ import cv2
 import numpy as npy
 import traceback
 import sys
+import six
 
 
 # globals
-_cameras = []
-_camera_polling_thread = ''
-_index = []
+_gcameras = []
+_gcamera_polling_thread = ''
+_gindex = []
 
 
+@six.add_metaclass(abc.ABCMeta)
 class FrameSource(object):
     """
     An abstract Camera-type class, for handling multiple types of video
     input. Any sources of image inherit from it.
     """
-    _cali_mat = ''  # intrinsic calibration matrix
+    _calib_mat = ''  # intrinsic calibration matrix
     _dist_coeff = ''  # distortion matrix
     _thread_cap_time = ''  # the time the last picture was taken
-    capture_time = ''  # timestamp of the last aquired image
+    capture_time = ''  # timestamp of the last acquired image
 
+    @abc.abstractmethod
     def __init__(self):
-        return
+        self._calib_mat = None
+        self._dist_coeff = None
+        self._thread_cap_time = None
+        self.capture_time = None
 
+    @abc.abstractmethod
     def get_property(self, p):
         return None
 
+    @abc.abstractmethod
     def get_all_properties(self):
         return {}
 
+    @abc.abstractmethod
     def get_image(self):
         return None
 
-    def calibrate(self, image_list, grid_size=0.03, dimensions=(8, 5)):
-        pass
+    @abc.abstractmethod
+    def calibrate(self, image_list, grid_size=0.03, dims=(8, 5)):
+        """
+        Camera calibration will help remove distortion and fish eye effects
+        It is agnostic of the imagery source, and can be used with any camera
 
-    def get_camera_matrix(self):
+        The easiest way to run calibration is to run the calibrate.py file
+        under the tools directory.
+
+        :param image_list: a list of images of color calibration images
+        :param grid_size: the actual grid size of the calibration grid,
+                           the unit used will be the calibration unit
+                           value (i.e. if in doubt use meters, or U.S. standard)
+        :param dims: the count of the 'interior' corners in the calibration
+                      grid. So far a grid where there are 4x4 black squares
+                      has seven interior corners.
+        :return: camera's intrinsic matrix.
+        """
+        warn_thresh = 1
+        n_boards = 0  # number of boards
+        board_w = int(dims[1])  # number of horizontal corners
+        board_h = int(dims[0])  # number of vertical corners
+        n_boards = int(len(image_list))
+        board_num= board_w * board_h  # number of total corners
+        board_size = (board_w, board_h)  # size of board
+
+        if n_boards < warn_thresh:
+            logger.warning('FrameSource.calibrate: We suggest suing 20 or'
+                           'more images to perform camera calibration.')
+
+        # creation of memory storages
+        image_points = cv.CreateMat(n_boards * board_num, 2, cv.CV_32FC1)
+        object_points = cv.CreateMat(n_boards * board_num, 3, cv.CV_32FC1)
+        point_counts = cv.CreateMat(n_boards, 1, cv.CV_32SC1)
+        intrinsic_mat = cv.CreateMat(3, 3, cv.CV_32FC1)
+        dist_coeff = cv.CreateMat(5, 1, cv.CV_32FC1)
+
+        # capture frames of specified properties and modification
+        # of matrix values
+        i = 0
+        z = 0  # to print number of frames
+        successes = 0
+        img_idx = 0
+
+        # capturing required number of views
+        while successes < n_boards:
+            found = 0
+            img = image_list[img_idx]
+            found, corners = cv.FindChessboardCorners(
+                img.gray_matrix, board_size,
+                cv.CV_CALIB_CB_ADAPTIVE_THRESH | cv.CV_CALIB_CB_FILTER_QUADS
+            )
+
+            corners = cv.FindCornerSubPix(
+                    img.gray_matrix, corners,
+                    (11, 11), (-1, -1),
+                    (cv.CV_TERMCRIT_EPS + cv.CV_TERMCRIT_ITER, 30, 0.1)
+            )
+
+            # if got a good image, draw chess board
+            if found == 1:
+                corner_count = len(corners)
+                z += 1
+
+            # if got a good image, add to matrix
+                if len(corners) == board_num:
+                    step = successes * board_num
+                    k = step
+                    for j in range(board_num):
+                        cv.Set2D(image_points, k, 0, corners[j][0])
+                        cv.Set2D(image_points, k, 1, corners[j][1])
+                        cv.Set2D(object_points, k, 0,
+                                 grid_size * (float(j) / float(board_w)))
+                        cv.Set2D(object_points, k, 1,
+                                 grid_size * (float(j) % float(board_w)))
+                        cv.Set2D(object_points, k, 2, 0.0)
+                    cv.Set2D(point_counts, successes, 0, board_num)
+                    successes += 1
+
+        # now assigning new matrices according to view_count
+        if successes < warn_thresh:
+            logger.warning('FrameSource.calibrate: You have {} good '
+                           'images for calibration, but we recommend '
+                           'at least {}'.format(successes, warn_thresh))
+
+        object_points2 = cv.CreateMat(successes * board_num, 3, cv.CV_32FC1)
+        image_points2 = cv.CreateMat(successes * board_num, 2, cv.CV_32FC1)
+        point_counts2 = cv.CreateMat(successes, 1, cv.CV_32FC1)
+
+        for i in range(successes * board_num):
+            cv.Set2D(image_points2, i, 0, cv.Get2D(image_points, i, 0))
+            cv.Set2D(image_points2, i, 1, cv.Get2D(image_points, i, 1))
+            cv.Set2D(object_points2, i, 0, cv.Get2D(object_points, i, 0))
+            cv.Set2D(object_points2, i, 1, cv.Get2D(object_points, i, 1))
+            cv.Set2D(object_points2, i, 2, cv.Get2D(object_points, i, 2))
+
+        for i in range(successes):
+            cv.Set2D(point_counts2, i, 0, cv.Get2D(point_counts, i, 0))
+
+        cv.Set2D(intrinsic_mat, 0, 0, 1.0)
+        cv.Set2D(intrinsic_mat, 1, 1, 1.0)
+        rcv = cv.CreateMat(n_boards, 3, cv.CV_64FC1)
+        tcv = cv.CreateMat(n_boards, 3, cv.CV_64FC1)
+        # camera calibration
+        cv.CalibrateCamera2(object_points2, image_points2, point_counts2,
+                            (img.width, img.height), intrinsic_mat,
+                            dist_coeff, rcv, tcv, 0)
+
+        self._calib_mat = intrinsic_mat
+        self._dist_coeff = dist_coeff
+        return intrinsic_mat
+
+    @abc.abstractproperty
+    def camera_matrix(self):
         """
         Return a cvMat of the camera's intrinsic matrix.
         """
-        return self._cali_mat
+        return self._calib_mat
 
-    def undistort(self, image_or_2darray):
-        pass
+    @abc.abstractmethod
+    def undistort(self, img):
+        """
+        If given an image, apply the undistortion given by the camera's matrix
+        and return the result.
+        If given a 1xN 2D cvmat or a 2xN numpy array, it will un-distort points
+        of measurement and return them in the original coordinate system.
+        :param img: an image or and ndarray
+        :return: The undistored image or the undisotreted points.
 
+        :Example:
+        >>> img = cam.get_image()
+        >>> result = cam.undistort(img)
+        """
+        if not (isinstance(self._calib_mat, cv.cvmat) and
+                isinstance(self._dist_coeff, cv.cvmat)):
+            logger.warning('FrameSource.undistort: This operation requires '
+                           'calibration, please load the calibration matrix')
+            return None
+
+        if isinstance(img, InstanceType) and isinstance(img, Image):
+            inimg = img
+            ret = inimg.zeros()
+            cv.Undistort2(inimg.bitmap, ret, self._calib_mat, self._dist_coeff)
+            return Image(ret)
+        else:
+            mat = None
+            if isinstance(img, cv.cvmat):
+                mat = img
+            else:
+                arr = cv.fromarray(npy.array(img))
+                mat = cv.CreateMat(cv.GetSize(arr)[1], 1, cv.CV_64FC2)
+                cv.Merge(arr[:, 0], arr[:, 1], None, None, mat)
+
+            upoints = cv.CreateMat(cv.GetSize(mat)[1], 1, cv.CV_64FC2)
+            cv.UndistortPoints(mat, upoints, self._calib_mat, self._dist_coeff)
+
+            return (npy.array(upoints[:, 0]) * [
+                self.camera_matrix[0, 0],
+                self.camera_matrix[1, 1] + self.camera_matrix[0, 2],
+                self.camera_matrix[1, 2]
+            ])[:, 0]
+
+    @abc.abstractmethod
     def get_image_undisort(self):
+        """
+        Using the overridden get_image method, we retrieve the image and apply
+        the undistortion operation
+        :return: latest image from the camera after applying undistortion.
+        >>> cam = Camera()
+        >>> cam.loadCalibration("mycam.xml")
+        >>> while True:
+        >>>    img = cam.get_image_undisort()
+        >>>    img.show()
+        """
         return self.undistort(self.get_image())
 
+    @abc.abstractmethod
     def save_calibration(self, filename):
-        pass
+        """
+        Save the calibration matrices to file.
 
+        :param filename: file name, without extension
+        :return: True, if the file was saved, False otherwise
+        """
+        ret1 = ret2 = False
+        if not isinstance(self._calib_mat, cv.cvmat):
+            logger.warning("FrameSource.save_calibration: No calibration matrix"
+                           "present, can't save")
+        else:
+            intr_file = filename + 'Intrinsic.xml'
+            cv.Save(intr_file, self._calib_mat)
+            ret1 = True
+
+        if not isinstance(self._dist_coeff, cv.cvmat):
+            logger.warning("FrameSource.save_calibration: No calibration matrix"
+                           "present, can't save")
+        else:
+            dist_file = filename + 'Distortion.xml'
+            cv.Save(dist_file, self._dist_coeff)
+            ret2 = True
+
+        return ret1 and ret2
+
+    @abc.abstractmethod
     def load_calibration(self, filename):
-        pass
+        """
+        Load a calibration matrix from file.
+        The filename should be the stem of the calibration files names.
+        e.g. if the calibration files are MyWebcamIntrinsic.xml and
+        MyWebcamDistortion.xml then load the calibration file 'MyWebCam'
 
+        :param filename: without extension, which saves the calibration data
+        :return: Bool. True - file was loaded, False otherwise.
+        """
+        intr_file = filename + 'Intrinsic.xml'
+        self._calib_mat = cv.Load(intr_file)
+        dist_file = filename + 'Distortion.xml'
+        self._dist_coeff = cv.Load(dist_file)
+
+        if (isinstance(self._dist_coeff, cv.cvmat) and
+                isinstance(self._calib_mat, cv.cvmat)):
+            return True
+
+        return False
+
+    @abc.abstractmethod
     def live(self):
-        pass
+        """
+        Shows a live view of the camera.
+
+        :Example:
+        >>> cam = Camera()
+        >>> cam.live()
+        Left click will show mouse coordinates and color.
+        Right click will kill the live image.
+        """
+        start_time = time.time()
+
+        img = self.get_image()
+        dsp = Display(img.size())
+        img.save(dsp)
+        col = Color.RED
+
+        while not dsp.is_done():
+            img = self.get_image()
+            elapsed_time = time.time() - start_time
+
+            if dsp.mouse_l:
+                txt1 = 'Coord: ({}, {})'.format(dsp.mouse_x, dsp.mouse_y)
+                img.dl().text(txt1, (10, img.height / 2), color=col)
+                txt2 = 'Color: {}'.format(img.get_pixel(dsp.mouse_x, dsp.mouse_y))
+                img.dl().text(txt2, (10, img.height / 2 + 10), color=col)
+                print(txt1 + txt2)
+
+            if 0 < elapsed_time < 5:
+                img.dl().text('In live mode', (10, 10), color=col)
+                img.dl().text('Left click will show mouse coordinates and color',
+                              (10, 20), color=col)
+                img.dl().text('Right click will kill the live image', (10, 30),
+                              color=col)
+
+            img.save(dsp)
+            if dsp.mouse_r:
+                print("Closing window!")
+                dsp.done = True
+
+        sdl2.quit()
 
 
 class Camera(FrameSource):
-    pass
+    _cv2_capture = None  # cvCapture object
+    _thread = None
+    _sdl2_cam = False
+    _sdl2_buf = None
+
+    prop_map = {
+        "width": cv.CV_CAP_PROP_FRAME_WIDTH,
+        "height": cv.CV_CAP_PROP_FRAME_HEIGHT,
+        "brightness": cv.CV_CAP_PROP_BRIGHTNESS,
+        "contrast": cv.CV_CAP_PROP_CONTRAST,
+        "saturation": cv.CV_CAP_PROP_SATURATION,
+        "hue": cv.CV_CAP_PROP_HUE,
+        "gain": cv.CV_CAP_PROP_GAIN,
+        "exposure": cv.CV_CAP_PROP_EXPOSURE
+    }
+
+    def __init__(self, cam_idx=-1, prop_set={}, threaded=True, calib_file=''):
+        global _gcameras
+        global _gcamera_polling_thread
+        global _gindex
+        raise NotImplementedError
+
+    @property
+    def sdl2_cam(self):
+        return self._sdl2_cam
+
+    @sdl2_cam.setter
+    def sdl2_cam(self, value):
+        self._sdl2_cam = value
+
+    @property
+    def sdl2_buf(self):
+        return self._sdl2_buf
+
+    @sdl2_buf.setter
+    def sdl2_buf(self, value):
+        self._sdl2_buf = value
+        
+    @property
+    def cv2_capture(self):
+        return self._cv2_capture
+
+    @cv2_capture.setter
+    def cv2_capture(self, value):
+        self._cv2_capture = value
 
 
 class FrameBufferThread(threading.Thread):
-    pass
+    """
+    This is a helper thread which continually debuffers the camera frames.
+    If you don't do this, cameras may constantly give a frame behind, which
+    case problems at low sample rates. This makes sure the frame returned by
+    you camera are fresh.
+    """
+    def run(self):
+        global _gcameras
+        while True:
+            for cam in _gcameras:
+                if cam.sdl2_cam:
+                    cam.sdl2_buf = cam.cv2_capture.get_image(cam.sdl2_buf)
+                else:
+                    cv.GrabFrame(cam.cv2_capture)
+                cam._thread_capture_time = time.time()
+            time.sleep(0.04)  # max 25 fps, if you're lucky
+
 
 
 class VirtualCamera(FrameSource):
