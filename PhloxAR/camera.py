@@ -578,9 +578,145 @@ class FrameBufferThread(threading.Thread):
             time.sleep(0.04)  # max 25 fps, if you're lucky
 
 
-
 class VirtualCamera(FrameSource):
-    pass
+    """
+    The virtual camera lets you test algorithms or functions by providing
+    a Camera object which is not a physically connected device.
+
+    Currently, VirtualCamera supports "image", "imageset" and "video" source
+    types.
+
+    For image, pass the filename or URL to the image
+    For the video, the filename
+    For imageset, you can pass either a path or a list of [path, extension]
+    For directory you treat a directory to show the latest file, an example
+    would be where a security camera logs images to the directory,
+    calling .get_image() will get the latest in the directory
+    """
+    _src = None
+    _src_type = None
+    _last_time = 0
+
+    def __init__(self, src, src_type, start=1):
+        """
+        The constructor takes a source, and source type.
+
+        :param src: the source of the imagery
+        :param src_type: the type of the virtual camera. Valid strings include
+                         "image" - a single still image.
+                         "video" - a video file.
+                         "imageset" - a SimpleCV image set.
+                        "directory" - a VirtualCamera for loading a directory
+        :param start: the number of the frame that you want to start with.
+
+        :Example:
+        >>> vc = VirtualCamera("img.jpg", "image")
+        >>> vc = VirtualCamera("video.mpg", "video")
+        >>> vc = VirtualCamera("./path_to_images/", "imageset")
+        >>> vc = VirtualCamera("video.mpg", "video", 300)
+        >>> vc = VirtualCamera("./imgs", "directory")
+        """
+        super(VirtualCamera, self).__init__()
+        self._src = src
+        self._src_type = src_type
+        self.counter = 0
+
+        if start == 0:
+            start = 1
+
+        self._start = start
+
+        if self._src_type not in ['video', 'image', 'imageset', 'directory']:
+            print('Error: In VirtualCamera(), Incorrect Source '
+                  'option. "{}" \nUsage:'.format(self._src_type))
+            print('\tVirtualCamera("filename","video")')
+            print('\tVirtualCamera("filename","image")')
+            print('\tVirtualCamera("./path_to_images","imageset")')
+            print('\tVirtualCamera("./path_to_images","directory")')
+            return
+        else:
+            if isinstance(self._src, str) and not os.path.exists(self._src):
+                print('Error: In VirtualCamera()\n\t "{}" was not found'.format(
+                    self._src
+                ))
+                return
+        if self._src_type == 'imageset':
+            if isinstance(src, ImageSet):
+                self._src = src
+            elif isinstance(src, (list, str)):
+                self._src = ImageSet()
+                if isinstance(src, list):
+                    self._src.load(*src)
+                else:
+                    self._src.load(src)
+            else:
+                warnings.warn('Virtual Camera is unable to figure out the '
+                              'contents of your ImageSet, it must be a '
+                              'directory, list of directories, or an '
+                              'ImageSet object')
+        elif self._src_type == 'video':
+            self._cv2_capture = cv.CaptureFromFile(self._src)
+            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
+                                  self._start - 1)
+        elif self._src_type == 'directory':
+            pass
+
+    def get_image(self):
+        """
+        Retrieve an Image-object from the virtual camera.
+
+        :return: an Image
+
+        :Example:
+        >>> cam = VirtualCamera()
+        >>> while True:
+        >>>     cam.get_image().show()
+        """
+        if self._src_type == 'image':
+            self.counter += 1
+            return Image(self._src, self)
+        elif self._src_type == 'imageset':
+            print(len(self._src))
+            img = self._src[self.counter % len(self._src)]
+            self.counter += 1
+            return img
+        elif self._src_type == 'video':
+            # cv.QueryFrame returns None if the video is finished
+            frame = cv.QueryFrame(self._cv2_capture)
+            if frame:
+                img = cv.CreateImage(cv.GetSize(frame), cv.IPL_DEPTH_8U, 3)
+                cv.Copy(frame, img)
+                return Image(img, self)
+            else:
+                return None
+        elif self._src_type == 'directory':
+            img = self.find_lastest_image(self._src, 'bmp')
+            self.counter += 1
+            return Image(img, self)
+
+    def get_property(self, p):
+        pass
+
+    def get_all_properties(self):
+        pass
+
+    def rewind(self, start=None):
+        pass
+
+    def get_frame(self, frame):
+        pass
+
+    def skip_frames(self, num):
+        pass
+
+    def get_frame_number(self):
+        pass
+
+    def get_current_play_time(self):
+        pass
+
+    def find_lastest_image(self, directory='', ext='png'):
+        pass
 
 
 class JpegStreamReader(threading.Thread):
