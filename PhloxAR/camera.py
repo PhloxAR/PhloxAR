@@ -37,10 +37,7 @@ class FrameSource(object):
 
     @abc.abstractmethod
     def __init__(self):
-        self._calib_mat = None
-        self._dist_coeff = None
-        self._thread_cap_time = None
-        self.capture_time = None
+        return
 
     @abc.abstractmethod
     def get_property(self, p):
@@ -341,10 +338,194 @@ class Camera(FrameSource):
     }
 
     def __init__(self, cam_idx=-1, prop_set={}, threaded=True, calib_file=''):
+        """
+        In the camera constructor, cam_idx indicates which camera to connect to
+        and prop_set is a dictionary which can be used to set any camera
+        attributes, supported props are currently:
+        height, width, brightness, contrast, saturation, hue, gain, and exposure
+
+        You can also specify whether you want the FrameBufferThread to
+        continuously debuffer the camera.  If you specify True, the camera
+        is essentially 'on' at all times.  If you specify off, you will have
+        to manage camera buffers.
+
+        :param cam_idx: the index of the camera, these go from 0 upward,
+                         and are system specific.
+        :param prop_set: the property set for the camera (i.e. a dict of
+                          camera properties).
+        :Note:
+        For most web cameras only the width and height properties are
+        supported. Support for all of the other parameters varies by
+        camera and operating system.
+
+        :param threaded: if True we constantly debuffer the camera, otherwise
+                          the user must do this manually.
+        :param calib_file: calibration file to load.
+        """
         global _gcameras
         global _gcamera_polling_thread
         global _gindex
-        raise NotImplementedError
+
+        self._index = None
+        self._threaded = False
+        self._cv2_capture = None
+
+        if platform.system() == 'Linux':
+            if -1 in _gindex and cam_idx != -1 and cam_idx not in _gindex:
+                process = subprocess.Popen(['lsof /dev/video' + str(cam_idx)],
+                                           shell=True, stdout=subprocess.PIPE)
+                data = process.communicate()
+                if data[0]:
+                    cam_idx = -1
+            else:
+                process = subprocess.Popen(['lsof /dev/video*'], shell=True,
+                                           stdout=subprocess.PIPE)
+                data = process.communicate()
+                if data[0]:
+                    cam_idx = int(data[0].split('\n')[1].split()[-1][-1])
+
+        for cam in _gcameras:
+            if cam_idx == cam.index:
+                self._threaded = cam.threaded
+                self._cv2_capture = cam.cv2_capture
+                self._index = cam.index
+                _gcameras.append(self)
+                return
+
+        # to support XIMEA cameras
+        if isinstance(cam_idx, str):
+            if cam_idx.lower() == 'ximea':
+                cam_idx = 1100
+                _gindex.append(cam_idx)
+
+        self._cv2_capture = cv.CaptureFromCAM(cam_idx)
+        self._index = cam_idx
+
+        if 'delay' in prop_set:
+            time.sleep(prop_set['delay'])
+
+        if (platform.system() == 'Linux' and
+                ('height' in prop_set or
+                         cv.GrabFrame(self._cv2_capture) == False)):
+            import pygame.camera as sdl2_cam
+            sdl2_cam.init()
+            threaded = True  # pygame must be threaded
+
+            if cam_idx == -1:
+                cam_idx = 0
+                self._index = cam_idx
+                _gindex.append(cam_idx)
+                print(_gindex)
+
+            if 'height' in prop_set and 'width' in prop_set:
+                self._cv2_capture = sdl2_cam.Camera('/dev/video' + str(cam_idx),
+                                                    prop_set['width'],
+                                                    prop_set['height'])
+            else:
+                self._cv2_capture = sdl2_cam.Camera('/dev/video' + str(cam_idx))
+
+            try:
+                self._cv2_capture.start()
+            except Exception as e:
+                msg = "Caught exception: {}".format(e)
+                logger.warning(msg)
+                logger.warning('PhloxAR cannot find camera on your computer!')
+                return
+            time.sleep(0)
+            self._sdl2_buf = self._cv2_capture.get_image()
+            self._sdl2_cam = True
+        else:
+            _gindex.append(cam_idx)
+            self._threaded = False
+
+            if platform.system() == 'Windows':
+                threaded = False
+
+            if not self._cv2_capture:
+                return
+
+            for p in prop_set.keys():
+                if p in self.prop_map:
+                    cv.SetCaptureProperty(self._cv2_capture, self.prop_map[p],
+                                          prop_set[p])
+
+        if threaded:
+            self._threaded = True
+            _gcameras.append(self)
+            if not _gcamera_polling_thread:
+                _gcamera_polling_thread = FrameBufferThread()
+                _gcamera_polling_thread.daemon = True
+                _gcamera_polling_thread.start()
+                time.sleep(0)
+
+        if calib_file:
+            self.load_calibration(calib_file)
+
+        super(Camera, self).__init__()
+
+    def get_property(self, p):
+        """
+        Retrieve the value of a given property, wrapper for
+        cv.GetCaptureProperty
+
+        :param p: the property to retrieve
+        :return: specified property, if it can't be found the method return False
+
+        :Example:
+        >>> cam = Camera()
+        >>> p = cam.get_property('width')
+        """
+        if self._sdl2_cam:
+            if p.lower() == 'width':
+                return self._cv2_capture.get_size()[0]
+            elif p.lower() == 'height':
+                return self._cv2_capture.get_size()[1]
+            else:
+                return False
+
+        if p in self.prop_map:
+            return cv.GetCaptureProperty(self._cv2_capture, self.prop_map[p])
+
+        return False
+
+    def get_all_properties(self):
+        """
+        Return all properties from the camera.
+
+        :return: a dict of all the camera properties.
+        """
+        if self._sdl2_cam:
+            return False
+
+        props = {}
+
+        for p in self.prop_map:
+            props[p] = self.get_property(p)
+
+        return props
+
+    def get_image(self):
+        """
+        Retrieve an Image-object from the camera.  If you experience problems
+        with stale frames from the camera's hardware buffer, increase the
+        flush cache number to dequeue multiple frames before retrieval
+        We're working on how to solve this problem.
+
+        :return: a Image.
+
+        :Example:
+        >>> cam = Camera()
+        >>> while True:
+        >>>     cam.get_image().show()
+        """
+
+    @property
+    def index(self):
+        return self._index
+
+    @property
+    def threaded(self):
+        return self._threaded
 
     @property
     def sdl2_cam(self):
