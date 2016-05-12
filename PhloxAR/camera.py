@@ -33,7 +33,7 @@ class FrameSource(object):
     _calib_mat = ''  # intrinsic calibration matrix
     _dist_coeff = ''  # distortion matrix
     _thread_cap_time = ''  # the time the last picture was taken
-    capture_time = ''  # timestamp of the last acquired image
+    _cap_time = ''  # timestamp of the last acquired image
 
     @abc.abstractmethod
     def __init__(self):
@@ -51,7 +51,6 @@ class FrameSource(object):
     def get_image(self):
         return None
 
-    @abc.abstractmethod
     def calibrate(self, image_list, grid_size=0.03, dims=(8, 5)):
         """
         Camera calibration will help remove distortion and fish eye effects
@@ -163,14 +162,12 @@ class FrameSource(object):
         self._dist_coeff = dist_coeff
         return intrinsic_mat
 
-    @abc.abstractproperty
     def camera_matrix(self):
         """
         Return a cvMat of the camera's intrinsic matrix.
         """
         return self._calib_mat
 
-    @abc.abstractmethod
     def undistort(self, img):
         """
         If given an image, apply the undistortion given by the camera's matrix
@@ -213,7 +210,6 @@ class FrameSource(object):
                 self.camera_matrix[1, 2]
             ])[:, 0]
 
-    @abc.abstractmethod
     def get_image_undisort(self):
         """
         Using the overridden get_image method, we retrieve the image and apply
@@ -227,7 +223,6 @@ class FrameSource(object):
         """
         return self.undistort(self.get_image())
 
-    @abc.abstractmethod
     def save_calibration(self, filename):
         """
         Save the calibration matrices to file.
@@ -254,7 +249,6 @@ class FrameSource(object):
 
         return ret1 and ret2
 
-    @abc.abstractmethod
     def load_calibration(self, filename):
         """
         Load a calibration matrix from file.
@@ -276,7 +270,6 @@ class FrameSource(object):
 
         return False
 
-    @abc.abstractmethod
     def live(self):
         """
         Shows a live view of the camera.
@@ -511,13 +504,27 @@ class Camera(FrameSource):
         flush cache number to dequeue multiple frames before retrieval
         We're working on how to solve this problem.
 
-        :return: a Image.
+        :return: an Image.
 
         :Example:
         >>> cam = Camera()
         >>> while True:
         >>>     cam.get_image().show()
         """
+        if self._sdl2_cam:
+            return Image(self._sdl2_buf.copy())
+
+        if not self._threaded:
+            cv.GrabFrame(self._cv2_capture)
+            self._cap_time = time.time()
+        else:
+            self._cap_time = self._thread_cap_time
+
+        frame = cv.RetrieveFrame(self._cv2_capture)
+        newing = cv.CreateImage(cv.GetSize(frame), cv.IPL_DEPTH_8U, 3)
+        cv.Copy(frame, newing)
+
+        return Image(newing, self)
 
     @property
     def index(self):
