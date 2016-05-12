@@ -17,6 +17,14 @@ import traceback
 import sys
 import six
 
+if sys.version[0] == 2:
+    from urllib2 import urlopen, build_opener
+    from urllib2 import HTTPBasicAuthHandler, HTTPPasswordMgrWithDefaultRealm
+elif sys.version[0] == 3:
+    from urllib import urlopen
+    from urllib.request import build_opener, HTTPBasicAuthHandler
+    from urllib.request import HTTPPasswordMgrWithDefaultRealm
+
 
 # globals
 _gcameras = []
@@ -549,7 +557,7 @@ class Camera(FrameSource):
     @sdl2_buf.setter
     def sdl2_buf(self, value):
         self._sdl2_buf = value
-        
+
     @property
     def cv2_capture(self):
         return self._cv2_capture
@@ -720,7 +728,101 @@ class VirtualCamera(FrameSource):
 
 
 class JpegStreamReader(threading.Thread):
-    pass
+    """
+     A Threaded class for pulling down JPEG streams and breaking up the images.
+     This is handy for reading the stream of images from a IP Camera.
+     """
+    url = ""
+    currentframe = ""
+    _thread_cap_time = ""
+
+    def run(self):
+
+        f = ''
+
+        if re.search('@', self.url):
+            authstuff = re.findall('//(\S+)@', self.url)[0]
+            self.url = re.sub("//\S+@", "//", self.url)
+            user, password = authstuff.split(":")
+
+            # thank you missing urllib2 manual
+            # http://www.voidspace.org.uk/python/articles/urllib2.shtml#id5
+            password_mgr = HTTPPasswordMgrWithDefaultRealm()
+            password_mgr.add_password(None, self.url, user, password)
+
+            handler = HTTPBasicAuthHandler(password_mgr)
+            opener = build_opener(handler)
+
+            f = opener.open(self.url)
+        else:
+            f = urlopen(self.url)
+
+        headers = f.info()
+        if "content-type" in headers:
+            # force upcase first char
+            headers['Content-type'] = headers['content-type']
+
+        if "Content-type" not in headers:
+            logger.warning("Tried to load a JpegStream from " +
+                           self.url +
+                           ", but didn't find a content-type header!")
+            return
+
+        multipart, boundary = headers['Content-type'].split("boundary=")
+        if not re.search("multipart", multipart, re.I):
+            logger.warning("Tried to load a JpegStream from " +
+                           self.url + ", but the content type header was " +
+                           multipart + " not multipart/replace!")
+            return
+
+        buff = ''
+        data = f.readline().strip()
+        length = 0
+        contenttype = "jpeg"
+
+        # the first frame contains a boundarystring and some header info
+        while True:
+            # print data
+            if re.search(boundary, data.strip()) and len(buff):
+                # we have a full jpeg in buffer.  Convert to an image
+                if contenttype == "jpeg":
+                    self.currentframe = buff
+                    self._thread_cap_time = time.time()
+                buff = ''
+
+            if re.match("Content-Type", data, re.I):
+                # set the content type, if provided (default to jpeg)
+                (header, typestring) = data.split(":")
+                (junk, contenttype) = typestring.strip().split("/")
+
+            if re.match("Content-Length", data, re.I):
+                # once we have the content length, we know how far to go jfif
+                (header, length) = data.split(":")
+                length = int(length.strip())
+
+            if (re.search("JFIF", data, re.I) or re.search("\xff\xd8\xff\xdb",
+                                                           data) or len(
+                    data) > 55):
+                # we have reached the start of the image
+                buff = ''
+                if length and length > len(data):
+                    buff += data + f.read(
+                        length - len(data))  # read the remainder of the image
+                    if contenttype == "jpeg":
+                        self.currentframe = buff
+                        self._thread_cap_time = time.time()
+                else:
+                    while not re.search(boundary, data):
+                        buff += data
+                        data = f.readline()
+
+                    endimg, junk = data.split(boundary)
+                    buff += endimg
+                    data = boundary
+                    continue
+
+            data = f.readline()  # load the next (header) line
+            time.sleep(0)  # let the other threads go
 
 
 class JpegStreamCamera(FrameSource):
