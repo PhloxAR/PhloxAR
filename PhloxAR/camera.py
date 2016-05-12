@@ -991,7 +991,7 @@ class GigECamera(Camera):
         camera.start_acquisition()
         buff = self._stream.pop_buffer()
         self._cap_time = buff.timestamp_ns / 1000000.0
-        img = npy.fromstring(ct.string_at(buff.data_address(), buff.size),
+        img = npy.fromstring(ctypes.string_at(buff.data_address(), buff.size),
                              dtype=npy.uint8).reshape(self._height, self._width)
         rgb = cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR)
         self._stream.push_buffer(buff)
