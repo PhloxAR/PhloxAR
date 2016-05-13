@@ -1419,7 +1419,17 @@ class Image(object):
         return -self
 
     def grayscale(self):
-        pass
+        """
+        This method returns a gray scale version of the image. It makes
+        everything look like an old movie.
+
+        :return: a grayscale image.
+
+        :Example:
+        >>> img = Image("lenna")
+        >>> img.grayscale().binarize().show()
+        """
+        return Image(self._gray_bitmap_func(), color_space=ColorSpace.GRAY)
 
     def flip_horizontal(self):
         pass
