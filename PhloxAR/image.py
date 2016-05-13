@@ -1172,14 +1172,14 @@ class Image(object):
             sfactor = float(height) / float(self.height)
             width = int(sfactor * float(self.width))
 
-        if width > MAX_DIMENSION or height > MAX_DIMENSION:
+        if width > MAX_DIMS or height > MAX_DIMS:
             logger.warning("Image.resize! You tried to make an image really"
                            " big or impossibly small. I can't scale that")
             return ret
 
         scaled_bitmap = cv.CreateImage((width, height), 8, 3)
         cv.Resize(self.bitmap, scaled_bitmap)
-        return Image(scaled_bitmap, colorSpace=self._colorSpace)
+        return Image(scaled_bitmap, color_space=self._colorSpace)
 
     def smooth(self, method='gaussian', aperture=(3, 3), sigma=0,
                spatial_sigma=0, grayscale=False, aperature=None):
