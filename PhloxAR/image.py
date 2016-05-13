@@ -1111,11 +1111,75 @@ class Image(object):
 
         return Image(img, colorspace=self._color_space)
 
-    def scale(self, width, height=-1, interpolation=cv2.INTER_LINEAR):
-        pass
+    def scale(self, scalar, interp=cv2.INTER_LINEAR):
+        """
+        Scale the image to a new width and height.
+        If no height is provided, the width is considered a scaling value
+
+        :param scalar: scalar to scale
+        :param interp: how to generate new pixels that don't match the original
+                       pixels. Argument goes direction to cv.Resize.
+                       See http://docs.opencv.org/modules/imgproc/doc/geometric_transformations.html?highlight=resize#cv2.resize for more details
+
+        :return: resized image.
+
+        :Example:
+        >>> img.scale(2.0)
+        """
+        if scalar is not None:
+            w = int(self.width *  scalar)
+            h = int(self.height * scalar)
+            if w > MAX_DIMS or h > MAX_DIMS or h < 1 or w < 1:
+                logger.warning("You tried to make an image really big or "
+                               "impossibly small. I can't scale that")
+                return self
+        else:
+            return self
+
+        scaled_array = npy.zeros((w, h, 3), dtype='uint8')
+        ret = cv2.resize(self.cvnarray, (w, h), interpolation=interp)
+        return Image(ret, color_space=self._color_space, cv2image=True)
 
     def resize(self, width=None, height=None):
-        pass
+        """
+        Resize an image based on a width, a height, or both.
+        If either width or height is not provided the value is inferred by
+        keeping the aspect ratio. If both values are provided then the image
+        is resized accordingly.
+
+        :param width: width of the output image in pixels.
+        :param height: height of the output image in pixels.
+
+        :return:
+        Returns a resized image, if the size is invalid a warning is issued and
+        None is returned.
+
+        :Example:
+        >>> img = Image("lenna")
+        >>> img2 = img.resize(w=1024) # h is guessed from w
+        >>> img3 = img.resize(h=1024) # w is guessed from h
+        >>> img4 = img.resize(w=200,h=100)
+        """
+        ret = None
+        if width is None and height is None:
+            logger.warning("Image.resize has no parameters. No operation is "
+                           "performed")
+            return None
+        elif width is not None and height is None:
+            sfactor = float(width) / float(self.width)
+            height = int(sfactor * float(self.height))
+        elif width is None and height is not None:
+            sfactor = float(height) / float(self.height)
+            width = int(sfactor * float(self.width))
+
+        if width > MAX_DIMENSION or height > MAX_DIMENSION:
+            logger.warning("Image.resize! You tried to make an image really"
+                           " big or impossibly small. I can't scale that")
+            return ret
+
+        scaled_bitmap = cv.CreateImage((width, height), 8, 3)
+        cv.Resize(self.bitmap, scaled_bitmap)
+        return Image(scaled_bitmap, colorSpace=self._colorSpace)
 
     def smooth(self, method='gaussian', aperture=(3, 3), sigma=0,
                spatial_sigma=0, grayscale=False, aperature=None):
