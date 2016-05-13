@@ -1708,7 +1708,7 @@ class Image(object):
         >>> img = Image("lena")
         >>> fs = img.find_blobs()
         >>> if fs is not None:
-        >>>     fs.draw()
+            ... fs.draw()
 
         :Warning:
         For blobs that live right on the edge of the image OpenCV reports
@@ -1731,9 +1731,45 @@ class Image(object):
             return None
 
         return FeatureSet(blobs).sort_area()
-gi
-    def find_skintone_blobs(self, minsize=10, maxsiz=0, dilate_iter=1):
 
+    def find_skintone_blobs(self, minsize=10, maxsize=0, dilate_iter=1):
+        """
+        Find Skintone blobs will look for continuous regions of Skintone in a
+        color image and return them as Blob features in a FeatureSet. Parameters
+        specify the binarize filter threshold value, and minimum and maximum
+        size for blobs. If a threshold value is -1, it will use an adaptive
+        threshold.  See binarize() for more information about thresholding.
+        The threshblocksize and threshconstant parameters are only used for
+        adaptive threshold.
+
+        :param minsize: the minimum size of the blobs, in pixels, of the
+                         returned blobs. This helps to filter out noise.n
+        :param maxsize: the maximim size of the blobs, in pixels, of the
+                         returned blobs.
+        :param dilate_iter: the number of times to run the dilation operation.
+
+        :return: a featureset (basically a list) of blob features. If no blobs
+                 are found this method returns None.
+        :Example:
+        >>> img = Image("lenna")
+        >>> fs = img.find_skintone_blobs()
+        >>> if fs is not None:
+            ... fs.draw()
+
+        :Note:
+        It will be really awesome for making UI type stuff, where you want
+        to track a hand or a face.
+        """
+        if maxsize == 0:
+            maxsize = self.width * self.height
+        mask = self.get_skintone_mask(dilate_iter)
+        blobmaker = BlobMaker()
+        blobs = blobmaker.extract_from_binary(mask, self, minsize=minsize,
+                                              maxsize=maxsize)
+        if not len(blobs):
+            return None
+
+        return FeatureSet(blobs).sort_area()
 
     def get_skintone_mask(self, dilate_iter=0):
         pass
