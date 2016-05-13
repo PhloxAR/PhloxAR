@@ -129,6 +129,7 @@ class Image(object):
         """
         Takes a single polymorphic parameter, tests to see how it should convert
         to RGB image.
+
         :param src: the source of the image, could be anything, a file name,
                         a width and height tuple, a url. Certain strings such as
                         'lena', or 'logo' are loaded automatically for quick test.
@@ -145,7 +146,6 @@ class Image(object):
         Python Image Library: Image type
         Filename: All OpenCV supported types (jpg, png, bmp, gif, etc)
         URL: The source can be a url, but must include the http://
-        :return:
         """
         self._layers = []
         self.camera = camera
@@ -319,7 +319,7 @@ class Image(object):
         if color_space != ColorSpace.UNKNOWN:
             self._color_space = color_space
 
-        bmp = self.get_bitmap()
+        bmp = self.bitmap
         self.width = bmp.width
         self.height = bmp.height
         self.depth = bmp.depth
@@ -371,10 +371,28 @@ class Image(object):
         A live view of the camera.
         Left click will show mouse coordinates and color.
         Right click will kill the live image.
+
         :return: None.
+
+        :Example:
+        >>> cam = Camera()
+        >>> cam.live()
         """
         start_time = time.time()
-        pass
+
+        from PhloxAR.display import Display
+
+        i = self
+        d = Display(i.size)
+        i.save(d)
+        col = Color.RED
+
+        while not d.is_done():
+            i = self
+            i.clear_layers()
+            elapsed_time = time.time() - start_time
+
+            if d.mouse_l:
 
     @property
     def color_space(self):
@@ -808,6 +826,7 @@ class Image(object):
     def equalize(self):
         """
         Perform histogram equalization on the image.
+
         :return: return a grayscale Image
         """
         return Image(self._equalize_gray_bitmap())
