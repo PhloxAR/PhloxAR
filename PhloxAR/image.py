@@ -75,12 +75,12 @@ class Image(object):
     _pilimg = ''  # holds a PIL Image object in buffer
     _surface = ''  # pygame surface representation of the image
     _narray = ''  # numpy array representation of the image
-    _cv2narray = None  # Numpy array which compatible with OpenCV >= 2.3
+    _cvnarray = None  # Numpy array which compatible with OpenCV >= 2.3
 
     _gray_matrix = ''  # the gray scale (cvmat) representation
     _gray_bitmap = ''  # the 8-bit gray scale bitmap
     _gray_narray = ''  # gray scale numpy array for key point stuff
-    _gray_cv2narray = None  # grayscale numpy array for OpenCV >= 2.3
+    _gray_cvnarray = None  # grayscale numpy array for OpenCV >= 2.3
 
     _equalized_gray_bitmap = ''  # the normalized bitmap
 
@@ -129,6 +129,7 @@ class Image(object):
         """
         Takes a single polymorphic parameter, tests to see how it should convert
         to RGB image.
+
         :param src: the source of the image, could be anything, a file name,
                         a width and height tuple, a url. Certain strings such as
                         'lena', or 'logo' are loaded automatically for quick test.
@@ -145,7 +146,6 @@ class Image(object):
         Python Image Library: Image type
         Filename: All OpenCV supported types (jpg, png, bmp, gif, etc)
         URL: The source can be a url, but must include the http://
-        :return:
         """
         self._layers = []
         self.camera = camera
@@ -171,13 +171,13 @@ class Image(object):
             img_file = urllib2.urlopen(req)
 
             img = StringIO(img_file.read())
-            src = pilImage.open(img).convert("RGB")
+            src = PILImage.open(img).convert("RGB")
 
         # check base64 url
         if type(src) == str and (src.lower().startswith('data:image/png;base64')):
             ims = src[22:].decode('base64')
             img = StringIO(ims)
-            src = pilImage.open(img).convert("RGB")
+            src = PILImage.open(img).convert("RGB")
 
         if type(src) == str:
             tmp_name = src.lower()
@@ -255,7 +255,7 @@ class Image(object):
                 try:
                     if sclsname == 'StringIO':
                         src.seek(0)  # set the stringIO to the beginning
-                    self._pilimage = pilImage.open(src)
+                    self._pilimage = PILImage.open(src)
                     self._bitmap = cv.CreateImageHeader(self._pilimage.size,
                                                         cv.IPL_DEPTH_8U, 3)
                 except:
@@ -270,7 +270,7 @@ class Image(object):
 
                     WEBP_IMAGE_DATA = bytearray(file(src, "rb").read())
                     result = wdecode.DecodeRGB(WEBP_IMAGE_DATA)
-                    webpimage = pilImage.frombuffer("RGB",
+                    webpimage = PILImage.frombuffer("RGB",
                                                     (result.width, result.height),
                                                     str(result.bitmap),
                                                     "raw", "RGB", 0, 1)
@@ -286,14 +286,14 @@ class Image(object):
                     self._bitmap = cv.LoadImage(self.filename,
                                                 iscolor=cv.CV_LOAD_IMAGE_COLOR)
                 except:
-                    self._pil = pilImage.open(self.filename).convert("RGB")
+                    self._pil = PILImage.open(self.filename).convert("RGB")
                     self._bitmap = cv.CreateImageHeader(self._pil.size,
                                                         cv.IPL_DEPTH_8U, 3)
                     cv.SetData(self._bitmap, self._pil.tostring())
                     cv.CvtColor(self._bitmap, self._bitmap, cv.CV_RGB2BGR)
 
                 # TODO, on IOError fail back to PIL
-                self._colorSpace = ColorSpace.BGR
+                self._color_space = ColorSpace.BGR
         elif type(src) == sdl2.Surface:
             self._surface = src
             self._bitmap = cv.CreateImageHeader(self._surface.get_size(),
@@ -319,7 +319,7 @@ class Image(object):
         if color_space != ColorSpace.UNKNOWN:
             self._color_space = color_space
 
-        bmp = self.get_bitmap()
+        bmp = self.bitmap
         self.width = bmp.width
         self.height = bmp.height
         self.depth = bmp.depth
@@ -371,10 +371,45 @@ class Image(object):
         A live view of the camera.
         Left click will show mouse coordinates and color.
         Right click will kill the live image.
+
         :return: None.
+
+        :Example:
+        >>> cam = Camera()
+        >>> cam.live()
         """
         start_time = time.time()
-        pass
+
+        from PhloxAR.display import Display
+
+        i = self
+        d = Display(i.size)
+        i.save(d)
+        col = Color.RED
+
+        while not d.is_done():
+            i = self
+            i.clear_layers()
+            elapsed_time = time.time() - start_time
+
+            if d.mouse_l:
+                txt1 = 'Coord: ({}, {})'.format(d.mouse_x, d.mouse_r)
+                i.dl().text(txt1, (10, i.height / 2), color=col)
+                txt2 = 'Color: {}'.format((i.get_pixel(d.mouse_x, d.mouse_y)))
+                i.dl().text(txt2, (10, i.height / 2 + 10), color=col)
+                print(txt1 + '\n' + txt2)
+
+            if 0 < elapsed_time < 5:
+                i.dl().text('In live mode', (10, 10), color=col)
+                i.dl().text("Left click will show mouse coordinates and color",
+                            (10,20), color=col)
+                i.dl().text("Right click will kill the live image", (10,30),
+                            color=col)
+
+            i.save(d)
+            if d.mouse_r:
+                print("Closing Window!")
+                d.done = True
 
     @property
     def color_space(self):
@@ -383,6 +418,8 @@ class Image(object):
         :return: integer corresponding to the color space.
         """
         return self._color_space
+
+    get_color_space = color_space
 
     def is_rgb(self):
         """
@@ -652,6 +689,8 @@ class Image(object):
 
         return bitmap
 
+    get_empty = zeros
+
     @property
     def bitmap(self):
         """
@@ -669,6 +708,8 @@ class Image(object):
 
         return self._bitmap
 
+    get_bitmap = bitmap.fget
+
     @property
     def matrix(self):
         """
@@ -681,6 +722,8 @@ class Image(object):
         else:
             self._matrix = cv.GetMat(self._bitmap)
             return self._matrix
+
+    get_matrix = matrix.fget
 
     @property
     def gray_matrix(self):
@@ -695,6 +738,8 @@ class Image(object):
             self._gray_matrix = cv.GetMat(self._gray_bitmap_func())
             return self._gray_matrix
 
+    get_grayscale_matrix = gray_matrix.fget
+
     @property
     def float_matrix(self):
         """
@@ -706,6 +751,8 @@ class Image(object):
         cv.Convert(self.bitmap, img)
 
         return img
+
+    get_float_matrix = float_matrix
 
     @property
     def pilimg(self):
@@ -721,10 +768,13 @@ class Image(object):
             pass
         pass
 
+    get_pilimg = pilimg
+
     @property
     def narray(self):
         """
         Get a Numpy array of the image in width x height x RGB dimensions
+
         :return: the image, converted first to grayscale and then converted
                   to a 3D Numpy array.
         """
@@ -734,6 +784,8 @@ class Image(object):
         self._narray = npy.array(self.matrix)[:, :, ::-1].transpose([1, 0, 2])
 
         return self._narray
+
+    get_narray = narray.fget
 
     @property
     def gray_narray(self):
@@ -749,27 +801,33 @@ class Image(object):
                     self._gray_bitmap_func()
             )).transpose())
 
+    get_grayscale_narray = gray_narray.fget
+
     @property
-    def cv2narray(self):
+    def cvnarray(self):
         """
         Get a Numpy array of the image, compatible with OpenCV >= 2.3
         :return: 3D Numpy array of the image.
         """
-        if not isinstance(self._cv2narray, npy.ndarray):
-            self._cv2narray = npy.array(self.matrix)
+        if not isinstance(self._cvnarray, npy.ndarray):
+            self._cvnarray = npy.array(self.matrix)
 
-        return self._cv2narray
+        return self._cvnarray
+
+    get_cvnarray = cvnarray.fget
 
     @property
-    def gray_cv2narray(self):
+    def gray_cvnarray(self):
         """
         Get a grayscale Numpy array of the image, compatible with OpenCV >= 2.3
         :return: the 3D Numpy array of the image.
         """
-        if not isinstance(self._gray_cv2narray, npy.ndarray):
-            self._gray_cv2narray = npy.array(self.gray_matrix)
+        if not isinstance(self._gray_cvnarray, npy.ndarray):
+            self._gray_cvnarray = npy.array(self.gray_matrix)
 
-        return self._gray_cv2narray
+        return self._gray_cvnarray
+
+    get_grayscale_cvnarray = gray_cvnarray.fget
 
     def _gray_bitmap_func(self):
         """
@@ -800,14 +858,15 @@ class Image(object):
             cv.Split(self.bitmap, self._gray_bitmap, self._gray_bitmap,
                      self._gray_bitmap, None)
         else:
-            logger.warning("Image._gray_bitmap: There is no supported conversion"
-                           "to gray colorspace.")
+            logger.warning("Image._gray_bitmap: There is no supported "
+                           "conversion to gray color space.")
 
         return self._gray_bitmap
 
     def equalize(self):
         """
         Perform histogram equalization on the image.
+
         :return: return a grayscale Image
         """
         return Image(self._equalize_gray_bitmap())
@@ -829,6 +888,7 @@ class Image(object):
     def surface(self):
         """
         Returns the image as a Pygame Surface. Used for rendering the display.
+
         :return: a pygame Surface object used for rendering.
         """
         if self._surface:
@@ -842,6 +902,8 @@ class Image(object):
                                                       self.size, 'RGB')
             return self._surface
 
+    get_sdl_surface = surface.fget
+
     def to_string(self):
         """
         Returns the image as a string, useful for moving data around.
@@ -850,59 +912,723 @@ class Image(object):
         return self.to_rgb().bitmap.tostring()
 
     def save(self, handle_or_name='', mode='', verbose=False, tmp=False,
-             path=None, clean=False, **kwargs):
-        pass
+             path=None, filename=None, clean=False, **kwargs):
+        """
+        Save the image to the specified file name. If no file name is provided
+        then it will use the file name from which the Image was loaded, or the
+        last place it was saved to. You can save to lots of places, not just files.
+        For example you can save to the Display, a JpegStream, VideoStream,
+        temporary file, or Ipython Notebook.
+
+        Save will implicitly render the image's layers before saving, but the
+        layers are not applied to the Image itself.
+
+        :param handle_or_name: the filename to which to store the file.
+                                The method will infer the file type.
+        :param mode: used for saving using pul
+        :param verbose: if True return the path where we saved the file.
+        :param tmp: if True save the image as a temporary file and return the path
+        :param path: where temporary files to be stored
+        :param filename: name(prefix) of the temporary file
+        :param clean: True if temp files are tobe deleted once the object
+                       is to be destroyed
+        :param kwargs: used for overloading the PIL save methods. In particular
+                        this method is useful for setting the jpeg compression
+                        level. For JPG see this documentation:
+                        http://www.pythonware.com/library/pil/handbook/format-jpeg.htm
+
+        :return:
+
+        :Example:
+        >>> img = Image('phlox')
+        >>> img.save(tmp=True)
+
+        It will return the path that it saved to.
+        Save also supports IPython Notebooks when passing it a Display object
+        that has been instainted with the notebook flag.
+        To do this just use:
+
+        >>> disp = Display(displaytype='notebook')
+        >>> img.save(disp)
+
+        :Note:
+        You must have IPython notebooks installed for this to work path
+        and filename are valid if and only if temp is set to True.
+        """
+        # TODO, we use the term mode here when we mean format
+        # TODO, if any params are passed, use PIL
+        if tmp:
+            import glob
+            if filename is None:
+                filename = 'Image'
+            if path is None:
+                path = tempfile.gettempdir()
+            if glob.os.path.exists(path):
+                path = glob.os.path.abspath(path)
+                imfiles = glob.glob(glob.os.path.join(path, filename + '*.png'))
+                num = [0]
+                for img in imfiles:
+                    num.append(int(glob.re.findall('[0-9]+$', img[:-4])[-1]))
+                num.sort()
+                fnum = num[-1] + 1
+                filename = glob.os.path.join(path, filename + ('%07d' % fnum) +
+                                             '.png')
+                self._tmp_files.append(filename, clean)
+                self.save(self._tmp_files[-1][0])
+                return self._tmp_files[-1][0]
+            else:
+                print("Path does not exist!")
+        else:
+            if filename:
+                handle_or_name = filename + '.png'
+
+        if not handle_or_name:
+            if self.filename:
+                handle_or_name = self.filename
+            else:
+                handle_or_name = self.filehandle
+
+        if len(self._layers):
+            img_save = self.apply_layers()
+        else:
+            img_save = self
+
+        if (self._color_space != ColorSpace.BGR and
+            self._color_space != ColorSpace.GRAY):
+            img_save = img_save.to_bgr()
+
+        if not isinstance(handle_or_name, str):
+            fh = handle_or_name
+
+            if not PIL_ENABLED:
+                logger.warning("You need the Pillow to save by file handle")
+                return 0
+
+            if isinstance(fh, 'JpegStreamer'):
+                fh.jpgdata = StringIO()
+                # save via PIL to a StringIO handle
+                img_save.pilimg.save(fh.jpgdata, 'jpeg', **kwargs)
+                fh.refreshtime = time.time()
+                self.filename = ''
+                self.filehandle = fh
+
+            elif isinstance(fh, 'VideoStream'):
+                self.filename = ''
+                self.filehandle = fh
+                fh.write_frame(img_save)
+
+            elif isinstance(fh, 'Display'):
+                if fh.display_type == 'notebook':
+                    try:
+                        from IPython.core import Image as IPYImage
+                    except ImportError:
+                        print("Need IPython Notebooks to use the display mode!")
+                        return
+
+                    from IPython.core import display as IPYDisplay
+                    tf = tempfile.NamedTemporaryFile(suffix='.png')
+                    loc = tf.name
+                    tf.close()
+                    self.save(loc)
+                    IPYDisplay.display(IPYImage(filename=loc))
+                else:
+                    self.filehandle = fh
+                    fh.write_frame(img_save)
+
+            else:
+                if not mode:
+                    mode = 'jpeg'
+
+                try:
+                    # latest version of PIL/PILLOW supports webp,
+                    # try this first, if not gracefully fallback
+                    img_save.pilimg.save(fh, mode, **kwargs)
+                    # set the file name for future save operations
+                    self.filehandle = fh
+                    self.filename = ''
+                    return 1
+                except Exception as e:
+                    if mode.lower() != 'webp':
+                        raise e
+
+            if verbose:
+                print(self.filename)
+
+            if not mode.lower() == 'webp':
+                return 1
+
+        # make a temporary file location if there isn't one
+        if not handle_or_name:
+            filename = tempfile.mkstemp(suffix='.png')[-1]
+        else:
+            filename = handle_or_name
+
+        # allow saving in webp format
+        if mode == 'webp' or re.search('\.webp$', filename):
+            try:
+                # newer versions of PIL support webp format, try that first
+                self.pilimg.save(filename, **kwargs)
+            except:
+                logger.warning("Can't save to webp format!")
+
+        if kwargs:
+            if not mode:
+                mode = 'jpeg'
+            img_save.pilimg.save(filename, mode, **kwargs)
+            return 1
+
+        if filename:
+            cv.SaveImage(filename, img_save.bitmap)
+            self.filename = filename
+            self.filehandle = None
+        elif self.filename:
+            cv.SaveImage(self.filename, img_save.bitmap)
+        else:
+            return 0
+
+        if verbose:
+            print(self.filename)
+
+        if tmp:
+            return filename
+        else:
+            return 1
 
     def copy(self):
-        pass
+        """
+        Return a full copy of the Image's bitmap.  Note that this is different
+        from using python's implicit copy function in that only the bitmap itself
+        is copied. This method essentially performs a deep copy.
 
+        :return: a copy of this Image
 
-    def scale(self, width, height=-1, interpolation=cv2.INTER_LINEAR):
-        pass
+        :Example:
+        >>> img = Image('lena')
+        >>> img2 = img.copy()
+        """
+        img = self.zeros()
+        cv.Copy(self.bitmap, img)
+
+        return Image(img, colorspace=self._color_space)
+
+    def scale(self, scalar, interp=cv2.INTER_LINEAR):
+        """
+        Scale the image to a new width and height.
+        If no height is provided, the width is considered a scaling value
+
+        :param scalar: scalar to scale
+        :param interp: how to generate new pixels that don't match the original
+                       pixels. Argument goes direction to cv.Resize.
+                       See http://docs.opencv.org/modules/imgproc/doc/geometric_transformations.html?highlight=resize#cv2.resize for more details
+
+        :return: resized image.
+
+        :Example:
+        >>> img.scale(2.0)
+        """
+        if scalar is not None:
+            w = int(self.width *  scalar)
+            h = int(self.height * scalar)
+            if w > MAX_DIMS or h > MAX_DIMS or h < 1 or w < 1:
+                logger.warning("You tried to make an image really big or "
+                               "impossibly small. I can't scale that")
+                return self
+        else:
+            return self
+
+        scaled_array = npy.zeros((w, h, 3), dtype='uint8')
+        ret = cv2.resize(self.cvnarray, (w, h), interpolation=interp)
+        return Image(ret, color_space=self._color_space, cv2image=True)
 
     def resize(self, width=None, height=None):
-        pass
+        """
+        Resize an image based on a width, a height, or both.
+        If either width or height is not provided the value is inferred by
+        keeping the aspect ratio. If both values are provided then the image
+        is resized accordingly.
+
+        :param width: width of the output image in pixels.
+        :param height: height of the output image in pixels.
+
+        :return:
+        Returns a resized image, if the size is invalid a warning is issued and
+        None is returned.
+
+        :Example:
+        >>> img = Image("lenna")
+        >>> img2 = img.resize(w=1024) # h is guessed from w
+        >>> img3 = img.resize(h=1024) # w is guessed from h
+        >>> img4 = img.resize(w=200,h=100)
+        """
+        ret = None
+        if width is None and height is None:
+            logger.warning("Image.resize has no parameters. No operation is "
+                           "performed")
+            return None
+        elif width is not None and height is None:
+            sfactor = float(width) / float(self.width)
+            height = int(sfactor * float(self.height))
+        elif width is None and height is not None:
+            sfactor = float(height) / float(self.height)
+            width = int(sfactor * float(self.width))
+
+        if width > MAX_DIMS or height > MAX_DIMS:
+            logger.warning("Image.resize! You tried to make an image really"
+                           " big or impossibly small. I can't scale that")
+            return ret
+
+        scaled_bitmap = cv.CreateImage((width, height), 8, 3)
+        cv.Resize(self.bitmap, scaled_bitmap)
+        return Image(scaled_bitmap, color_space=self._color_space)
 
     def smooth(self, method='gaussian', aperture=(3, 3), sigma=0,
-               spatial_sigma=0, grayscale=False, aperature=None):
-        pass
+               spatial_sigma=0, grayscale=False):
+        """
+        Smooth the image, by default with the Gaussian blur. If desired,
+        additional algorithms and apertures can be specified. Optional
+        parameters are passed directly to OpenCV's cv.Smooth() function.
+        If grayscale is true the smoothing operation is only performed
+        on a single channel otherwise the operation is performed on
+        each channel of the image. for OpenCV versions >= 2.3.0 it is
+        advisible to take a look at
+        - bilateralFilter
+        - medianFilter
+        - blur
+        - gaussianBlur
 
-    def median_filter(self, window='', grayscale=False):
-        pass
+        :param method: valid options are 'blur' or 'gaussian', 'bilateral',
+                        and 'median'.
+        :param aperture: a tuple for the window size of the gaussian blur as
+                          an (x,y) tuple. should be odd
+        :param sigma:
+        :param spatial_sigma:
+        :param grayscale: return grayscale image
+
+        :return: the smoothed image.
+
+        :Example:
+        >>> img = Image('lena')
+        >>> img2 = img.smooth()
+        >>> img3 = img.smooth('median')
+        """
+        # TODO: deprecated function -istuple-
+        if istuple(aperture):
+            win_x, win_y = aperture
+            if win_x <= 0 or win_y <= 0 or win_x % 2 == 0 or win_y % 2 == 0:
+                logger.warning('The size must be odd number and greater than 0')
+                return None
+        else:
+            raise ValueError('Please provide a tuple to aperture')
+
+        if method == 'blur':
+            m = cv.CV_BLUR
+        elif method == 'bilateral':
+            m = cv.CV_BILATERAL
+            win_y = win_x  # aperture must be square
+        elif method == 'median':
+            m = cv.CV_MEDIAN
+            win_y = win_x  # aperture must be square
+        else:
+            m = cv.CV_GAUSSIAN  # default method
+
+        if grayscale:
+            new_img = self.zeros(1)
+            cv.Smooth(self._gray_bitmap_func(), new_img, method, win_x, win_y,
+                      sigma, spatial_sigma)
+        else:
+            new_img = self.zeros(3)
+            r = self.zeros(1)
+            g = self.zeros(1)
+            b = self.zeros(1)
+            ro = self.zeros(1)
+            go = self.zeros(1)
+            bo = self.zeros(1)
+            cv.Split(self.bitmap, b, g, r, None)
+            cv.Smooth(r, ro, method, win_x, win_y, sigma, spatial_sigma)
+            cv.Smooth(g, go, method, win_x, win_y, sigma, spatial_sigma)
+            cv.Smooth(b, bo, method, win_x, win_y, sigma, spatial_sigma)
+            cv.Merge(bo, go, ro, None, new_img)
+
+        return Image(new_img, color_space=self._color_space)
+
+    def median_filter(self, window=(3, 3), grayscale=False):
+        """
+        Smooths the image, with the median filter. Performs a median
+        filtering operation to denoise/despeckle the image.
+        The optional parameter is the window size.
+
+
+        :param window: should be in the form a tuple (win_x,win_y).
+                       Where win_x should be equal to win_y. By default
+                       it is set to 3x3, i.e window = (3, 3).
+
+        :Note:
+        win_x and win_y should be greater than zero, a odd number and equal.
+        """
+        if istuple(window):
+            win_x, win_y = window
+            if win_x >= 0 and win_y >= 0 and win_x % 2 == 1 and win_y % 2 == 1:
+                if win_x != win_y:
+                    win_x = win_y
+            else:
+                logger.warning("The aperture (win_x,win_y) must be odd number"
+                               " and greater than 0.")
+                return None
+
+        elif isnum(window):
+            win_x = window
+        else:
+            win_x = 3  # set the default aperture window size (3x3)
+
+        if grayscale:
+            img_median_blur = cv2.medianBlur(self.gray_narray, win_x)
+            return Image(img_median_blur, color_space=ColorSpace.GRAY)
+        else:
+            img_median_blur = cv2.medianBlur(
+                    self.narray[:, :, ::-1].transpose([1, 0, 2]), win_x
+            )
+            img_median_blur = img_median_blur[:, :, ::-1].transpose([1, 0, 2])
+            return Image(img_median_blur, color_space=self._color_space)
 
     def bilateral_filter(self, diameter=5, sigma_color=10, sigma_space=10,
                          grayscale=False):
-        pass
+        """
+        Smooths the image, using bilateral filtering. Potential of bilateral
+        filtering is for the removal of texture. The optional parameter are
+        diameter, sigmaColor, sigmaSpace.
 
-    def blur(self, window='', grayscale=False):
-        pass
+        Bilateral Filter
+        see : http://en.wikipedia.org/wiki/Bilateral_filter
+        see : http://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html
+
+        :param diameter: a tuple for the window of the form (diameter,diameter).
+                         By default window = (3, 3). Diameter of each pixel
+                         neighborhood that is used during filtering.
+        :param sigma_color: filter the specified value in the color space.
+                            A larger value of the parameter means that farther
+                            colors within the pixel neighborhood will be mixed
+                            together, resulting in larger areas of semi-equal
+                            color.
+        :param sigma_space: filter the specified value in the coordinate space.
+                            A larger value of the parameter means that farther
+                            pixels will influence each other as long as their
+                            colors are close enough
+        """
+        if istuple(diameter):
+            win_x, win_y = diameter
+            if win_x >= 0 and win_y >= 0 and win_x % 2 == 1 and win_y % 2 == 1:
+                if win_x != win_y:
+                    diameter = (win_x, win_y)
+            else :
+                logger.warning("The aperture (win_x,win_y) must be odd number and greater than 0.")
+                return None
+        else :
+            win_x = 3  # set the default aperture window size (3x3)
+            diameter = (win_x,win_x)
+
+        if grayscale:
+            img_bilateral = cv2.bilateralFilter(self.gray_narray, diameter,
+                                                sigma_color, sigma_space)
+            return Image(img_bilateral, color_space=ColorSpace.GRAY)
+        else:
+            img_bilateral = cv2.bilateralFilter(
+                    self.narray[:, :, ::-1].transpose([1, 0, 2]),
+                    diameter, sigma_color, sigma_space
+            )
+            img_bilateral = img_bilateral[:, :, ::-1].transpose([1, 0, 2])
+            return Image(img_bilateral, color_space=self._color_space)
+
+    def blur(self, window=None, grayscale=False):
+        """
+        Smooth an image using the normalized box filter.
+        The optional parameter is window.
+        see : http://en.wikipedia.org/wiki/Blur
+
+        :param window: should be in the form a tuple (win_x,win_y).
+                       By default it is set to 3x3, i.e window = (3, 3).
+        """
+        if istuple(window):
+            win_x, win_y = window
+            if win_x <= 0 or win_y <= 0:
+                logger.warning("win_x and win_y should be greater than 0.")
+                return None
+        elif isnum(window):
+            window = (window, window)
+        else:
+            window = (3, 3)
+
+        if grayscale:
+            img_blur = cv2.blur(self.gray_narray, window)
+            return Image(img_blur, color_space=ColorSpace.GRAY)
+        else:
+            img_blur = cv2.blur(self.narray[:, :, ::-1].transpose([1, 0, 2]),
+                                window)
+            img_blur = img_blur[:, :, ::-1].transpose([1, 0, 2])
+            return Image(img_blur, color_space=self._color_space)
 
     def gaussian_blur(self, window='', sigmax=0, sigmay=0, grayscale=False):
-        pass
+        """
+        Smoothes an image, typically used to reduce image noise and reduce detail.
+        The optional parameter is window.
+        see : http://en.wikipedia.org/wiki/Gaussian_blur
+
+        :param window: should be in the form a tuple (win_x,win_y).
+                        Where win_x and win_y should be positive and odd.
+                        By default it is set to 3x3, i.e window = (3, 3).
+        :param sigmax: Gaussian kernel standard deviation in X direction.
+        :param sigmay: Gaussian kernel standard deviation in Y direction.
+        :param grayscale: if true, the effect is applied on grayscale images.
+        """
+        if istuple(window):
+            win_x, win_y = window
+            if win_x >= 0 and win_y >= 0 and win_x % 2 == 1 and win_y % 2 == 1:
+                pass
+            else:
+                logger.warning("The aperture (win_x,win_y) must be odd number "
+                               "and greater than 0.")
+                return None
+
+        elif isnum(window):
+            window = (window, window)
+
+        else:
+            window = (3, 3)  # set the default aperture window size (3x3)
+
+        image_gauss = cv2.GaussianBlur(self.cvnarray, window,
+                                       sigmaX=sigmax,
+                                       sigmaY=sigmay)
+
+        if grayscale:
+            return Image(image_gauss, color_space=ColorSpace.GRAY,
+                         cv2image=True)
+        else:
+            return Image(image_gauss, color_space=self._color_space,
+                         cv2image=True)
 
     def invert(self):
-        pass
+        """
+        Invert (negative) the image note that this can also be done with the
+        unary minus (-) operator. For binary image this turns black into white and white into black (i.e. white is the new black).
+
+        :return: opposite of the current image.
+
+        :Example:
+        >>> img  = Image("polar_bear_in_the_snow.png")
+        >>> img.invert().save("black_bear_at_night.png")
+        """
+        return -self
 
     def grayscale(self):
-        pass
+        """
+        This method returns a gray scale version of the image. It makes
+        everything look like an old movie.
+
+        :return: a grayscale image.
+
+        :Example:
+        >>> img = Image("lenna")
+        >>> img.grayscale().binarize().show()
+        """
+        return Image(self._gray_bitmap_func(), color_space=ColorSpace.GRAY)
 
     def flip_horizontal(self):
-        pass
+        """
+        Horizontally mirror an image.
+        Note that flip does not mean rotate 180 degrees! The two are different.
+
+        :return: flipped image.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> upsidedown = img.flip_horizontal()
+        """
+        new_img = self.zeros()
+        cv.Flip(self.bitmap, new_img, 1)
+        return Image(new_img, color_space=self._color_space)
 
     def flip_vertical(self):
-        pass
+        """
+        Vertically mirror an image.
+        Note that flip does not mean rotate 180 degrees! The two are different.
 
-    def stretch(self, threshold_low=0, threshold_high=255):
-        pass
+        :return: flipped image.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> upsidedown = img.flip_vertical()
+        """
+        new_img = self.zeros()
+        cv.Flip(self.bitmap, new_img, 0)
+        return Image(new_img, color_space=self._color_space)
+
+    def stretch(self, thresh_low=0, thresh_high=255):
+        """
+        The stretch filter works on a greyscale image, if the image
+        is color, it returns a greyscale image.  The filter works by
+        taking in a lower and upper threshold.  Anything below the lower
+        threshold is pushed to black (0) and anything above the upper
+        threshold is pushed to white (255)
+
+        :param thresh_low: the lower threshold for the stretch operation.
+                             This should be a value between 0 and 255.
+        :param thresh_high: the upper threshold for the stretch operation.
+                             This should be a value between 0 and 255.
+
+        :return: A gray scale version of the image with the appropriate
+                  histogram stretching.
+
+        :Example:
+        >>> img = Image("orson_welles.jpg")
+        >>> img2 = img.stretch(56.200)
+        >>> img2.show()
+
+        # TODO - make this work on RGB images with thresholds for each channel.
+        """
+        try:
+            new_img = self.zeros(1)
+            cv.Threshold(self._gray_bitmap_func(), new_img, thresh_low, 255,
+                         cv.CV_THRESH_TOZERO)
+            cv.Not(new_img, new_img)
+            cv.Threshold(new_img, new_img, 255 - thresh_high, 255,
+                         cv.CV_THRESH_TOZERO)
+            cv.Not(new_img, new_img)
+            return Image(new_img)
+        except:
+            return None
 
     def gamma_correct(self, gamma=1):
-        pass
+        """
+        Transforms an image according to Gamma Correction also known as
+        Power Law Transform.
 
-    def binarize(self, threshold=-1, maxv=255, blocksize=0, p=5):
-        pass
+        :param gamma: a non-negative real number.
+        :return: a Gamma corrected image.
+
+        :Example:
+        >>> img = Image('family_watching_television_1958.jpg')
+        >>> img.show()
+        >>> img.gamma_correct(1.5).show()
+        >>> img.gamma_correct(0.7).show()
+        """
+        if gamma < 0:
+            return "Gamma should be a non-negative real number"
+        scale = 255.0
+        src = self.narray
+        dst = (((1.0 / scale) * src) ** gamma) * scale
+        return Image(dst)
+
+    def binarize(self, thresh=-1, maxv=255, blocksize=0, p=5):
+        """
+        Do a binary threshold the image, changing all values below thresh to
+        maxv and all above to black.  If a color tuple is provided, each color
+        channel is thresholded separately. If threshold is -1 (default), an
+        adaptive method (OTSU's method) is used. If then a blocksize is
+        specified, a moving average over each region of block*block pixels a
+        threshold is applied where threshold = local_mean - p.
+
+        :param thresh: the threshold as an integer or an (r,g,b) tuple,
+                        where pixels below (darker) than thresh are set
+                        to to max value, and all values above this value
+                        are set to black. If this parameter is -1 we use
+                        Otsu's method.
+        :param maxv: the maximum value for pixels below the threshold.
+                     Ordinarily this should be 255 (white)
+        :param blocksize: the size of the block used in the adaptive binarize
+                           operation. This parameter must be an odd number.
+        :param p: the difference from the local mean to use for thresholding
+                   in Otsu's method.
+
+        :return: a binary (two colors, usually black and white) image. This
+                 works great for the find_blobs family of functions.
+
+        :Example:
+        Example of a vanila threshold versus an adaptive threshold:
+        >>> img = Image("orson_welles.jpg")
+        >>> b1 = img.binarize(128)
+        >>> b2 = img.binarize(blocksize=11,p=7)
+        >>> b3 = b1.sideBySide(b2)
+        >>> b3.show()
+
+        :Note:
+        Otsu's Method Description<http://en.wikipedia.org/wiki/Otsu's_method>`
+        """
+        if istuple(thresh):
+            r = self.zeros(1)
+            g = self.zeros(1)
+            b = self.zeros(1)
+            cv.Split(self.bitmap, b, g, r, None)
+
+            cv.Threshold(r, r, thresh[0], maxv, cv.CV_THRESH_BINARY_INV)
+            cv.Threshold(g, g, thresh[1], maxv, cv.CV_THRESH_BINARY_INV)
+            cv.Threshold(b, b, thresh[2], maxv, cv.CV_THRESH_BINARY_INV)
+
+            cv.Add(r, g, r)
+            cv.Add(r, b, r)
+
+            return Image(r, color_space=self._color_space)
+        elif thresh == -1:
+            new_bitmap = self.zeros(1)
+            if blocksize:
+                cv.AdaptiveThreshold(self._gray_bitmap_func(), new_bitmap,
+                                     maxv,
+                                     cv.CV_ADAPTIVE_THRESH_GAUSSIAN_C,
+                                     cv.CV_THRESH_BINARY_INV, blocksize, p)
+            else:
+                cv.Threshold(self._gray_bitmap_func(), new_bitmap, thresh,
+                             float(maxv),
+                             cv.CV_THRESH_BINARY_INV + cv.CV_THRESH_OTSU)
+            return Image(new_bitmap, color_space=self._color_space)
+        else:
+            new_bitmap = self.zeros(1)
+            # desaturate the image, and apply the new threshold
+            cv.Threshold(self._gray_bitmap_func(), new_bitmap, thresh,
+                         float(maxv), cv.CV_THRESH_BINARY_INV)
+            return Image(new_bitmap, color_space=self._color_space)
 
     def mean_color(self, color_space=None):
-        pass
+        """
+        This method finds the average color of all the pixels in the image and
+        displays tuple in the color space specfied by the user.
+        If no color space is specified , (B,G,R) color space is taken as default.
+
+        :return: a tuple of the average image values. Tuples are in the
+                 channel order. For most images this means the results
+                 are (B,G,R).
+
+        :Example:
+        >>> img = Image('lenna')
+        >>> colors = img.mean_color()        # returns tuple in Image's colorspace format.
+        >>> colors = img.mean_color('BGR')   # returns tuple in (B,G,R) format.
+        >>> colors = img.mean_color('RGB')   # returns tuple in (R,G,B) format.
+        >>> colors = img.mean_color('HSV')   # returns tuple in (H,S,V) format.
+        >>> colors = img.mean_color('XYZ')   # returns tuple in (X,Y,Z) format.
+        >>> colors = img.mean_color('Gray')  # returns float of mean intensity.
+        >>> colors = img.mean_color('YCrCb') # returns tuple in (Y,Cr,Cb) format.
+        >>> colors = img.mean_color('HLS')   # returns tuple in (H,L,S) format.
+        """
+
+        if color_space is None:
+            return tuple(cv.Avg(self.bitmap())[0:3])
+        elif color_space == 'BGR':
+            return tuple(cv.Avg(self.to_bgr().bitmap)[0:3])
+        elif color_space == 'RGB':
+            return tuple(cv.Avg(self.to_rgb().bitmap)[0:3])
+        elif color_space == 'HSV':
+            return tuple(cv.Avg(self.to_hsv().bitmap)[0:3])
+        elif color_space == 'XYZ':
+            return tuple(cv.Avg(self.to_xyz().bitmap)[0:3])
+        elif color_space == 'Gray':
+            return cv.Avg(self._gray_bitmap_func())[0]
+        elif color_space == 'YCrCb':
+            return tuple(cv.Avg(self.to_ycrcb().bitmap)[0:3])
+        elif color_space == 'HLS':
+            return tuple(cv.Avg(self.to_hls().bitmap)[0:3])
+        else:
+            logger.warning("Image.mean_color: There is no supported conversion"
+                           " to the specified colorspace. Use one of these as "
+                           "argument: 'BGR' , 'RGB' , 'HSV' , 'Gray' , 'XYZ' , "
+                           "'YCrCb' , 'HLS' .")
+            return None
 
     def find_corners(self, maxnum=50, minquality=0.04, mindistance=1.0):
         pass
@@ -1091,7 +1817,7 @@ class Image(object):
     def _get_edge_map(self, t1=50, t2=100):
         pass
 
-    def roate(self, angle, fixed=True, point=None, scale=1.0):
+    def rotate(self, angle, fixed=True, point=None, scale=1.0):
         if point is None:
             point = [-1, -1]
 

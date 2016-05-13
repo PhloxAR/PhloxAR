@@ -93,20 +93,16 @@ except ImportError:
     except ImportError:
         raise ImportError("Cannot load OpenCV library which is required.")
 
-# optional libraies
+# optional libraries
 PIL_ENABLED = True
 try:
-    from PIL import Image as pilImage
-    from PIL import ImageFont as pilImageFont
-    from PIL import GifImagePlugin
-    getheader = GifImagePlugin.getheader
-    getdata = GifImagePlugin.getdata
+    from PIL import Image as PILImage
+    from PIL import ImageFont as PILImageFont
+    from PIL import GifImagePlugin as PILGifImagePlugin
+    getheader = PILGifImagePlugin.getheader
+    getdata = PILGifImagePlugin.getdata
 except ImportError:
-    try:
-        import Image as pil
-        from GifImagePlugin import getheader, getdata
-    except ImportError:
-        PIL_ENABLED = False
+    PIL_ENABLED = False
 
 # kinect
 FREENECT_ENABLED = True
@@ -391,9 +387,9 @@ def set_logging(log_level, file_name=None):
     enabled, the way errors are displayed on the interactive shell is
     not changed.
     """
-    if file_name and ipython_version:
+    if file_name and ipy_ver:
         try:
-            if ipython_version.startswith('0.10'):
+            if ipy_ver.startswith('0.10'):
                 __IPYTHON__.set_custom_exc((Exception,), ipy_exc_handler)
             else:
                 ip = get_ipython()
