@@ -1292,7 +1292,51 @@ class Image(object):
 
     def bilateral_filter(self, diameter=5, sigma_color=10, sigma_space=10,
                          grayscale=False):
-        pass
+        """
+        Smooths the image, using bilateral filtering. Potential of bilateral
+        filtering is for the removal of texture. The optional parameter are
+        diameter, sigmaColor, sigmaSpace.
+
+        Bilateral Filter
+        see : http://en.wikipedia.org/wiki/Bilateral_filter
+        see : http://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html
+
+        :param diameter: a tuple for the window of the form (diameter,diameter).
+                         By default window = (3, 3). Diameter of each pixel
+                         neighborhood that is used during filtering.
+        :param sigma_color: filter the specified value in the color space.
+                            A larger value of the parameter means that farther
+                            colors within the pixel neighborhood will be mixed
+                            together, resulting in larger areas of semi-equal
+                            color.
+        :param sigma_space: filter the specified value in the coordinate space.
+                            A larger value of the parameter means that farther
+                            pixels will influence each other as long as their
+                            colors are close enough
+        """
+        if istuple(diameter):
+            win_x, win_y = diameter
+            if win_x >= 0 and win_y >= 0 and win_x % 2 == 1 and win_y % 2 == 1:
+                if win_x != win_y:
+                    diameter = (win_x, win_y)
+            else :
+                logger.warning("The aperture (win_x,win_y) must be odd number and greater than 0.")
+                return None
+        else :
+            win_x = 3  # set the default aperture window size (3x3)
+            diameter = (win_x,win_x)
+
+        if grayscale:
+            img_bilateral = cv2.bilateralFilter(self.gray_narray, diameter,
+                                                sigma_color, sigma_space)
+            return Image(img_bilateral, color_space=ColorSpace.GRAY)
+        else:
+            img_bilateral = cv2.bilateralFilter(
+                    self.narray[:, :, ::-1].transpose([1, 0, 2]),
+                    diameter, sigma_color, sigma_space
+            )
+            img_bilateral = img_bilateral[:, :, ::-1].transpose([1, 0, 2])
+            return Image(img_bilateral, color_space=self._color_space)
 
     def blur(self, window='', grayscale=False):
         pass
