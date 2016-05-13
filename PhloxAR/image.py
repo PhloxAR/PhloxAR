@@ -1367,10 +1367,56 @@ class Image(object):
             return Image(img_blur, color_space=self._color_space)
 
     def gaussian_blur(self, window='', sigmax=0, sigmay=0, grayscale=False):
-        pass
+        """
+        Smoothes an image, typically used to reduce image noise and reduce detail.
+        The optional parameter is window.
+        see : http://en.wikipedia.org/wiki/Gaussian_blur
+
+        :param window: should be in the form a tuple (win_x,win_y).
+                        Where win_x and win_y should be positive and odd.
+                        By default it is set to 3x3, i.e window = (3, 3).
+        :param sigmax: Gaussian kernel standard deviation in X direction.
+        :param sigmay: Gaussian kernel standard deviation in Y direction.
+        :param grayscale: if true, the effect is applied on grayscale images.
+        """
+        if istuple(window):
+            win_x, win_y = window
+            if win_x >= 0 and win_y >= 0 and win_x % 2 == 1 and win_y % 2 == 1:
+                pass
+            else:
+                logger.warning("The aperture (win_x,win_y) must be odd number "
+                               "and greater than 0.")
+                return None
+
+        elif isnum(window):
+            window = (window, window)
+
+        else:
+            window = (3, 3)  # set the default aperture window size (3x3)
+
+        image_gauss = cv2.GaussianBlur(self.cvnarray, window,
+                                       sigmaX=sigmax,
+                                       sigmaY=sigmay)
+
+        if grayscale:
+            return Image(image_gauss, color_space=ColorSpace.GRAY,
+                         cv2image=True)
+        else:
+            return Image(image_gauss, color_space=self._color_space,
+                         cv2image=True)
 
     def invert(self):
-        pass
+        """
+        Invert (negative) the image note that this can also be done with the
+        unary minus (-) operator. For binary image this turns black into white and white into black (i.e. white is the new black).
+
+        :return: opposite of the current image.
+
+        :Example:
+        >>> img  = Image("polar_bear_in_the_snow.png")
+        >>> img.invert().save("black_bear_at_night.png")
+        """
+        return -self
 
     def grayscale(self):
         pass
