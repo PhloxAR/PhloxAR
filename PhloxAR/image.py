@@ -1461,11 +1461,61 @@ class Image(object):
         cv.Flip(self.bitmap, new_img, 0)
         return Image(new_img, color_space=self._color_space)
 
-    def stretch(self, threshold_low=0, threshold_high=255):
-        pass
+    def stretch(self, thresh_low=0, thresh_high=255):
+        """
+        The stretch filter works on a greyscale image, if the image
+        is color, it returns a greyscale image.  The filter works by
+        taking in a lower and upper threshold.  Anything below the lower
+        threshold is pushed to black (0) and anything above the upper
+        threshold is pushed to white (255)
+
+        :param thresh_low: the lower threshold for the stretch operation.
+                             This should be a value between 0 and 255.
+        :param thresh_high: the upper threshold for the stretch operation.
+                             This should be a value between 0 and 255.
+
+        :return: A gray scale version of the image with the appropriate
+                  histogram stretching.
+
+        :Example:
+        >>> img = Image("orson_welles.jpg")
+        >>> img2 = img.stretch(56.200)
+        >>> img2.show()
+
+        # TODO - make this work on RGB images with thresholds for each channel.
+        """
+        try:
+            new_img = self.zeros(1)
+            cv.Threshold(self._gray_bitmap_func(), new_img, thresh_low, 255,
+                         cv.CV_THRESH_TOZERO)
+            cv.Not(new_img, new_img)
+            cv.Threshold(new_img, new_img, 255 - thresh_high, 255,
+                         cv.CV_THRESH_TOZERO)
+            cv.Not(new_img, new_img)
+            return Image(new_img)
+        except:
+            return None
 
     def gamma_correct(self, gamma=1):
-        pass
+        """
+        Transforms an image according to Gamma Correction also known as
+        Power Law Transform.
+
+        :param gamma: a non-negative real number.
+        :return: a Gamma corrected image.
+
+        :Example:
+        >>> img = Image('family_watching_television_1958.jpg')
+        >>> img.show()
+        >>> img.gamma_correct(1.5).show()
+        >>> img.gamma_correct(0.7).show()
+        """
+        if gamma < 0:
+            return "Gamma should be a non-negative real number"
+        scale = 255.0
+        src = self.narray
+        dst = (((1.0 / scale) * src) ** gamma) * scale
+        return Image(dst)
 
     def binarize(self, threshold=-1, maxv=255, blocksize=0, p=5):
         pass
