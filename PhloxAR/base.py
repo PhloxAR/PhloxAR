@@ -387,9 +387,9 @@ def set_logging(log_level, file_name=None):
     enabled, the way errors are displayed on the interactive shell is
     not changed.
     """
-    if file_name and ipython_version:
+    if file_name and ipy_ver:
         try:
-            if ipython_version.startswith('0.10'):
+            if ipy_ver.startswith('0.10'):
                 __IPYTHON__.set_custom_exc((Exception,), ipy_exc_handler)
             else:
                 ip = get_ipython()
