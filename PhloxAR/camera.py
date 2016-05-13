@@ -610,7 +610,7 @@ class VirtualCamera(FrameSource):
         :param src_type: the type of the virtual camera. Valid strings include
                          "image" - a single still image.
                          "video" - a video file.
-                         "imageset" - a SimpleCV image set.
+                         "imageset" - a PhloxAR image set.
                         "directory" - a VirtualCamera for loading a directory
         :param start: the number of the frame that you want to start with.
 
@@ -1138,11 +1138,11 @@ class Scanner(FrameSource):
     def print_properties(self):
 
         """
-        **SUMMARY**
+        
         Print detailed information about the SANE device properties
-        **RETURNS**
+        :return:
         Nothing
-        **EXAMPLES**
+        :Example:
         >>> scan = Scanner()
         >>> scan.print_properties()
         """
@@ -1154,12 +1154,12 @@ class Scanner(FrameSource):
 
     def get_property(self, p):
         """
-        **SUMMARY**
+        
         Returns a single property value from the SANE device
         equivalent to Scanner.device.PROPERTY
-        **RETURNS**
+        :return:
         Value for option or None if missing/inactive
-        **EXAMPLES**
+        :Example:
         >>> scan = Scanner()
         >>> print(scan.get_property('mode'))
         color
@@ -1300,7 +1300,6 @@ class DigitalCamera(FrameSource):
 
 class ScreenCamera(object):
     """
-    **SUMMARY**
     ScreenCapture is a camera class would allow you to capture all or part of
     the screen and return it as a color image. Requires the pyscreenshot
     Library: https://github.com/vijaym123/pyscreenshot
@@ -1667,7 +1666,7 @@ class AVTCamera(FrameSource):
         ]
 
         def __repr__(self):
-            return "<SimpleCV.Camera.AVTCameraInfo - UniqueId: %s>" % (self.UniqueId)
+            return "<PhloxAR.Camera.AVTCameraInfo - UniqueId: %s>" % (self.UniqueId)
 
     class AVTFrame(ctypes.Structure):
         def __init__(self, buffersize):
@@ -1727,8 +1726,8 @@ class AVTCamera(FrameSource):
         camlist = self.list_all_cameras()
 
         if not len(camlist):
-            raise Exception(
-                "Couldn't find any cameras with the PvAVT driver.  Use SampleViewer to confirm you have one connected.")
+            raise Exception("Couldn't find any cameras with the PvAVT driver.  "
+                            "Use SampleViewer to confirm you have one connected.")
 
         if camera_id < 9000:  # camera was passed as an index reference
             if camera_id == -1:  # accept -1 for "first camera"
@@ -1794,9 +1793,9 @@ class AVTCamera(FrameSource):
 
     def list_all_cameras(self):
         """
-        **SUMMARY**
         List all cameras attached to the host
-        **RETURNS**
+
+        :return:
         List of AVTCameraInfo objects, otherwise empty list
         """
         camlist = (self.AVTCameraInfo * 100)()
@@ -1810,37 +1809,37 @@ class AVTCamera(FrameSource):
 
     def run_command(self, command):
         """
-        **SUMMARY**
         Runs a PvAVT Command on the camera
         Valid Commands include:
-        * FrameStartTriggerSoftware
-        * AcquisitionAbort
-        * AcquisitionStart
-        * AcquisitionStop
-        * ConfigFileLoad
-        * ConfigFileSave
-        * TimeStampReset
-        * TimeStampValueLatch
-        **RETURNS**
-        0 on success
-        **EXAMPLE**
-        >>>c = AVTCamera()
-        >>>c.run_command("TimeStampReset")
+        - FrameStartTriggerSoftware
+        - AcquisitionAbort
+        - AcquisitionStart
+        - AcquisitionStop
+        - ConfigFileLoad
+        - ConfigFileSave
+        - TimeStampReset
+        - TimeStampValueLatch
+
+        :return: 0 on success
+
+        :Example
+        >>> c = AVTCamera()
+        >>> c.run_command("TimeStampReset")
         """
         return self.dll.PvCommandRun(self.handle, command)
 
     def get_property(self, name):
         """
-        **SUMMARY**
         This retrieves the value of the AVT Camera attribute
         There are around 140 properties for the AVT Camera, so reference the
         AVT Camera and Driver Attributes pdf that is provided with
         the driver for detailed information
         Note that the error codes are currently ignored, so empty values
         may be returned.
-        **EXAMPLE**
+
+        :Example:
         >>>c = AVTCamera()
-        >>>print c.get_property("ExposureValue")
+        >>>print(c.get_property("ExposureValue"))
         """
         valtype, perm = self._properties.get(name, (None, None))
 
@@ -1883,12 +1882,12 @@ class AVTCamera(FrameSource):
 
     def get_all_properties(self):
         """
-        **SUMMARY**
         This returns a dict with the name and current value of the
         documented PvAVT attributes
         CAVEAT: it addresses each of the properties individually, so
         this may take time to run if there's network latency
-        **EXAMPLE**
+
+        :Example:
         >>>c = AVTCamera(0)
         >>>props = c.get_all_properties()
         >>>print(props['ExposureValue'])
@@ -1901,7 +1900,6 @@ class AVTCamera(FrameSource):
 
     def set_property(self, name, value, skip_buffer_size_check=False):
         """
-        **SUMMARY**
         This sets the value of the AVT Camera attribute.
         There are around 140 properties for the AVT Camera, so reference the
         AVT Camera and Driver Attributes pdf that is provided with
@@ -1909,7 +1907,8 @@ class AVTCamera(FrameSource):
         By default, we will also refresh the height/width and bytes per
         frame we're expecting -- you can manually bypass this if you want speed
         Returns the raw PvAVT error code (0 = success)
-        **Example**
+
+        :Example:
         >>>c = AVTCamera()
         >>>c.set_property("ExposureValue", 30000)
         >>>c.get_image().show()
@@ -1941,29 +1940,27 @@ class AVTCamera(FrameSource):
 
     def get_image(self, timeout=5000):
         """
-        **SUMMARY**
         Extract an Image from the Camera, returning the value.  No matter
         what the image characteristics on the camera, the Image returned
         will be RGB 8 bit depth, if camera is in greyscale mode it will
         be 3 identical channels.
-        **EXAMPLE**
+
+        :Example:
         >>>c = AVTCamera()
         >>>c.get_image().show()
         """
 
-        if self.frame != None:
+        if self.frame is not None:
             st = time.time()
             try:
                 pverr(self.dll.PvCaptureWaitForFrameDone(self.handle,
                                                          ctypes.byref(self.frame),
                                                          timeout))
-            except Exception, e:
-                print
-                "Exception waiting for frame:", e
-                print
-                "Time taken:", time.time() - st
+            except Exception as e:
+                print("Exception waiting for frame:", e)
+                print("Time taken:", time.time() - st)
                 self.frame = None
-                raise (e)
+                raise e
             img = self.unbuffer()
             self.frame = None
             return img
@@ -2022,14 +2019,12 @@ class AVTCamera(FrameSource):
                 pverr(self.dll.PvCaptureWaitForFrameDone(self.handle,
                                                          ctypes.byref(frame),
                                                          timeout))
-            except Exception, e:
-                print
-                "Exception waiting for frame:", e
-                print
-                "Time taken:", time.time() - st
-                raise (e)
+            except Exception as e:
+                print("Exception waiting for frame:", e)
+                print("Time taken:", time.time() - st)
+                raise e
 
-        except Exception, e:
+        except Exception as e:
             print("Exception aquiring frame:", e)
             raise e
 
@@ -2047,6 +2042,7 @@ class AVTCamera(FrameSource):
         except Exception as e:
             print("Exception aquiring frame:", e)
             raise (e)
+
 
 class GigECamera(Camera):
     """
@@ -2245,8 +2241,10 @@ class VimbaCamera(FrameSource):
         self._vimba.shutdown()
 
     def shutdown(self):
-        """You must call this function if you are using threaded=true when you are finished
-            to prevent segmentation fault"""
+        """
+        You must call this function if you are using threaded=true when you are finished
+        to prevent segmentation fault
+        """
         # REQUIRED TO PREVENT SEGMENTATION FAULT FOR THREADED=True
         if self._camera:
             self._camera.closeCamera()
@@ -2345,11 +2343,10 @@ class VimbaCamera(FrameSource):
 
     def list_all_cameras(self):
         """
-        **SUMMARY**
         List all cameras attached to the host
-        **RETURNS**
-        List of VimbaCamera objects, otherwise empty list
-        VimbaCamera objects are defined in the pymba module
+
+        :return: List of VimbaCamera objects, otherwise empty list
+                  VimbaCamera objects are defined in the pymba module
         """
         cameraIds = self._vimba.getCameraIds()
         ar = []
@@ -2359,29 +2356,29 @@ class VimbaCamera(FrameSource):
 
     def run_command(self, command):
         """
-        **SUMMARY**
         Runs a Vimba Command on the camera
         Valid Commands include:
-        * AcquisitionAbort
-        * AcquisitionStart
-        * AcquisitionStop
-        **RETURNS**
-        0 on success
-        **EXAMPLE**
-        >>>c = VimbaCamera()
-        >>>c.run_command("TimeStampReset")
+        - AcquisitionAbort
+        - AcquisitionStart
+        - AcquisitionStop
+
+        :return: 0 on success
+
+        :Example:
+        >>> c = VimbaCamera()
+        >>> c.run_command("TimeStampReset")
         """
         return self._camera.runFeatureCommand(command)
 
     def get_property(self, p):
         """
-        **SUMMARY**
         This retrieves the value of the Vimba Camera attribute
         There are around 140 properties for the Vimba Camera, so reference the
         Vimba Camera pdf that is provided with
         the SDK for detailed information
         Throws VimbaException if property is not found or not implemented yet.
-        **EXAMPLE**
+
+        :Example:
         >>>c = VimbaCamera()
         >>>print(c.get_property("ExposureMode"))
         """
@@ -2418,16 +2415,16 @@ class VimbaCamera(FrameSource):
 
     def set_property(self, name, value, skip_buffer_size_check=False):
         """
-        **SUMMARY**
         This sets the value of the Vimba Camera attribute.
         There are around 140 properties for the Vimba Camera, so reference the
         Vimba Camera pdf that is provided with
         the SDK for detailed information
         Throws VimbaException if property not found or not yet implemented
-        **Example**
-        >>>c = VimbaCamera()
-        >>>c.setProperty("ExposureAutoRate", 200)
-        >>>c.getImage().show()
+
+        :Example:
+        >>> c = VimbaCamera()
+        >>> c.setProperty("ExposureAutoRate", 200)
+        >>> c.getImage().show()
         """
         ret = self._camera.__setattr__(name, value)
 
@@ -2560,7 +2557,3 @@ class VimbaCameraThread(threading.Thread):
 
     def stopped(self):
         return self._stop.isSet()
-
-
-
-
