@@ -2512,7 +2512,7 @@ class VimbaCamera(FrameSource):
 
             return Image(rgb, colorSpace=colorSpace, cv2image=imgData)
 
-        except Exception, e:
+        except Exception as e:
             print("Exception acquiring frame: "
                   "{}: {}".format(e, traceback.format_exc()))
             raise e
