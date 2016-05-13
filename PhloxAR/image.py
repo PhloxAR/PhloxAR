@@ -1772,12 +1772,133 @@ class Image(object):
         return FeatureSet(blobs).sort_area()
 
     def get_skintone_mask(self, dilate_iter=0):
-        pass
+        """
+        Find Skintone mask will look for continuous regions of Skintone in a
+        color image and return a binary mask where the white pixels denote
+        Skintone region.
 
+        :param dilate_iter: the number of times to run the dilation operation.
+
+        :return: a binary mask.
+
+        :Example:
+        >>> img = Image("lenna")
+        >>> mask = img.get_skintone_mask()
+        >>> mask.show()
+        """
+        if self._color_space != ColorSpace.YCrCb:
+            YCrCb = self.to_ycrcb()
+        else:
+            YCrCb = self
+
+        Y = npy.ones((256, 1), dtype=uint8) * 0
+        Y[5:] = 255
+        Cr = npy.ones((256, 1), dtype=uint8) * 0
+        Cr[140:180] = 255
+        Cb = npy.ones((256, 1), dtype=uint8) * 0
+        Cb[77:135] = 255
+        Y_img = YCrCb.zeros(1)
+        Cr_img = YCrCb.zeros(1)
+        Cb_img = YCrCb.zeros(1)
+        cv.Split(YCrCb.bitmap, Y_img, Cr_img, Cb_img, None)
+        cv.LUT(Y_img, Y_img, cv.fromarray(Y))
+        cv.LUT(Cr_img, Cr_img, cv.fromarray(Cr))
+        cv.LUT(Cb_img, Cb_img, cv.fromarray(Cb))
+        temp = self.zeros()
+        cv.Merge(Y_img, Cr_img, Cb_img, None, temp)
+        mask = Image(temp, colorSpace=ColorSpace.YCrCb)
+        mask = mask.binarize((128, 128, 128))
+        mask = mask.to_rgb().binarize()
+        mask.dilate(dilate_iter)
+        return mask
+
+    # this code is based on code that's based on code from
+    # http://blog.jozilla.net/2008/06/27/fun-with-python-opencv-and-face-detection/
     def find_haar_features(self, cascade, scale_factor=1.2, min_neighbors=2,
-                           use_cammy=cv.CV_HAAR_DO_CANNY_PRUNING,
+                           use_canny=cv.CV_HAAR_DO_CANNY_PRUNING,
                            min_size=(20, 20), max_size=(1000, 1000)):
-        pass
+        """
+        A Haar like feature cascase is a really robust way of finding the
+        location of a known object. This technique works really well for a few
+        specific applications like face, pedestrian, and vehicle detection.
+        It is worth noting that this approach **IS NOT A MAGIC BULLET** .
+        Creating a cascade file requires a large number of images that have
+        been sorted by a human. If you want to find Haar Features (useful for
+        face detection among other purposes) this will return Haar feature
+        objects in a FeatureSet.
+        For more information, consult the cv.HaarDetectObjects documentation.
+        To see what features are available run img.listHaarFeatures() or you can
+        provide your own haarcascade file if you have one available.
+        Note that the cascade parameter can be either a filename, or a HaarCascade
+        loaded with cv.Load(), or a HaarCascade object.
+
+        :param cascade: the Haar Cascade file, this can be either the path to
+                        a cascade file or a HaarCascased SimpleCV object that
+                        has already been loaded.
+        :param scale_factor: the scaling factor for subsequent rounds of the
+                             Haar cascade (default 1.2) in terms of a
+                             percentage (i.e. 1.2 = 20% increase in size)
+        :param min_neighbors: the minimum number of rectangles that makes up
+                              an object. Usually detected faces are clustered
+                              around the face, this is the number of detections
+                              in a cluster that we need for detection. Higher
+                              values here should reduce false positives and
+                              decrease false negatives.
+        :param use_canny: whether or not to use Canny pruning to reject areas
+                          with too many edges (default yes, set to 0 to disable)
+        :param min_size: minimum window size. By default, it is set to the size
+                         of samples the classifier has been trained on ((20,20)
+                         for face detection)
+        :param max_size: maximum window size. By default, it is set to the size
+                         of samples the classifier has been trained on
+                         ((1000,1000) for face detection)
+        :return: a feature set of HaarFeatures
+
+        :Example:
+        >>> faces = HaarCascade("face.xml","myFaces")
+        >>> cam = Camera()
+        >>> while True:
+        >>>     f = cam.get_image().find_haar_features(faces)
+        >>>     if f is not None:
+        >>>         f.show()
+
+        :Note:
+        OpenCV Docs:
+        - http://opencv.willowgarage.com/documentation/python/objdetect_cascade_classification.html
+        Wikipedia:
+        - http://en.wikipedia.org/wiki/Viola-Jones_object_detection_framework
+        - http://en.wikipedia.org/wiki/Haar-like_features
+        The video on this pages shows how Haar features and cascades work to located faces:
+        - http://dismagazine.com/dystopia/evolved-lifestyles/8115/anti-surveillance-how-to-hide-from-machines/
+        """
+        storage = cv.CreateMemStorage(0)
+
+        # lovely.  This segfaults if not present
+        from PhloxAR.features.HaarCascade import HaarCascade
+        if isinstance(cascade, str):
+            cascade = HaarCascade(cascade)
+            if not cascade.get_cascade():
+                return None
+        elif isinstance(cascade, HaarCascade):
+            pass
+        else:
+            logger.warning('Could not initialize HaarCascade. Enter Valid'
+                           'cascade value.')
+
+        # added all of the arguments from the opencv docs arglist
+        import cv2
+        haar_classify = cv2.CascadeClassifier(cascade.get_file_handle())
+        objects = haar_classify.detectMultiScale(self.gray_narray,
+                                                 scale_factor=scale_factor,
+                                                 min_neighbors=min_neighbors,
+                                                 min_size=min_size,
+                                                 flags=use_canny)
+        cv2flag = True
+
+        if objects is not None:
+            return FeatureSet([HaarFeature(self, o, cascade, cv2flag) for o in objects])
+
+        return None
 
     def draw_circle(self, ctr, rad, color=(0, 0, 0), thickness=1):
         pass
