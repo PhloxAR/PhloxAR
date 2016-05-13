@@ -1251,8 +1251,44 @@ class Image(object):
 
         return Image(new_img, color_space=self._color_space)
 
-    def median_filter(self, window='', grayscale=False):
-        pass
+    def median_filter(self, window=(3, 3), grayscale=False):
+        """
+        Smooths the image, with the median filter. Performs a median
+        filtering operation to denoise/despeckle the image.
+        The optional parameter is the window size.
+
+
+        :param window: should be in the form a tuple (win_x,win_y).
+                       Where win_x should be equal to win_y. By default
+                       it is set to 3x3, i.e window = (3, 3).
+
+        :Note:
+        win_x and win_y should be greater than zero, a odd number and equal.
+        """
+        if istuple(window):
+            win_x, win_y = window
+            if win_x >= 0 and win_y >= 0 and win_x % 2 == 1 and win_y % 2 == 1:
+                if win_x != win_y:
+                    win_x = win_y
+            else:
+                logger.warning("The aperture (win_x,win_y) must be odd number"
+                               " and greater than 0.")
+                return None
+
+        elif isnum(window):
+            win_x = window
+        else:
+            win_x = 3  # set the default aperture window size (3x3)
+
+        if grayscale:
+            img_median_blur = cv2.medianBlur(self.gray_narray, win_x)
+            return Image(img_median_blur, color_space=ColorSpace.GRAY)
+        else:
+            img_median_blur = cv2.medianBlur(
+                    self.narray[:, :, ::-1].transpose([1, 0, 2]), win_x
+            )
+            img_median_blur = img_median_blur[:, :, ::-1].transpose([1, 0, 2])
+            return Image(img_median_blur, color_space=self._color_space)
 
     def bilateral_filter(self, diameter=5, sigma_color=10, sigma_space=10,
                          grayscale=False):
