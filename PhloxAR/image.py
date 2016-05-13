@@ -1179,7 +1179,7 @@ class Image(object):
 
         scaled_bitmap = cv.CreateImage((width, height), 8, 3)
         cv.Resize(self.bitmap, scaled_bitmap)
-        return Image(scaled_bitmap, color_space=self._colorSpace)
+        return Image(scaled_bitmap, color_space=self._color_space)
 
     def smooth(self, method='gaussian', aperture=(3, 3), sigma=0,
                spatial_sigma=0, grayscale=False):
@@ -1517,11 +1517,118 @@ class Image(object):
         dst = (((1.0 / scale) * src) ** gamma) * scale
         return Image(dst)
 
-    def binarize(self, threshold=-1, maxv=255, blocksize=0, p=5):
-        pass
+    def binarize(self, thresh=-1, maxv=255, blocksize=0, p=5):
+        """
+        Do a binary threshold the image, changing all values below thresh to
+        maxv and all above to black.  If a color tuple is provided, each color
+        channel is thresholded separately. If threshold is -1 (default), an
+        adaptive method (OTSU's method) is used. If then a blocksize is
+        specified, a moving average over each region of block*block pixels a
+        threshold is applied where threshold = local_mean - p.
+
+        :param thresh: the threshold as an integer or an (r,g,b) tuple,
+                        where pixels below (darker) than thresh are set
+                        to to max value, and all values above this value
+                        are set to black. If this parameter is -1 we use
+                        Otsu's method.
+        :param maxv: the maximum value for pixels below the threshold.
+                     Ordinarily this should be 255 (white)
+        :param blocksize: the size of the block used in the adaptive binarize
+                           operation. This parameter must be an odd number.
+        :param p: the difference from the local mean to use for thresholding
+                   in Otsu's method.
+
+        :return: a binary (two colors, usually black and white) image. This
+                 works great for the find_blobs family of functions.
+
+        :Example:
+        Example of a vanila threshold versus an adaptive threshold:
+        >>> img = Image("orson_welles.jpg")
+        >>> b1 = img.binarize(128)
+        >>> b2 = img.binarize(blocksize=11,p=7)
+        >>> b3 = b1.sideBySide(b2)
+        >>> b3.show()
+
+        :Note:
+        Otsu's Method Description<http://en.wikipedia.org/wiki/Otsu's_method>`
+        """
+        if istuple(thresh):
+            r = self.zeros(1)
+            g = self.zeros(1)
+            b = self.zeros(1)
+            cv.Split(self.bitmap, b, g, r, None)
+
+            cv.Threshold(r, r, thresh[0], maxv, cv.CV_THRESH_BINARY_INV)
+            cv.Threshold(g, g, thresh[1], maxv, cv.CV_THRESH_BINARY_INV)
+            cv.Threshold(b, b, thresh[2], maxv, cv.CV_THRESH_BINARY_INV)
+
+            cv.Add(r, g, r)
+            cv.Add(r, b, r)
+
+            return Image(r, color_space=self._color_space)
+        elif thresh == -1:
+            new_bitmap = self.zeros(1)
+            if blocksize:
+                cv.AdaptiveThreshold(self._gray_bitmap_func(), new_bitmap,
+                                     maxv,
+                                     cv.CV_ADAPTIVE_THRESH_GAUSSIAN_C,
+                                     cv.CV_THRESH_BINARY_INV, blocksize, p)
+            else:
+                cv.Threshold(self._gray_bitmap_func(), new_bitmap, thresh,
+                             float(maxv),
+                             cv.CV_THRESH_BINARY_INV + cv.CV_THRESH_OTSU)
+            return Image(new_bitmap, color_space=self._color_space)
+        else:
+            new_bitmap = self.zeros(1)
+            # desaturate the image, and apply the new threshold
+            cv.Threshold(self._gray_bitmap_func(), new_bitmap, thresh,
+                         float(maxv), cv.CV_THRESH_BINARY_INV)
+            return Image(new_bitmap, color_space=self._color_space)
 
     def mean_color(self, color_space=None):
-        pass
+        """
+        This method finds the average color of all the pixels in the image and
+        displays tuple in the color space specfied by the user.
+        If no color space is specified , (B,G,R) color space is taken as default.
+
+        :return: a tuple of the average image values. Tuples are in the
+                 channel order. For most images this means the results
+                 are (B,G,R).
+
+        :Example:
+        >>> img = Image('lenna')
+        >>> colors = img.mean_color()        # returns tuple in Image's colorspace format.
+        >>> colors = img.mean_color('BGR')   # returns tuple in (B,G,R) format.
+        >>> colors = img.mean_color('RGB')   # returns tuple in (R,G,B) format.
+        >>> colors = img.mean_color('HSV')   # returns tuple in (H,S,V) format.
+        >>> colors = img.mean_color('XYZ')   # returns tuple in (X,Y,Z) format.
+        >>> colors = img.mean_color('Gray')  # returns float of mean intensity.
+        >>> colors = img.mean_color('YCrCb') # returns tuple in (Y,Cr,Cb) format.
+        >>> colors = img.mean_color('HLS')   # returns tuple in (H,L,S) format.
+        """
+
+        if color_space == None:
+            return tuple(cv.Avg(self.bitmap())[0:3])
+        elif color_space == 'BGR':
+            return tuple(cv.Avg(self.to_bgr().bitmap)[0:3])
+        elif color_space == 'RGB':
+            return tuple(cv.Avg(self.to_rgb().bitmap)[0:3])
+        elif color_space == 'HSV':
+            return tuple(cv.Avg(self.to_hsv().bitmap)[0:3])
+        elif color_space == 'XYZ':
+            return tuple(cv.Avg(self.to_xyz().bitmap)[0:3])
+        elif color_space == 'Gray':
+            return cv.Avg(self._gray_bitmap_func())[0]
+        elif color_space == 'YCrCb':
+            return tuple(cv.Avg(self.to_ycrcb().bitmap)[0:3])
+        elif color_space == 'HLS':
+            return tuple(cv.Avg(self.to_hls().bitmap)[0:3])
+        else:
+            logger.warning("Image.mean_color: There is no supported conversion"
+                           " to the specified colorspace. Use one of these as "
+                           "argument: 'BGR' , 'RGB' , 'HSV' , 'Gray' , 'XYZ' , "
+                           "'YCrCb' , 'HLS' .")
+            return None
 
     def find_corners(self, maxnum=50, minquality=0.04, mindistance=1.0):
         pass
