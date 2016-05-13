@@ -678,7 +678,7 @@ class VirtualCamera(FrameSource):
         :Example:
         >>> cam = VirtualCamera()
         >>> while True:
-        >>>     cam.get_image().show()
+            ... cam.get_image().show()
         """
         if self._src_type == 'image':
             self.counter += 1
@@ -698,7 +698,7 @@ class VirtualCamera(FrameSource):
             else:
                 return None
         elif self._src_type == 'directory':
-            img = self.find_lastest_image(self._src, 'bmp')
+            img = self.find_latest_image(self._src, 'bmp')
             self.counter += 1
             return Image(img, self)
 
@@ -709,22 +709,177 @@ class VirtualCamera(FrameSource):
         pass
 
     def rewind(self, start=None):
-        pass
+        """
+        Rewind the video source back to the given frame.
+        Available for only video sources.
+
+        :param start: the number of the frame you want to rwind to,
+                       if not provided, the video source would be rewound
+                       to the starting frame number you provided or rewound
+                       to the beginning.
+        :return: None
+
+        :Example:
+        >>> cam = VirtualCamera('file.avi', 'video', 120)
+        >>> i = 0
+        >>> while i < 60:
+            ... cam.get_image().show()
+            ... i += 1
+        >>> cam.rewind()
+        """
+        if self._src_type == 'video':
+            if not start:
+                cv.SetCaptureProperty(self._cv2_capture,
+                                      cv.CV_CAP_PROP_POS_FRAMES,
+                                      self._start - 1)
+            else:
+                if start == 0:
+                    start = 1
+                cv.SetCaptureProperty(self._cv2_capture,
+                                      cv.CV_CAP_PROP_POS_FRAMES,
+                                      self._start - 1)
+        else:
+            self.counter = 0
 
     def get_frame(self, frame):
-        pass
+        """
+        Get the provided numbered frame from the video source.
+        Available for only video sources.
+
+        :param frame: the number of the frame
+        :return: Image
+
+        >>> cam = VimbaCamera('file.avi', 'video', 120)
+        >>> cam.get_frame(400).show()
+        """
+        if self._src_type == 'video':
+            num_frame = int(cv.GetCaptureProperty(self._cv2_capture,
+                                                  cv.CV_CAP_PROP_POS_FRAMES))
+            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
+                                  frame - 1)
+            img = self.get_image()
+            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
+                                  num_frame)
+            return img
+        elif self._src_type == 'imageset':
+            img = None
+            if frame < len(self._src):
+                img = self._src[frame]
+            return img
+        else:
+            return None
 
     def skip_frames(self, num):
-        pass
+        """
+        Skip num number of frames.
+        Available for only video sources
+
+        :param num: number of frames to be skipped
+        :return: None
+
+        >>> cam = VirtualCamera('file.avi', 'video', 120)
+        >>> i = 0
+        >>> while i < 60:
+            ... cam.get_image().show()
+            ... i += 1
+        >>> cam.skip_frames(100)
+        >>> cam.get_image().show()
+        """
+        if self._src_type == 'video':
+            num_frame = int(cv.GetCaptureProperty(self._cv2_capture,
+                                                  cv.CV_CAP_PROP_POS_FRAMES))
+            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
+                                  num_frame + num - 1)
+        elif self._src_type == 'imageset':
+            self.counter = (self.counter + num) % len(self._src)
+        else:
+            self.counter += num
 
     def get_frame_number(self):
-        pass
+        """
+        Get the current frame number of the video source.
+        Available for only video sources.
+
+        :return: number of frame, integer
+
+        :Example:
+        >>> cam = VirtualCamera('file.avi', 'video', 120)
+        >>> i = 0
+        >>> while i < 60:
+            ... cam.get_image().show()
+            ... i += 1
+        >>> cam.skip_frames(100)
+        >>> cam.get_frame_number()
+        """
+        if self._src_type == 'video':
+            num_frame = int(cv.GetCaptureProperty(self._cv2_capture,
+                                                  cv.CV_CAP_PROP_POS_FRAMES))
+            return num_frame
+        else:
+            return self.counter
 
     def get_current_play_time(self):
-        pass
+        """
+        Get the current play time in milliseconds of the video source.
+        Available for only video sources.
 
-    def find_lastest_image(self, directory='', ext='png'):
-        pass
+        :return: int, milliseconds of time from beginning of file.
+
+        :Example:
+        >>> cam = VirtualCamera("filename.avi", "video", 120)
+        >>> i=0
+        >>> while i<60:
+            ... cam.getImage().show()
+            ... i+=1
+        >>> cam.skipFrames(100)
+        >>> cam.getCurrentPlayTime()
+            """
+        if self._src_type == 'video':
+            milliseconds = int(cv.GetCaptureProperty(self.capture,
+                                                     cv.CV_CAP_PROP_POS_MSEC))
+            return milliseconds
+        else:
+            raise ValueError('sources other than video do not have play '
+                             'time property')
+
+    def find_latest_image(self, directory='', ext='png'):
+        """
+        This function finds the latest file in a directory
+        with a given extension.
+
+        :param directory: the directory you want to load images from
+                           (defaults to current directory)
+        :param ext: image extension you want to use (defaults to .png)
+
+        :return: the filename of the latest image
+
+        :Example:
+        >>> cam = VirtualCamera('imgs/', 'png') #find all .png files in 'img' directory
+        >>> cam.get_image() # Grab the latest image from that directory
+        """
+        max_mtime = 0
+        max_dir = None
+        max_file = None
+        max_full_path = None
+        for dirname, subdirs, files in os.walk(directory):
+            for f in files:
+                if f.split('.')[-1] == ext:
+                    full_path = os.path.join(dirname, f)
+                    mtime = os.stat(full_path).st_mtime
+                    if mtime > max_mtime:
+                        max_mtime = mtime
+                        max_dir = dirname
+                        max_file = f
+                        self._last_time = mtime
+                        max_full_path = os.path.abspath(
+                            os.path.join(dirname, f))
+
+        # if file is being written, block until mtime is at least 100ms old
+        while time.mktime(time.localtime()) - os.stat(
+                max_full_path).st_mtime < 0.1:
+            time.sleep(0)
+
+        return max_full_path
 
 
 class JpegStreamReader(threading.Thread):
