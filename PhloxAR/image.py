@@ -1607,7 +1607,7 @@ class Image(object):
         >>> colors = img.mean_color('HLS')   # returns tuple in (H,L,S) format.
         """
 
-        if color_space == None:
+        if color_space is None:
             return tuple(cv.Avg(self.bitmap())[0:3])
         elif color_space == 'BGR':
             return tuple(cv.Avg(self.to_bgr().bitmap)[0:3])
@@ -1817,7 +1817,7 @@ class Image(object):
     def _get_edge_map(self, t1=50, t2=100):
         pass
 
-    def roate(self, angle, fixed=True, point=None, scale=1.0):
+    def rotate(self, angle, fixed=True, point=None, scale=1.0):
         if point is None:
             point = [-1, -1]
 
