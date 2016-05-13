@@ -75,12 +75,12 @@ class Image(object):
     _pilimg = ''  # holds a PIL Image object in buffer
     _surface = ''  # pygame surface representation of the image
     _narray = ''  # numpy array representation of the image
-    _cv2narray = None  # Numpy array which compatible with OpenCV >= 2.3
+    _cvnarray = None  # Numpy array which compatible with OpenCV >= 2.3
 
     _gray_matrix = ''  # the gray scale (cvmat) representation
     _gray_bitmap = ''  # the 8-bit gray scale bitmap
     _gray_narray = ''  # gray scale numpy array for key point stuff
-    _gray_cv2narray = None  # grayscale numpy array for OpenCV >= 2.3
+    _gray_cvnarray = None  # grayscale numpy array for OpenCV >= 2.3
 
     _equalized_gray_bitmap = ''  # the normalized bitmap
 
@@ -171,13 +171,13 @@ class Image(object):
             img_file = urllib2.urlopen(req)
 
             img = StringIO(img_file.read())
-            src = pilImage.open(img).convert("RGB")
+            src = PILImage.open(img).convert("RGB")
 
         # check base64 url
         if type(src) == str and (src.lower().startswith('data:image/png;base64')):
             ims = src[22:].decode('base64')
             img = StringIO(ims)
-            src = pilImage.open(img).convert("RGB")
+            src = PILImage.open(img).convert("RGB")
 
         if type(src) == str:
             tmp_name = src.lower()
@@ -255,7 +255,7 @@ class Image(object):
                 try:
                     if sclsname == 'StringIO':
                         src.seek(0)  # set the stringIO to the beginning
-                    self._pilimage = pilImage.open(src)
+                    self._pilimage = PILImage.open(src)
                     self._bitmap = cv.CreateImageHeader(self._pilimage.size,
                                                         cv.IPL_DEPTH_8U, 3)
                 except:
@@ -270,7 +270,7 @@ class Image(object):
 
                     WEBP_IMAGE_DATA = bytearray(file(src, "rb").read())
                     result = wdecode.DecodeRGB(WEBP_IMAGE_DATA)
-                    webpimage = pilImage.frombuffer("RGB",
+                    webpimage = PILImage.frombuffer("RGB",
                                                     (result.width, result.height),
                                                     str(result.bitmap),
                                                     "raw", "RGB", 0, 1)
@@ -286,14 +286,14 @@ class Image(object):
                     self._bitmap = cv.LoadImage(self.filename,
                                                 iscolor=cv.CV_LOAD_IMAGE_COLOR)
                 except:
-                    self._pil = pilImage.open(self.filename).convert("RGB")
+                    self._pil = PILImage.open(self.filename).convert("RGB")
                     self._bitmap = cv.CreateImageHeader(self._pil.size,
                                                         cv.IPL_DEPTH_8U, 3)
                     cv.SetData(self._bitmap, self._pil.tostring())
                     cv.CvtColor(self._bitmap, self._bitmap, cv.CV_RGB2BGR)
 
                 # TODO, on IOError fail back to PIL
-                self._colorSpace = ColorSpace.BGR
+                self._color_space = ColorSpace.BGR
         elif type(src) == sdl2.Surface:
             self._surface = src
             self._bitmap = cv.CreateImageHeader(self._surface.get_size(),
@@ -393,6 +393,23 @@ class Image(object):
             elapsed_time = time.time() - start_time
 
             if d.mouse_l:
+                txt1 = 'Coord: ({}, {})'.format(d.mouse_x, d.mouse_r)
+                i.dl().text(txt1, (10, i.height / 2), color=col)
+                txt2 = 'Color: {}'.format((i.get_pixel(d.mouse_x, d.mouse_y)))
+                i.dl().text(txt2, (10, i.height / 2 + 10), color=col)
+                print(txt1 + '\n' + txt2)
+
+            if 0 < elapsed_time < 5:
+                i.dl().text('In live mode', (10, 10), color=col)
+                i.dl().text("Left click will show mouse coordinates and color",
+                            (10,20), color=col)
+                i.dl().text("Right click will kill the live image", (10,30),
+                            color=col)
+
+            i.save(d)
+            if d.mouse_r:
+                print("Closing Window!")
+                d.done = True
 
     @property
     def color_space(self):
@@ -401,6 +418,8 @@ class Image(object):
         :return: integer corresponding to the color space.
         """
         return self._color_space
+
+    get_color_space = color_space
 
     def is_rgb(self):
         """
@@ -670,6 +689,8 @@ class Image(object):
 
         return bitmap
 
+    get_empty = zeros
+
     @property
     def bitmap(self):
         """
@@ -687,6 +708,8 @@ class Image(object):
 
         return self._bitmap
 
+    get_bitmap = bitmap.fget
+
     @property
     def matrix(self):
         """
@@ -699,6 +722,8 @@ class Image(object):
         else:
             self._matrix = cv.GetMat(self._bitmap)
             return self._matrix
+
+    get_matrix = matrix.fget
 
     @property
     def gray_matrix(self):
@@ -713,6 +738,8 @@ class Image(object):
             self._gray_matrix = cv.GetMat(self._gray_bitmap_func())
             return self._gray_matrix
 
+    get_grayscale_matrix = gray_matrix.fget
+
     @property
     def float_matrix(self):
         """
@@ -724,6 +751,8 @@ class Image(object):
         cv.Convert(self.bitmap, img)
 
         return img
+
+    get_float_matrix = float_matrix
 
     @property
     def pilimg(self):
@@ -739,10 +768,13 @@ class Image(object):
             pass
         pass
 
+    get_pilimg = pilimg
+
     @property
     def narray(self):
         """
         Get a Numpy array of the image in width x height x RGB dimensions
+
         :return: the image, converted first to grayscale and then converted
                   to a 3D Numpy array.
         """
@@ -752,6 +784,8 @@ class Image(object):
         self._narray = npy.array(self.matrix)[:, :, ::-1].transpose([1, 0, 2])
 
         return self._narray
+
+    get_narray = narray.fget
 
     @property
     def gray_narray(self):
@@ -767,27 +801,33 @@ class Image(object):
                     self._gray_bitmap_func()
             )).transpose())
 
+    get_grayscale_narray = gray_narray.fget
+
     @property
-    def cv2narray(self):
+    def cvnarray(self):
         """
         Get a Numpy array of the image, compatible with OpenCV >= 2.3
         :return: 3D Numpy array of the image.
         """
-        if not isinstance(self._cv2narray, npy.ndarray):
-            self._cv2narray = npy.array(self.matrix)
+        if not isinstance(self._cvnarray, npy.ndarray):
+            self._cvnarray = npy.array(self.matrix)
 
-        return self._cv2narray
+        return self._cvnarray
+
+    get_cvnarray = cvnarray.fget
 
     @property
-    def gray_cv2narray(self):
+    def gray_cvnarray(self):
         """
         Get a grayscale Numpy array of the image, compatible with OpenCV >= 2.3
         :return: the 3D Numpy array of the image.
         """
-        if not isinstance(self._gray_cv2narray, npy.ndarray):
-            self._gray_cv2narray = npy.array(self.gray_matrix)
+        if not isinstance(self._gray_cvnarray, npy.ndarray):
+            self._gray_cvnarray = npy.array(self.gray_matrix)
 
-        return self._gray_cv2narray
+        return self._gray_cvnarray
+
+    get_grayscale_cvnarray = gray_cvnarray.fget
 
     def _gray_bitmap_func(self):
         """
@@ -818,8 +858,8 @@ class Image(object):
             cv.Split(self.bitmap, self._gray_bitmap, self._gray_bitmap,
                      self._gray_bitmap, None)
         else:
-            logger.warning("Image._gray_bitmap: There is no supported conversion"
-                           "to gray colorspace.")
+            logger.warning("Image._gray_bitmap: There is no supported "
+                           "conversion to gray color space.")
 
         return self._gray_bitmap
 
@@ -848,6 +888,7 @@ class Image(object):
     def surface(self):
         """
         Returns the image as a Pygame Surface. Used for rendering the display.
+
         :return: a pygame Surface object used for rendering.
         """
         if self._surface:
@@ -861,6 +902,8 @@ class Image(object):
                                                       self.size, 'RGB')
             return self._surface
 
+    get_sdl_surface = surface.fget
+
     def to_string(self):
         """
         Returns the image as a string, useful for moving data around.
@@ -869,8 +912,187 @@ class Image(object):
         return self.to_rgb().bitmap.tostring()
 
     def save(self, handle_or_name='', mode='', verbose=False, tmp=False,
-             path=None, clean=False, **kwargs):
-        pass
+             path=None, filename=None, clean=False, **kwargs):
+        """
+        Save the image to the specified file name. If no file name is provided
+        then it will use the file name from which the Image was loaded, or the
+        last place it was saved to. You can save to lots of places, not just files.
+        For example you can save to the Display, a JpegStream, VideoStream,
+        temporary file, or Ipython Notebook.
+
+        Save will implicitly render the image's layers before saving, but the
+        layers are not applied to the Image itself.
+
+        :param handle_or_name: the filename to which to store the file.
+                                The method will infer the file type.
+        :param mode: used for saving using pul
+        :param verbose: if True return the path where we saved the file.
+        :param tmp: if True save the image as a temporary file and return the path
+        :param path: where temporary files to be stored
+        :param filename: name(prefix) of the temporary file
+        :param clean: True if temp files are tobe deleted once the object
+                       is to be destroyed
+        :param kwargs: used for overloading the PIL save methods. In particular
+                        this method is useful for setting the jpeg compression
+                        level. For JPG see this documentation:
+                        http://www.pythonware.com/library/pil/handbook/format-jpeg.htm
+
+        :return:
+
+        :Example:
+        >>> img = Image('phlox')
+        >>> img.save(tmp=True)
+
+        It will return the path that it saved to.
+        Save also supports IPython Notebooks when passing it a Display object
+        that has been instainted with the notebook flag.
+        To do this just use:
+
+        >>> disp = Display(displaytype='notebook')
+        >>> img.save(disp)
+
+        :Note:
+        You must have IPython notebooks installed for this to work path
+        and filename are valid if and only if temp is set to True.
+        """
+        # TODO, we use the term mode here when we mean format
+        # TODO, if any params are passed, use PIL
+        if tmp:
+            import glob
+            if filename is None:
+                filename = 'Image'
+            if path is None:
+                path = tempfile.gettempdir()
+            if glob.os.path.exists(path):
+                path = glob.os.path.abspath(path)
+                imfiles = glob.glob(glob.os.path.join(path, filename + '*.png'))
+                num = [0]
+                for img in imfiles:
+                    num.append(int(glob.re.findall('[0-9]+$', img[:-4])[-1]))
+                num.sort()
+                fnum = num[-1] + 1
+                filename = glob.os.path.join(path, filename + ('%07d' % fnum) +
+                                             '.png')
+                self._tmp_files.append(filename, clean)
+                self.save(self._tmp_files[-1][0])
+                return self._tmp_files[-1][0]
+            else:
+                print("Path does not exist!")
+        else:
+            if filename:
+                handle_or_name = filename + '.png'
+
+        if not handle_or_name:
+            if self.filename:
+                handle_or_name = self.filename
+            else:
+                handle_or_name = self.filehandle
+
+        if len(self._layers):
+            img_save = self.apply_layers()
+        else:
+            img_save = self
+
+        if (self._color_space != ColorSpace.BGR and
+            self._color_space != ColorSpace.GRAY):
+            img_save = img_save.to_bgr()
+
+        if not isinstance(handle_or_name, str):
+            fh = handle_or_name
+
+            if not PIL_ENABLED:
+                logger.warning("You need the Pillow to save by file handle")
+                return 0
+
+            if isinstance(fh, 'JpegStreamer'):
+                fh.jpgdata = StringIO()
+                # save via PIL to a StringIO handle
+                img_save.pilimg.save(fh.jpgdata, 'jpeg', **kwargs)
+                fh.refreshtime = time.time()
+                self.filename = ''
+                self.filehandle = fh
+
+            elif isinstance(fh, 'VideoStream'):
+                self.filename = ''
+                self.filehandle = fh
+                fh.write_frame(img_save)
+
+            elif isinstance(fh, 'Display'):
+                if fh.display_type == 'notebook':
+                    try:
+                        from IPython.core import Image as IPYImage
+                    except ImportError:
+                        print("Need IPython Notebooks to use the display mode!")
+                        return
+
+                    from IPython.core import display as IPYDisplay
+                    tf = tempfile.NamedTemporaryFile(suffix='.png')
+                    loc = tf.name
+                    tf.close()
+                    self.save(loc)
+                    IPYDisplay.display(IPYImage(filename=loc))
+                else:
+                    self.filehandle = fh
+                    fh.write_frame(img_save)
+
+            else:
+                if not mode:
+                    mode = 'jpeg'
+
+                try:
+                    # latest version of PIL/PILLOW supports webp,
+                    # try this first, if not gracefully fallback
+                    img_save.pilimg.save(fh, mode, **kwargs)
+                    # set the file name for future save operations
+                    self.filehandle = fh
+                    self.filename = ''
+                    return 1
+                except Exception as e:
+                    if mode.lower() != 'webp':
+                        raise e
+
+            if verbose:
+                print(self.filename)
+
+            if not mode.lower() == 'webp':
+                return 1
+
+        # make a temporary file location if there isn't one
+        if not handle_or_name:
+            filename = tempfile.mkstemp(suffix='.png')[-1]
+        else:
+            filename = handle_or_name
+
+        # allow saving in webp format
+        if mode == 'webp' or re.search('\.webp$', filename):
+            try:
+                # newer versions of PIL support webp format, try that first
+                self.pilimg.save(filename, **kwargs)
+            except:
+                logger.warning("Can't save to webp format!")
+
+        if kwargs:
+            if not mode:
+                mode = 'jpeg'
+            img_save.pilimg.save(filename, mode, **kwargs)
+            return 1
+
+        if filename:
+            cv.SaveImage(filename, img_save.bitmap)
+            self.filename = filename
+            self.filehandle = None
+        elif self.filename:
+            cv.SaveImage(self.filename, img_save.bitmap)
+        else:
+            return 0
+
+        if verbose:
+            print(self.filename)
+
+        if tmp:
+            return filename
+        else:
+            return 1
 
     def copy(self):
         pass
