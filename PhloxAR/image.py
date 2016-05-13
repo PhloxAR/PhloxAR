@@ -6,6 +6,7 @@ from __future__ import unicode_literals, absolute_import
 from PhloxAR.base import *
 from PhloxAR.color import *
 from PhloxAR.linescan import *
+from PhloxAR.features import *
 
 try:
     import urllib2
@@ -1631,15 +1632,108 @@ class Image(object):
             return None
 
     def find_corners(self, maxnum=50, minquality=0.04, mindistance=1.0):
-        pass
+        """
+        This will find corner Feature objects and return them as a FeatureSet
+        strongest corners first.  The parameters give the number of corners
+        to look for, the minimum quality of the corner feature, and the minimum
+        distance between corners.
+
+        :param maxnum: the maximum number of corners to return.
+        :param minquality: the minimum quality metric. This should be a number
+                           between zero and one.
+        :param mindistance: the minimum distance, in pixels, between successive
+                             corners.
+        :return: a featureset of Corner features or None if no corners are found.
+
+        :Example:
+        >>> img = Image("sampleimages/simplecv.png")
+        >>> corners = img.find_corners()
+        >>> if corners: True
+
+        >>> img = Image("sampleimages/black.png")
+        >>> corners = img.find_corners()
+        >>> if not corners: True
+        """
+        # initialize buffer frames
+        eig_image = cv.CreateImage(cv.GetSize(self.bitmap),
+                                   cv.IPL_DEPTH_32F, 1)
+        temp_image = cv.CreateImage(cv.GetSize(self.bitmap),
+                                    cv.IPL_DEPTH_32F, 1)
+
+        corner_coordinates = cv.GoodFeaturesToTrack(self._gray_bitmap_func(),
+                                                    eig_image, temp_image,
+                                                    maxnum, minquality,
+                                                    mindistance, None)
+        corner_features = []
+        for (x, y) in corner_coordinates:
+            corner_features.append(Corner(self, x, y))
+
+        return FeatureSet(corner_features)
 
     def find_blobs(self, threshold=-1, minsize=10, maxsize=0,
                    threshold_blocksize=0,
                    threshold_constant=5, appx_level=3):
-        pass
+        """
+        Find blobs  will look for continuous light regions and return them as
+        Blob features in a FeatureSet.  Parameters specify the binarize filter
+        threshold value, and minimum and maximum size for blobs. If a threshold
+        value is -1, it will use an adaptive threshold.  See binarize() for
+        more information about thresholding.  The threshblocksize and
+        threshconstant parameters are only used for adaptive threshold.
 
+        :param threshold: the threshold as an integer or an (r,g,b) tuple,
+                           where pixels below (darker) than thresh are set
+                           to to max value, and all values above this value
+                           are set to black. If this parameter is -1 we use
+                           Otsu's method.
+        :param minsize: the minimum size of the blobs, in pixels, of the
+                         returned blobs. This helps to filter out noise.
+        :param maxsize: the maximim size of the blobs, in pixels, of the
+                        returned blobs.
+        :param threshold_blocksize: the size of the block used in the adaptive
+                                    binarize operation.
+                                    # TODO - make this match binarize
+        :param threshold_constant: the difference from the local mean to use
+                                    for thresholding in Otsu's method.
+                                    # TODO - make this match binarize
+        :param appx_level: the blob approximation level - an integer for
+                            the maximum distance between the true edge and
+                            the approximation edge - lower numbers yield
+                            better approximation.
+
+        :return: a featureset (basically a list) of blob features. If no
+                  blobs are found this method returns None.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> fs = img.find_blobs()
+        >>> if fs is not None:
+        >>>     fs.draw()
+
+        :Warning:
+        For blobs that live right on the edge of the image OpenCV reports
+        the position and width height as being one over for the true position.
+        E.g. if a blob is at (0,0) OpenCV reports its position as (1,1).
+        Likewise the width and height for the other corners is reported as
+        being one less than the width and height. This is a known bug.
+        """
+        if maxsize == 0:
+            maxsize = self.width * self.height
+        # create a single channel image, thresholded to parameters
+
+        blobmaker = BlobMaker()
+        blobs = blobmaker.extractFromBinary(
+            self.binarize(threshold, 255, threshold_blocksize,
+                          threshold_constant).invert(),
+            self, minsize=minsize, maxsize=maxsize, appx_level=appx_level)
+
+        if not len(blobs):
+            return None
+
+        return FeatureSet(blobs).sort_area()
+gi
     def find_skintone_blobs(self, minsize=10, maxsiz=0, dilate_iter=1):
-        pass
+
 
     def get_skintone_mask(self, dilate_iter=0):
         pass
