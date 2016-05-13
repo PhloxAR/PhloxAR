@@ -43,15 +43,12 @@ class FrameSource(object):
     _thread_cap_time = ''  # the time the last picture was taken
     _cap_time = ''  # timestamp of the last acquired image
 
-    @abc.abstractmethod
     def __init__(self):
         return
 
-    @abc.abstractmethod
     def get_property(self, p):
         return None
 
-    @abc.abstractmethod
     def get_all_properties(self):
         return {}
 
@@ -702,12 +699,6 @@ class VirtualCamera(FrameSource):
             self.counter += 1
             return Image(img, self)
 
-    def get_property(self, p):
-        pass
-
-    def get_all_properties(self):
-        pass
-
     def rewind(self, start=None):
         """
         Rewind the video source back to the given frame.
@@ -892,7 +883,6 @@ class JpegStreamReader(threading.Thread):
     _thread_cap_time = ""
 
     def run(self):
-
         f = ''
 
         if re.search('@', self.url):
@@ -979,17 +969,333 @@ class JpegStreamReader(threading.Thread):
             data = f.readline()  # load the next (header) line
             time.sleep(0)  # let the other threads go
 
+    @property
+    def thread_capture_time(self):
+        return self._thread_cap_time
+
 
 class JpegStreamCamera(FrameSource):
-    pass
+    """
+    The JpegStreamCamera takes a URL of a JPEG stream and treats it like a
+    camera.  The current frame can always be accessed with getImage()
+    Requires the Python Imaging Library:
+    http://www.pythonware.com/library/pil/handbook/index.htm
+
+    :Example:
+    Using your Android Phone as a Camera. Softwares like IP Webcam can be used.
+
+    >>> cam = JpegStreamCamera("http://192.168.65.101:8080/videofeed") # your IP may be different.
+    >>> img = cam.get_image()
+    >>> img.show()
+    """
+    url = ""
+    camthread = ""
+    capturetime = 0
+
+    def __init__(self, url):
+        super(JpegStreamCamera, self).__init__()
+        if not PIL_ENABLED:
+            logger.warning("You need the Python Image Library (PIL) to use"
+                           " the JpegStreamCamera")
+            return
+        if not url.startswith('http://'):
+            url = "http://" + url
+        self.url = url
+        self.camthread = JpegStreamReader()
+        self.camthread.url = self.url
+        self.camthread.daemon = True
+        self.camthread.start()
+        self.capturetime = 0
+
+    def get_image(self):
+        """
+        Return the current frame of the JpegStream being monitored
+        """
+        if not self.camthread.thread_capture_time:
+            now = time.time()
+            while not self.camthread.thread_capture_time:
+                if time.time() - now > 5:
+                    warnings.warn("Timeout fetching JpegStream at " + self.url)
+                    return
+                time.sleep(0.1)
+
+        self.capturetime = self.camthread.thread_capture_time
+        return Image(pil.open(StringIO(self.camthread.currentframe)), self)
+
+
+_SANE_INIT = False
 
 
 class Scanner(FrameSource):
-    pass
+    """
+    The Scanner lets you use any supported SANE-compatable scanner as a camera.
+    List of supported devices: http://www.sane-projectypes.org/sane-supported-devices.html
+    Requires the PySANE wrapper for libsane.  The sane scanner object
+    is available for direct manipulation at Scanner.device
+    This scanner object is heavily modified from
+    https://bitbucket.org/DavidVilla/pysane
+    Constructor takes an index (default 0) and a list of SANE options
+    (default is color mode).
+
+    :Example:
+    >>> scan = Scanner(0, { "mode": "gray" })
+    >>> preview = scan.get_preview()
+    >>> stuff = preview.find_blobs(minsize = 1000)
+    >>> topleft = (npy.min(stuff.x()), npy.min(stuff.y()))
+    >>> bottomright = (npy.max(stuff.x()), npy.max(stuff.y()))
+    >>> scan.set_roi(topleft, bottomright)
+    >>> scan.set_property("resolution", 1200) #set high resolution
+    >>> scan.set_property("mode", "color")
+    >>> img = scan.get_image()
+    >>> scan.set_roi() #reset region of interest
+    >>> img.show()
+    """
+    usbid = None
+    manufacturer = None
+    model = None
+    kind = None
+    device = None
+    max_x = None
+    max_y = None
+    preview = None
+
+    def __init__(self, id=0, properties={'mode': 'color'}):
+        super(Scanner, self).__init__()
+        global _SANE_INIT
+        import sane
+        if not _SANE_INIT:
+            try:
+                sane.init()
+                _SANE_INIT = True
+            except:
+                warn("Initializing pysane failed, do you have pysane installed?")
+                return
+
+        devices = sane.get_devices()
+        if not len(devices):
+            warn("Did not find a sane-compatable device")
+            return
+
+        self.usbid, self.manufacturer, self.model, self.kind = devices[id]
+
+        self.device = sane.open(self.usbid)
+        self.max_x = self.device.br_x
+        self.max_y = self.device.br_y #save our extents for later
+
+        for k, v in properties.items():
+            setattr(self.device, k, v)
+
+    def get_image(self):
+        """
+        Retrieve an Image-object from the scanner.  Any ROI set with
+        setROI() is taken into account.
+
+        :return: an Image.  Note that whatever the scanner mode is,
+        PhloxAR will return a 3-channel, 8-bit image.
+
+        :Example:
+        >>> scan = Scanner()
+        >>> scan.get_image().show()
+        """
+        return Image(self.device.scan())
+
+    def get_preview(self):
+        """
+        Retrieve a preview-quality Image-object from the scanner.
+
+        :return: Image. Note that whatever the scanner mode is, will
+                  return a 3-channel, 8-bit image.
+
+        :Example:
+        >>> scan = Scanner()
+        >>> scan.get_preview().show()
+        """
+        self.preview = True
+        img = Image(self.device.scan())
+        self.preview = False
+        return img
+
+    def get_all_properties(self):
+        """
+        Return a list of all properties and values from the scanner
+
+        :return: Dictionary of active options and values. Inactive
+        options appear as "None"
+
+        :Example:
+        >>> scan = Scanner()
+        >>> print(scan.get_all_properties())
+        """
+        props = {}
+        for prop in self.device.optlist:
+            val = None
+            if hasattr(self.device, prop):
+                val = getattr(self.device, prop)
+            props[prop] = val
+
+        return props
+
+    def print_properties(self):
+
+        """
+        **SUMMARY**
+        Print detailed information about the SANE device properties
+        **RETURNS**
+        Nothing
+        **EXAMPLES**
+        >>> scan = Scanner()
+        >>> scan.print_properties()
+        """
+        for prop in self.device.optlist:
+            try:
+                print(self.device[prop])
+            except:
+                pass
+
+    def get_property(self, p):
+        """
+        **SUMMARY**
+        Returns a single property value from the SANE device
+        equivalent to Scanner.device.PROPERTY
+        **RETURNS**
+        Value for option or None if missing/inactive
+        **EXAMPLES**
+        >>> scan = Scanner()
+        >>> print(scan.get_property('mode'))
+        color
+        """
+        if hasattr(self.device, p):
+            return getattr(self.device, p)
+        return None
+
+    def set_roi(self, topleft=(0, 0), botright=(-1, -1)):
+        """
+        Sets an ROI for the scanner in the current resolution.  The
+        two parameters, topleft and botright, will default to the
+        device extents, so the ROI can be reset by calling setROI with
+        no parameters.
+        The ROI is set by SANE in resolution independent units (default
+        MM) so resolution can be changed after ROI has been set.
+
+        :return: None
+
+        :Example:
+        >>> scan = Scanner()
+        >>> scan.set_roi((50, 50), (100,100))
+        >>> scan.get_image().show() # a very small crop on the scanner
+        """
+        self.device.tl_x = self.px2mm(topleft[0])
+        self.device.tl_y = self.px2mm(topleft[1])
+        if botright[0] == -1:
+            self.device.br_x = self.max_x
+        else:
+            self.device.br_x = self.px2mm(botright[0])
+
+        if botright[1] == -1:
+            self.device.br_y = self.max_y
+        else:
+            self.device.br_y = self.px2mm(botright[1])
+
+    def set_property(self, prop, val):
+        """
+        Assigns a property value from the SANE device
+        equivalent to Scanner.device.PROPERTY = VALUE
+
+        :return: None
+
+        :Example:
+        >>> scan = Scanner()
+        >>> print(scan.getProperty('mode'))
+        color
+        >>> scan.set_property('mode', 'gray')
+        """
+        setattr(self.device, prop, val)
+
+    def px2mm(self, pixels=1):
+        """
+        Helper function to convert native scanner resolution to millimeter units
+
+        :return: float value
+
+        :Example:
+        >>> scan = Scanner()
+        >>> scan.px2mm(scan.device.resolution) #return DPI in DPMM
+        """
+        return float(pixels * 25.4 / float(self.device.resolution))
 
 
 class DigitalCamera(FrameSource):
-    pass
+    """
+    The DigitalCamera takes a point-and-shoot camera or high-end slr and uses
+    it as a Camera.  The current frame can always be accessed with get_preview()
+    Requires the PiggyPhoto Library: https://github.com/alexdu/piggyphoto
+
+    :Example:
+    >>> cam = DigitalCamera()
+    >>> pre = cam.get_preview()
+    >>> pre.find_blobs().show()
+    >>>
+    >>> img = cam.get_image()
+    >>> img.show()
+    """
+    camera = None
+    usbid = None
+    device = None
+
+    def __init__(self, id=0):
+        super(DigitalCamera, self).__init__()
+        try:
+            import piggyphoto
+        except:
+            warn("Initializing piggyphoto failed, do you have "
+                 "piggyphoto installed?")
+            return
+
+        devices = piggyphoto.cameraList(autodetect=True).toList()
+        if not len(devices):
+            warn("No compatible digital cameras attached")
+            return
+
+        self.device, self.usbid = devices[id]
+        self.camera = piggyphoto.camera()
+
+    def get_image(self):
+        """
+        Retrieve an Image-object from the camera with the highest
+        quality possible.
+
+        :return: an Image.
+
+        :Example:
+        >>> cam = DigitalCamera()
+        >>> cam.get_image().show()
+        """
+        fd, path = tempfile.mkstemp()
+        self.camera.capture_image(path)
+        img = Image(path)
+        os.close(fd)
+        os.remove(path)
+        return img
+
+    def get_preview(self):
+        """
+        Retrieve an Image-object from the camera with the preview quality
+        from the camera.
+
+
+        :return: an Image.
+
+        :Example:
+        >>> cam = DigitalCamera()
+        >>> cam.get_preview().show()
+        """
+        fd, path = tempfile.mkstemp()
+        self.camera.capture_preview(path)
+        img = Image(path)
+        os.close(fd)
+        os.remove(path)
+
+        return img
 
 
 class ScreenCamera(object):
@@ -1064,7 +1370,7 @@ class ScreenCamera(object):
             if self._roi:
                 img = img.crop(self._roi, centered=True)
         except Exception:
-            print("Error croping the image. ROI specified is not correct.")
+            print("Error croping the image. ROI specified is not correctypes.")
             return None
         return img
 
@@ -1078,20 +1384,669 @@ class StereoCamera(object):
 
 
 class AVTCameraThread(threading.Thread):
-    pass
+    camera = None
+    run = True
+    verbose = False
+    lock = None
+    logger = None
+    framerate = 0
+
+    def __init__(self, camera):
+        super(AVTCameraThread, self).__init__()
+        self._stop = threading.Event()
+        self.camera = camera
+        self.lock = threading.Lock()
+        self.name = 'Thread-Camera-ID-' + str(self.camera.uniqueid)
+
+    def run(self):
+        counter = 0
+        timestamp = time.time()
+
+        while self.run:
+            self.lock.acquire()
+            self.camera.run_command("AcquisitionStart")
+            frame = self.camera._get_frame(1000)
+
+            if frame:
+                img = Image(pil.fromstring(self.camera.imgformat,
+                                           (self.camera.width,
+                                            self.camera.height),
+                                           frame.ImageBuffer[
+                                           :int(frame.ImageBufferSize)]))
+                self.camera._buffer.appendleft(img)
+
+            self.camera.run_command("AcquisitionStop")
+            self.lock.release()
+            counter += 1
+            time.sleep(0.01)
+
+            if time.time() - timestamp >= 1:
+                self.camera.framerate = counter
+                counter = 0
+                timestamp = time.time()
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+
+AVTCameraErrors = [
+    ("ePvErrSuccess", "No error"),
+    ("ePvErrCameraFault", "Unexpected camera fault"),
+    ("ePvErrInternalFault", "Unexpected fault in PvApi or driver"),
+    ("ePvErrBadHandle", "Camera handle is invalid"),
+    ("ePvErrBadParameter", "Bad parameter to API call"),
+    ("ePvErrBadSequence", "Sequence of API calls is incorrect"),
+    ("ePvErrNotFound", "Camera or attribute not found"),
+    ("ePvErrAccessDenied", "Camera cannot be opened in the specified mode"),
+    ("ePvErrUnplugged", "Camera was unplugged"),
+    ("ePvErrInvalidSetup", "Setup is invalid (an attribute is invalid)"),
+    ("ePvErrResources", "System/network resources or memory not available"),
+    ("ePvErrBandwidth", "1394 bandwidth not available"),
+    ("ePvErrQueueFull", "Too many frames on queue"),
+    ("ePvErrBufferTooSmall", "Frame buffer is too small"),
+    ("ePvErrCancelled", "Frame cancelled by user"),
+    ("ePvErrDataLost", "The data for the frame was lost"),
+    ("ePvErrDataMissing", "Some data in the frame is missing"),
+    ("ePvErrTimeout", "Timeout during wait"),
+    ("ePvErrOutOfRange", "Attribute value is out of the expected range"),
+    ("ePvErrWrongType", "Attribute is not this type (wrong access function)"),
+    ("ePvErrForbidden", "Attribute write forbidden at this time"),
+    ("ePvErrUnavailable", "Attribute is not available at this time"),
+    ("ePvErrFirewall", "A firewall is blocking the traffic (Windows only)"),
+  ]
+
+
+def pverr(errcode):
+    if errcode:
+        raise Exception(": ".join(AVTCameraErrors[errcode]))
 
 
 class AVTCamera(FrameSource):
-    pass
+    """
+    AVTCamera is a ctypes wrapper for the Prosilica/Allied Vision cameras,
+    such as the "manta" series.
+    These require the PvAVT binary driver from Allied Vision:
+    http://www.alliedvisiontec.com/us/products/1108.html
+    Note that as of time of writing the new VIMBA driver is not available
+    for Mac/Linux - so this uses the legacy PvAVT drive
+    Props to Cixelyn, whos py-avt-pvapi module showed how to get much
+    of this working https://bitbucket.org/Cixelyn/py-avt-pvapi
+    All camera properties are directly from the PvAVT manual -- if not
+    specified it will default to whatever the camera state is.  Cameras
+    can either by
 
+    :Example:
+    >>> cam = AVTCamera(0, {"width": 656, "height": 492})
+    >>>
+    >>> img = cam.get_image()
+    >>> img.show()
+    """
 
-class AVTCameraInfo(ctypes.Structure):
-    pass
+    _buffer = None  # Buffer to store images
+    _buffersize = 10  # Number of images to keep in the rolling image buffer for threads
+    _lastimage = None  # Last image loaded into memory
+    _thread = None
+    _framerate = 0
+    threaded = False
+    _pvinfo = {}
+    _properties = {
+        "AcqEndTriggerEvent": ("Enum", "R/W"),
+        "AcqEndTriggerMode": ("Enum", "R/W"),
+        "AcqRecTriggerEvent": ("Enum", "R/W"),
+        "AcqRecTriggerMode": ("Enum", "R/W"),
+        "AcqStartTriggerEvent": ("Enum", "R/W"),
+        "AcqStartTriggerMode": ("Enum", "R/W"),
+        "FrameRate": ("Float32", "R/W"),
+        "FrameStartTriggerDelay": ("Uint32", "R/W"),
+        "FrameStartTriggerEvent": ("Enum", "R/W"),
+        "FrameStartTriggerMode": ("Enum", "R/W"),
+        "FrameStartTriggerOverlap": ("Enum", "R/W"),
+        "AcquisitionFrameCount": ("Uint32", "R/W"),
+        "AcquisitionMode": ("Enum", "R/W"),
+        "RecorderPreEventCount": ("Uint32", "R/W"),
+        "ConfigFileIndex": ("Enum", "R/W"),
+        "ConfigFilePowerup": ("Enum", "R/W"),
+        "DSPSubregionBottom": ("Uint32", "R/W"),
+        "DSPSubregionLeft": ("Uint32", "R/W"),
+        "DSPSubregionRight": ("Uint32", "R/W"),
+        "DSPSubregionTop": ("Uint32", "R/W"),
+        "DefectMaskColumnEnable": ("Enum", "R/W"),
+        "ExposureAutoAdjustTol": ("Uint32", "R/W"),
+        "ExposureAutoAlg": ("Enum", "R/W"),
+        "ExposureAutoMax": ("Uint32", "R/W"),
+        "ExposureAutoMin": ("Uint32", "R/W"),
+        "ExposureAutoOutliers": ("Uint32", "R/W"),
+        "ExposureAutoRate": ("Uint32", "R/W"),
+        "ExposureAutoTarget": ("Uint32", "R/W"),
+        "ExposureMode": ("Enum", "R/W"),
+        "ExposureValue": ("Uint32", "R/W"),
+        "GainAutoAdjustTol": ("Uint32", "R/W"),
+        "GainAutoMax": ("Uint32", "R/W"),
+        "GainAutoMin": ("Uint32", "R/W"),
+        "GainAutoOutliers": ("Uint32", "R/W"),
+        "GainAutoRate": ("Uint32", "R/W"),
+        "GainAutoTarget": ("Uint32", "R/W"),
+        "GainMode": ("Enum", "R/W"),
+        "GainValue": ("Uint32", "R/W"),
+        "LensDriveCommand": ("Enum", "R/W"),
+        "LensDriveDuration": ("Uint32", "R/W"),
+        "LensVoltage": ("Uint32", "R/V"),
+        "LensVoltageControl": ("Uint32", "R/W"),
+        "IrisAutoTarget": ("Uint32", "R/W"),
+        "IrisMode": ("Enum", "R/W"),
+        "IrisVideoLevel": ("Uint32", "R/W"),
+        "IrisVideoLevelMax": ("Uint32", "R/W"),
+        "IrisVideoLevelMin": ("Uint32", "R/W"),
+        "VsubValue": ("Uint32", "R/C"),
+        "WhitebalAutoAdjustTol": ("Uint32", "R/W"),
+        "WhitebalAutoRate": ("Uint32", "R/W"),
+        "WhitebalMode": ("Enum", "R/W"),
+        "WhitebalValueRed": ("Uint32", "R/W"),
+        "WhitebalValueBlue": ("Uint32", "R/W"),
+        "EventAcquisitionStart": ("Uint32", "R/C 40000"),
+        "EventAcquisitionEnd": ("Uint32", "R/C 40001"),
+        "EventFrameTrigger": ("Uint32", "R/C 40002"),
+        "EventExposureEnd": ("Uint32", "R/C 40003"),
+        "EventAcquisitionRecordTrigger": ("Uint32", "R/C 40004"),
+        "EventSyncIn1Rise": ("Uint32", "R/C 40010"),
+        "EventSyncIn1Fall": ("Uint32", "R/C 40011"),
+        "EventSyncIn2Rise": ("Uint32", "R/C 40012"),
+        "EventSyncIn2Fall": ("Uint32", "R/C 40013"),
+        "EventSyncIn3Rise": ("Uint32", "R/C 40014"),
+        "EventSyncIn3Fall": ("Uint32", "R/C 40015"),
+        "EventSyncIn4Rise": ("Uint32", "R/C 40016"),
+        "EventSyncIn4Fall": ("Uint32", "R/C 40017"),
+        "EventOverflow": ("Uint32", "R/C 65534"),
+        "EventError": ("Uint32", "R/C"),
+        "EventNotification": ("Enum", "R/W"),
+        "EventSelector": ("Enum", "R/W"),
+        "EventsEnable1": ("Uint32", "R/W"),
+        "BandwidthCtrlMode": ("Enum", "R/W"),
+        "ChunkModeActive": ("Boolean", "R/W"),
+        "NonImagePayloadSize": ("Unit32", "R/V"),
+        "PayloadSize": ("Unit32", "R/V"),
+        "StreamBytesPerSecond": ("Uint32", "R/W"),
+        "StreamFrameRateConstrain": ("Boolean", "R/W"),
+        "StreamHoldCapacity": ("Uint32", "R/V"),
+        "StreamHoldEnable": ("Enum", "R/W"),
+        "TimeStampFrequency": ("Uint32", "R/C"),
+        "TimeStampValueHi": ("Uint32", "R/V"),
+        "TimeStampValueLo": ("Uint32", "R/V"),
+        "Height": ("Uint32", "R/W"),
+        "RegionX": ("Uint32", "R/W"),
+        "RegionY": ("Uint32", "R/W"),
+        "Width": ("Uint32", "R/W"),
+        "PixelFormat": ("Enum", "R/W"),
+        "TotalBytesPerFrame": ("Uint32", "R/V"),
+        "BinningX": ("Uint32", "R/W"),
+        "BinningY": ("Uint32", "R/W"),
+        "CameraName": ("String", "R/W"),
+        "DeviceFirmwareVersion": ("String", "R/C"),
+        "DeviceModelName": ("String", "R/W"),
+        "DevicePartNumber": ("String", "R/C"),
+        "DeviceSerialNumber": ("String", "R/C"),
+        "DeviceVendorName": ("String", "R/C"),
+        "FirmwareVerBuild": ("Uint32", "R/C"),
+        "FirmwareVerMajor": ("Uint32", "R/C"),
+        "FirmwareVerMinor": ("Uint32", "R/C"),
+        "PartClass": ("Uint32", "R/C"),
+        "PartNumber": ("Uint32", "R/C"),
+        "PartRevision": ("String", "R/C"),
+        "PartVersion": ("String", "R/C"),
+        "SerialNumber": ("String", "R/C"),
+        "SensorBits": ("Uint32", "R/C"),
+        "SensorHeight": ("Uint32", "R/C"),
+        "SensorType": ("Enum", "R/C"),
+        "SensorWidth": ("Uint32", "R/C"),
+        "UniqueID": ("Uint32", "R/C"),
+        "Strobe1ControlledDuration": ("Enum", "R/W"),
+        "Strobe1Delay": ("Uint32", "R/W"),
+        "Strobe1Duration": ("Uint32", "R/W"),
+        "Strobe1Mode": ("Enum", "R/W"),
+        "SyncIn1GlitchFilter": ("Uint32", "R/W"),
+        "SyncInLevels": ("Uint32", "R/V"),
+        "SyncOut1Invert": ("Enum", "R/W"),
+        "SyncOut1Mode": ("Enum", "R/W"),
+        "SyncOutGpoLevels": ("Uint32", "R/W"),
+        "DeviceEthAddress": ("String", "R/C"),
+        "HostEthAddress": ("String", "R/C"),
+        "DeviceIPAddress": ("String", "R/C"),
+        "HostIPAddress": ("String", "R/C"),
+        "GvcpRetries": ("Uint32", "R/W"),
+        "GvspLookbackWindow": ("Uint32", "R/W"),
+        "GvspResentPercent": ("Float32", "R/W"),
+        "GvspRetries": ("Uint32", "R/W"),
+        "GvspSocketBufferCount": ("Enum", "R/W"),
+        "GvspTimeout": ("Uint32", "R/W"),
+        "HeartbeatInterval": ("Uint32", "R/W"),
+        "HeartbeatTimeout": ("Uint32", "R/W"),
+        "MulticastEnable": ("Enum", "R/W"),
+        "MulticastIPAddress": ("String", "R/W"),
+        "PacketSize": ("Uint32", "R/W"),
+        "StatDriverType": ("Enum", "R/V"),
+        "StatFilterVersion": ("String", "R/C"),
+        "StatFrameRate": ("Float32", "R/V"),
+        "StatFramesCompleted": ("Uint32", "R/V"),
+        "StatFramesDropped": ("Uint32", "R/V"),
+        "StatPacketsErroneous": ("Uint32", "R/V"),
+        "StatPacketsMissed": ("Uint32", "R/V"),
+        "StatPacketsReceived": ("Uint32", "R/V"),
+        "StatPacketsRequested": ("Uint32", "R/V"),
+        "StatPacketResent": ("Uint32", "R/V")
+    }
 
+    class AVTCameraInfo(ctypes.Structure):
+        """
+        AVTCameraInfo is an internal ctypes.Structure-derived class which
+        contains metadata about cameras on the local network.
+        Properties include:
+        - UniqueId
+        - CameraName
+        - ModelName
+        - PartNumber
+        - SerialNumber
+        - FirmwareVersion
+        - PermittedAccess
+        - InterfaceId
+        - InterfaceType
+        """
+        _fields_ = [
+            ("StructVer", ctypes.c_ulong),
+            ("UniqueId", ctypes.c_ulong),
+            ("CameraName", ctypes.c_char * 32),
+            ("ModelName", ctypes.c_char * 32),
+            ("PartNumber", ctypes.c_char * 32),
+            ("SerialNumber", ctypes.c_char * 32),
+            ("FirmwareVersion", ctypes.c_char * 32),
+            ("PermittedAccess", ctypes.c_long),
+            ("InterfaceId", ctypes.c_ulong),
+            ("InterfaceType", ctypes.c_int)
+        ]
 
-class AVTFrame(ctypes.Structure):
-    pass
+        def __repr__(self):
+            return "<SimpleCV.Camera.AVTCameraInfo - UniqueId: %s>" % (self.UniqueId)
 
+    class AVTFrame(ctypes.Structure):
+        def __init__(self, buffersize):
+            self.ImageBuffer = ctypes.create_string_buffer(buffersize)
+            self.ImageBufferSize = ctypes.c_ulong(buffersize)
+            self.AncillaryBuffer = 0
+            self.AncillaryBufferSize = 0
+            self.img = None
+            self.hasImage = False
+            self.frame = None
+
+        _fields_ = [
+            ("ImageBuffer", ctypes.POINTER(ctypes.c_char)),
+            ("ImageBufferSize", ctypes.c_ulong),
+            ("AncillaryBuffer", ctypes.c_int),
+            ("AncillaryBufferSize", ctypes.c_int),
+            ("Context", ctypes.c_int * 4),
+            ("_reserved1", ctypes.c_ulong * 8),
+
+            ("Status", ctypes.c_int),
+            ("ImageSize", ctypes.c_ulong),
+            ("AncillarySize", ctypes.c_ulong),
+            ("Width", ctypes.c_ulong),
+            ("Height", ctypes.c_ulong),
+            ("RegionX", ctypes.c_ulong),
+            ("RegionY", ctypes.c_ulong),
+            ("Format", ctypes.c_int),
+            ("BitDepth", ctypes.c_ulong),
+            ("BayerPattern", ctypes.c_int),
+            ("FrameCount", ctypes.c_ulong),
+            ("TimestampLo", ctypes.c_ulong),
+            ("TimestampHi", ctypes.c_ulong),
+            ("_reserved2", ctypes.c_ulong * 32)
+        ]
+
+    def __del__(self):
+        # This function should disconnect from the AVT Camera
+        pverr(self.dll.PvCameraClose(self.handle))
+
+    def __init__(self, camera_id=-1, properties={}, threaded=False):
+        super(AVTCamera, self).__init__()
+        import platform
+
+        if platform.system() == "Windows":
+            self.dll = ctypes.windll.LoadLibrary("PvAPI.dll")
+        elif platform.system() == "Darwin":
+            self.dll = ctypes.CDLL("libPvAPI.dylib", ctypes.RTLD_GLOBAL)
+        else:
+            self.dll = ctypes.CDLL("libPvAPI.so")
+
+        if not self._pvinfo.get("initialized", False):
+            self.dll.PvInitialize()
+            self._pvinfo['initialized'] = True
+        # initialize.  Note that we rely on listAllCameras being the next
+        # call, since it blocks on cameras initializing
+
+        camlist = self.list_all_cameras()
+
+        if not len(camlist):
+            raise Exception(
+                "Couldn't find any cameras with the PvAVT driver.  Use SampleViewer to confirm you have one connected.")
+
+        if camera_id < 9000:  # camera was passed as an index reference
+            if camera_id == -1:  # accept -1 for "first camera"
+                camera_id = 0
+
+            camera_id = camlist[camera_id].UniqueId
+
+        camera_id = long(camera_id)
+        self.handle = ctypes.c_uint()
+        init_count = 0
+        while self.dll.PvCameraOpen(camera_id, 0, ctypes.byref(
+                self.handle)) != 0:  # wait until camera is availble
+            if init_count > 4:  # Try to connect 5 times before giving up
+                raise Exception(
+                    'Could not connect to camera, please verify with SampleViewer you can connect')
+            init_count += 1
+            time.sleep(1)  # sleep and retry to connect to camera in a second
+
+        pverr(self.dll.PvCaptureStart(self.handle))
+        self.uniqueid = camera_id
+
+        self.set_property("AcquisitionMode", "SingleFrame")
+        self.set_property("FrameStartTriggerMode", "Freerun")
+
+        if properties.get("mode", "RGB") == 'gray':
+            self.set_property("PixelFormat", "Mono8")
+        else:
+            self.set_property("PixelFormat", "Rgb24")
+
+        # give some compatablity with other cameras
+        if properties.get("mode", ""):
+            properties.pop("mode")
+
+        if properties.get("height", ""):
+            properties["Height"] = properties["height"]
+            properties.pop("height")
+
+        if properties.get("width", ""):
+            properties["Width"] = properties["width"]
+            properties.pop("width")
+
+        for p in properties:
+            self.set_property(p, properties[p])
+
+        if threaded:
+            self._thread = AVTCameraThread(self)
+            self._thread.daemon = True
+            self._buffer = deque(maxlen=self._buffersize)
+            self._thread.start()
+            self.threaded = True
+        self.frame = None
+        self._refresh_frame_stats()
+
+    def restart(self):
+        """
+        This tries to restart the camera thread
+        """
+        self._thread.stop()
+        self._thread = AVTCameraThread(self)
+        self._thread.daemon = True
+        self._buffer = deque(maxlen=self._buffersize)
+        self._thread.start()
+
+    def list_all_cameras(self):
+        """
+        **SUMMARY**
+        List all cameras attached to the host
+        **RETURNS**
+        List of AVTCameraInfo objects, otherwise empty list
+        """
+        camlist = (self.AVTCameraInfo * 100)()
+        starttime = time.time()
+        while int(camlist[0].UniqueId) == 0 and time.time() - starttime < 10:
+            self.dll.PvCameraListEx(ctypes.byref(camlist), 100, None,
+                                    ctypes.sizeof(self.AVTCameraInfo))
+            time.sleep(0.1)  # keep checking for cameras until timeout
+
+        return [cam for cam in camlist if cam.UniqueId != 0]
+
+    def run_command(self, command):
+        """
+        **SUMMARY**
+        Runs a PvAVT Command on the camera
+        Valid Commands include:
+        * FrameStartTriggerSoftware
+        * AcquisitionAbort
+        * AcquisitionStart
+        * AcquisitionStop
+        * ConfigFileLoad
+        * ConfigFileSave
+        * TimeStampReset
+        * TimeStampValueLatch
+        **RETURNS**
+        0 on success
+        **EXAMPLE**
+        >>>c = AVTCamera()
+        >>>c.run_command("TimeStampReset")
+        """
+        return self.dll.PvCommandRun(self.handle, command)
+
+    def get_property(self, name):
+        """
+        **SUMMARY**
+        This retrieves the value of the AVT Camera attribute
+        There are around 140 properties for the AVT Camera, so reference the
+        AVT Camera and Driver Attributes pdf that is provided with
+        the driver for detailed information
+        Note that the error codes are currently ignored, so empty values
+        may be returned.
+        **EXAMPLE**
+        >>>c = AVTCamera()
+        >>>print c.get_property("ExposureValue")
+        """
+        valtype, perm = self._properties.get(name, (None, None))
+
+        if not valtype:
+            return None
+
+        val = ''
+        err = 0
+        if valtype == "Enum":
+            val = ctypes.create_string_buffer(100)
+            vallen = ctypes.c_long()
+            err = self.dll.PvAttrEnumGet(self.handle, name, val, 100,
+                                         ctypes.byref(vallen))
+            val = str(val[:vallen.value])
+        elif valtype == "Uint32":
+            val = ctypes.c_uint()
+            err = self.dll.PvAttrUint32Get(self.handle, name, ctypes.byref(val))
+            val = int(val.value)
+        elif valtype == "Float32":
+            val = ctypes.c_float()
+            err = self.dll.PvAttrFloat32Get(self.handle, name, ctypes.byref(val))
+            val = float(val.value)
+        elif valtype == "String":
+            val = ctypes.create_string_buffer(100)
+            vallen = ctypes.c_long()
+            err = self.dll.PvAttrStringGet(self.handle, name, val, 100,
+                                           ctypes.byref(vallen))
+            val = str(val[:vallen.value])
+        elif valtype == "Boolean":
+            val = ctypes.c_bool()
+            err = self.dll.PvAttrBooleanGet(self.handle, name, ctypes.byref(val))
+            val = bool(val.value)
+
+        # TODO, handle error codes
+
+        return val
+
+    # TODO, implement the PvAttrRange* functions
+    # def getPropertyRange(self, name)
+
+    def get_all_properties(self):
+        """
+        **SUMMARY**
+        This returns a dict with the name and current value of the
+        documented PvAVT attributes
+        CAVEAT: it addresses each of the properties individually, so
+        this may take time to run if there's network latency
+        **EXAMPLE**
+        >>>c = AVTCamera(0)
+        >>>props = c.get_all_properties()
+        >>>print(props['ExposureValue'])
+        """
+        props = {}
+        for p in self._properties.keys():
+            props[p] = self.get_property(p)
+
+        return props
+
+    def set_property(self, name, value, skip_buffer_size_check=False):
+        """
+        **SUMMARY**
+        This sets the value of the AVT Camera attribute.
+        There are around 140 properties for the AVT Camera, so reference the
+        AVT Camera and Driver Attributes pdf that is provided with
+        the driver for detailed information
+        By default, we will also refresh the height/width and bytes per
+        frame we're expecting -- you can manually bypass this if you want speed
+        Returns the raw PvAVT error code (0 = success)
+        **Example**
+        >>>c = AVTCamera()
+        >>>c.set_property("ExposureValue", 30000)
+        >>>c.get_image().show()
+        """
+        valtype, perm = self._properties.get(name, (None, None))
+
+        if not valtype:
+            return None
+
+        if valtype == "Uint32":
+            err = self.dll.PvAttrUint32Set(self.handle, name,
+                                           ctypes.c_uint(int(value)))
+        elif valtype == "Float32":
+            err = self.dll.PvAttrFloat32Set(self.handle, name,
+                                            ctypes.c_float(float(value)))
+        elif valtype == "Enum":
+            err = self.dll.PvAttrEnumSet(self.handle, name, str(value))
+        elif valtype == "String":
+            err = self.dll.PvAttrStringSet(self.handle, name, str(value))
+        elif valtype == "Boolean":
+            err = self.dll.PvAttrBooleanSet(self.handle, name,
+                                            ctypes.c_bool(bool(value)))
+
+        # just to be safe, re-cache the camera metadata
+        if not skip_buffer_size_check:
+            self._refresh_frame_stats()
+
+        return err
+
+    def get_image(self, timeout=5000):
+        """
+        **SUMMARY**
+        Extract an Image from the Camera, returning the value.  No matter
+        what the image characteristics on the camera, the Image returned
+        will be RGB 8 bit depth, if camera is in greyscale mode it will
+        be 3 identical channels.
+        **EXAMPLE**
+        >>>c = AVTCamera()
+        >>>c.get_image().show()
+        """
+
+        if self.frame != None:
+            st = time.time()
+            try:
+                pverr(self.dll.PvCaptureWaitForFrameDone(self.handle,
+                                                         ctypes.byref(self.frame),
+                                                         timeout))
+            except Exception, e:
+                print
+                "Exception waiting for frame:", e
+                print
+                "Time taken:", time.time() - st
+                self.frame = None
+                raise (e)
+            img = self.unbuffer()
+            self.frame = None
+            return img
+        elif self.threaded:
+            self._thread.lock.acquire()
+            try:
+                img = self._buffer.pop()
+                self._lastimage = img
+            except IndexError:
+                img = self._lastimage
+            self._thread.lock.release()
+
+        else:
+            self.run_command("AcquisitionStart")
+            frame = self._get_frame(timeout)
+            img = Image(pil.fromstring(self.imgformat,
+                                       (self.width, self.height),
+                                       frame.ImageBuffer[
+                                       :int(frame.ImageBufferSize)]))
+            self.run_command("AcquisitionStop")
+        return img
+
+    def setup_async_mode(self):
+        self.set_property('AcquisitionMode', 'SingleFrame')
+        self.set_property('FrameStartTriggerMode', 'Software')
+
+    def setup_sync_mode(self):
+        self.set_property('AcquisitionMode', 'Continuous')
+        self.set_property('FrameStartTriggerMode', 'FreeRun')
+
+    def unbuffer(self):
+        img = Image(pil.fromstring(self.imgformat,
+                                   (self.width, self.height),
+                                   self.frame.ImageBuffer[:int(self.frame.ImageBufferSize)]))
+
+        return img
+
+    def _refresh_frame_stats(self):
+        self.width = self.get_property("Width")
+        self.height = self.get_property("Height")
+        self.buffersize = self.get_property("TotalBytesPerFrame")
+        self.pixelformat = self.get_property("PixelFormat")
+        self.imgformat = 'RGB'
+        if self.pixelformat == 'Mono8':
+            self.imgformat = 'L'
+
+    def _get_frame(self, timeout=5000):
+        # return the AVTFrame object from the camera, timeout in ms
+        # need to multiply by bitdepth
+        try:
+            frame = self.AVTFrame(self.buffersize)
+            pverr(self.dll.PvCaptureQueueFrame(self.handle, ctypes.byref(frame),
+                                               None))
+            st = time.time()
+            try:
+                pverr(self.dll.PvCaptureWaitForFrameDone(self.handle,
+                                                         ctypes.byref(frame),
+                                                         timeout))
+            except Exception, e:
+                print
+                "Exception waiting for frame:", e
+                print
+                "Time taken:", time.time() - st
+                raise (e)
+
+        except Exception, e:
+            print("Exception aquiring frame:", e)
+            raise e
+
+        return frame
+
+    def acquire(self):
+        self.frame = self.AVTFrame(self.buffersize)
+        try:
+            self.run_command("AcquisitionStart")
+            pverr(
+                self.dll.PvCaptureQueueFrame(self.handle,
+                                             ctypes.byref(self.frame),
+                                             None))
+            self.run_command("AcquisitionStop")
+        except Exception as e:
+            print("Exception aquiring frame:", e)
+            raise (e)
 
 class GigECamera(Camera):
     """
@@ -1244,7 +2199,326 @@ class GigECamera(Camera):
 
 
 class VimbaCamera(FrameSource):
-    pass
+    """
+    VimbaCamera is a wrapper for the Allied Vision cameras, such as
+    the "manta" series. This requires the
+
+    1) Vimba SDK provided from Allied Vision
+       http://www.alliedvisiontec.com/us/products/software/vimba-sdk.html
+    2) Pyvimba Python library
+       TODO: <INSERT URL>
+       Note that as of time of writing, the VIMBA driver is not available
+       for Mac.
+    All camera properties are directly from the Vimba SDK manual -- if not
+    specified it will default to whatever the camera state is.
+
+    :Example:
+    >>> cam = VimbaCamera(0, {"width": 656, "height": 492})
+    >>>
+    >>> img = cam.get_image()
+    >>> img.show()
+    """
+
+    def _setupVimba(self):
+        from pymba import Vimba
+
+        self._vimba = Vimba()
+        self._vimba.startup()
+        system = self._vimba.getSystem()
+        if system.GeVTLIsPresent:
+            system.runFeatureCommand("GeVDiscoveryAllOnce")
+            time.sleep(0.2)
+
+    def __del__(self):
+        # This function should disconnect from the Vimba Camera
+        if self._camera is not None:
+            if self.threaded:
+                self._thread.stop()
+                time.sleep(0.2)
+
+            if self._frame is not None:
+                self._frame.revokeFrame()
+                self._frame = None
+
+            self._camera.closeCamera()
+
+        self._vimba.shutdown()
+
+    def shutdown(self):
+        """You must call this function if you are using threaded=true when you are finished
+            to prevent segmentation fault"""
+        # REQUIRED TO PREVENT SEGMENTATION FAULT FOR THREADED=True
+        if self._camera:
+            self._camera.closeCamera()
+
+        self._vimba.shutdown()
+
+    def __init__(self, camera_id=-1, properties={}, threaded=False):
+        super(VimbaCamera, self).__init__()
+        if not VIMBA_ENABLED:
+            raise Exception(
+                "You don't seem to have the pymba library installed.  This will make it hard to use a AVT Vimba Camera.")
+
+        self._vimba = None
+        self._setupVimba()
+
+        camlist = self.listAllCameras()
+        self._camTable = {}
+        self._frame = None
+        self._buffer = None  # Buffer to store images
+        self._buffersize = 10  # Number of images to keep in the rolling image buffer for threads
+        self._lastimage = None  # Last image loaded into memory
+        self._thread = None
+        self._framerate = 0
+        self.threaded = False
+        self._properties = {}
+        self._camera = None
+
+        i = 0
+        for cam in camlist:
+            self._camTable[i] = {'id': cam.cameraIdString}
+            i += 1
+
+        if not len(camlist):
+            raise Exception("Couldn't find any cameras with the Vimba driver.  "
+                            "Use VimbaViewer to confirm you have one connected.")
+
+        if camera_id < 9000:  # camera was passed as an index reference
+            if camera_id == -1:  # accept -1 for "first camera"
+                camera_id = 0
+
+            if camera_id > len(camlist):
+                raise Exception("Couldn't find camera at index %d." % camera_id)
+
+            cam_guid = camlist[camera_id].cameraIdString
+        else:
+            raise Exception("Index %d is too large" % camera_id)
+
+        self._camera = self._vimba.getCamera(cam_guid)
+        self._camera.openCamera()
+
+        self.uniqueid = cam_guid
+
+        self.setProperty("AcquisitionMode", "SingleFrame")
+        self.setProperty("TriggerSource", "Freerun")
+
+        # TODO: FIX
+        if properties.get("mode", "RGB") == 'gray':
+            self.setProperty("PixelFormat", "Mono8")
+        else:
+            fmt = "RGB8Packed"  # alternatively use BayerRG8
+            self.setProperty("PixelFormat", "BayerRG8")
+
+        # give some compatablity with other cameras
+        if properties.get("mode", ""):
+            properties.pop("mode")
+
+        if properties.get("height", ""):
+            properties["Height"] = properties["height"]
+            properties.pop("height")
+
+        if properties.get("width", ""):
+            properties["Width"] = properties["width"]
+            properties.pop("width")
+
+        for p in properties:
+            self.setProperty(p, properties[p])
+
+        if threaded:
+            self._thread = VimbaCameraThread(self)
+            self._thread.daemon = True
+            self._buffer = deque(maxlen=self._buffersize)
+            self._thread.start()
+            self.threaded = True
+
+        self._refreshFrameStats()
+
+    def restart(self):
+        """
+        This tries to restart the camera thread
+        """
+        self._thread.stop()
+        self._thread = VimbaCameraThread(self)
+        self._thread.daemon = True
+        self._buffer = deque(maxlen=self._buffersize)
+        self._thread.start()
+
+    def list_all_cameras(self):
+        """
+        **SUMMARY**
+        List all cameras attached to the host
+        **RETURNS**
+        List of VimbaCamera objects, otherwise empty list
+        VimbaCamera objects are defined in the pymba module
+        """
+        cameraIds = self._vimba.getCameraIds()
+        ar = []
+        for cameraId in cameraIds:
+            ar.append(self._vimba.getCamera(cameraId))
+        return ar
+
+    def run_command(self, command):
+        """
+        **SUMMARY**
+        Runs a Vimba Command on the camera
+        Valid Commands include:
+        * AcquisitionAbort
+        * AcquisitionStart
+        * AcquisitionStop
+        **RETURNS**
+        0 on success
+        **EXAMPLE**
+        >>>c = VimbaCamera()
+        >>>c.run_command("TimeStampReset")
+        """
+        return self._camera.runFeatureCommand(command)
+
+    def get_property(self, p):
+        """
+        **SUMMARY**
+        This retrieves the value of the Vimba Camera attribute
+        There are around 140 properties for the Vimba Camera, so reference the
+        Vimba Camera pdf that is provided with
+        the SDK for detailed information
+        Throws VimbaException if property is not found or not implemented yet.
+        **EXAMPLE**
+        >>>c = VimbaCamera()
+        >>>print(c.get_property("ExposureMode"))
+        """
+        return self._camera.__getattr__(p)
+
+    # TODO, implement the PvAttrRange* functions
+    # def getPropertyRange(self, name)
+
+    def get_all_properties(self):
+        """
+        This returns a dict with the name and current value of the
+        documented Vimba attributes
+        CAVEAT: it addresses each of the properties individually, so
+        this may take time to run if there's network latency
+
+        :Example:
+        >>>c = VimbaCamera(0)
+        >>>props = c.get_all_properties()
+        >>>print(props['ExposureMode'])
+        """
+        from pymba import VimbaException
+
+        # TODO
+        ar = {}
+        c = self._camera
+        cameraFeatureNames = c.getFeatureNames()
+        for name in cameraFeatureNames:
+            try:
+                ar[name] = c.__getattr__(name)
+            except VimbaException:
+                # Ignore features not yet implemented
+                pass
+        return ar
+
+    def set_property(self, name, value, skip_buffer_size_check=False):
+        """
+        **SUMMARY**
+        This sets the value of the Vimba Camera attribute.
+        There are around 140 properties for the Vimba Camera, so reference the
+        Vimba Camera pdf that is provided with
+        the SDK for detailed information
+        Throws VimbaException if property not found or not yet implemented
+        **Example**
+        >>>c = VimbaCamera()
+        >>>c.setProperty("ExposureAutoRate", 200)
+        >>>c.getImage().show()
+        """
+        ret = self._camera.__setattr__(name, value)
+
+        # just to be safe, re-cache the camera metadata
+        if not skip_buffer_size_check:
+            self._refreshFrameStats()
+
+        return ret
+
+    def get_image(self):
+        """
+        Extract an Image from the Camera, returning the value.  No matter
+        what the image characteristics on the camera, the Image returned
+        will be RGB 8 bit depth, if camera is in greyscale mode it will
+        be 3 identical channels.
+
+        :Example:
+        >>>c = VimbaCamera()
+        >>>c.get_image().show()
+        """
+
+        if self.threaded:
+            self._thread.lock.acquire()
+            try:
+                img = self._buffer.pop()
+                self._lastimage = img
+            except IndexError:
+                img = self._lastimage
+            self._thread.lock.release()
+
+        else:
+            img = self._capture_frame()
+
+        return img
+
+    def setup_async_mode(self):
+        self.set_property('AcquisitionMode', 'SingleFrame')
+        self.set_property('TriggerSource', 'Software')
+
+    def setup_sync_mode(self):
+        self.set_property('AcquisitionMode', 'SingleFrame')
+        self.set_property('TriggerSource', 'Freerun')
+
+    def _refresh_frame_stats(self):
+        self.width = self.getProperty("Width")
+        self.height = self.getProperty("Height")
+        self.pixelformat = self.getProperty("PixelFormat")
+        self.imgformat = 'RGB'
+        if self.pixelformat == 'Mono8':
+            self.imgformat = 'L'
+
+    def _get_frame(self):
+        if not self._frame:
+            self._frame = self._camera.getFrame()  # creates a frame
+            self._frame.announceFrame()
+
+        return self._frame
+
+    def _capture_frame(self, timeout=5000):
+        try:
+            c = self._camera
+            f = self._get_frame()
+
+            colorSpace = ColorSpace.BGR
+            if self.pixelformat == 'Mono8':
+                colorSpace = ColorSpace.GRAY
+
+            c.startCapture()
+            f.queueFrameCapture()
+            c.runFeatureCommand('AcquisitionStart')
+            c.runFeatureCommand('AcquisitionStop')
+            try:
+                f.waitFrameCapture(timeout)
+            except Exception as e:
+                print("Exception waiting for frame: %s: %s" % (e, traceback.format_exc()))
+                raise e
+
+            imgData = f.getBufferByteData()
+            moreUsefulImgData = npy.ndarray(buffer=imgData,
+                                            dtype=npy.uint8,
+                                            shape=(f.height, f.width, 1))
+
+            rgb = cv2.cvtColor(moreUsefulImgData, cv2.COLOR_BAYER_RG2RGB)
+            c.endCapture()
+
+            return Image(rgb, colorSpace=colorSpace, cv2image=imgData)
+
+        except Exception, e:
+            print("Exception acquiring frame: "
+                  "{}: {}".format(e, traceback.format_exc()))
+            raise e
 
 
 class VimbaCameraThread(threading.Thread):
