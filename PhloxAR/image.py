@@ -1182,8 +1182,74 @@ class Image(object):
         return Image(scaled_bitmap, color_space=self._colorSpace)
 
     def smooth(self, method='gaussian', aperture=(3, 3), sigma=0,
-               spatial_sigma=0, grayscale=False, aperature=None):
-        pass
+               spatial_sigma=0, grayscale=False):
+        """
+        Smooth the image, by default with the Gaussian blur. If desired,
+        additional algorithms and apertures can be specified. Optional
+        parameters are passed directly to OpenCV's cv.Smooth() function.
+        If grayscale is true the smoothing operation is only performed
+        on a single channel otherwise the operation is performed on
+        each channel of the image. for OpenCV versions >= 2.3.0 it is
+        advisible to take a look at
+        - bilateralFilter
+        - medianFilter
+        - blur
+        - gaussianBlur
+
+        :param method: valid options are 'blur' or 'gaussian', 'bilateral',
+                        and 'median'.
+        :param aperture: a tuple for the window size of the gaussian blur as
+                          an (x,y) tuple. should be odd
+        :param sigma:
+        :param spatial_sigma:
+        :param grayscale: return grayscale image
+
+        :return: the smoothed image.
+
+        :Example:
+        >>> img = Image('lena')
+        >>> img2 = img.smooth()
+        >>> img3 = img.smooth('median')
+        """
+        # TODO: deprecated function -istuple-
+        if istuple(aperture):
+            win_x, win_y = aperture
+            if win_x <= 0 or win_y <= 0 or win_x % 2 == 0 or win_y % 2 == 0:
+                logger.warning('The size must be odd number and greater than 0')
+                return None
+        else:
+            raise ValueError('Please provide a tuple to aperture')
+
+        if method == 'blur':
+            m = cv.CV_BLUR
+        elif method == 'bilateral':
+            m = cv.CV_BILATERAL
+            win_y = win_x  # aperture must be square
+        elif method == 'median':
+            m = cv.CV_MEDIAN
+            win_y = win_x  # aperture must be square
+        else:
+            m = cv.CV_GAUSSIAN  # default method
+
+        if grayscale:
+            new_img = self.zeros(1)
+            cv.Smooth(self._gray_bitmap_func(), new_img, method, win_x, win_y,
+                      sigma, spatial_sigma)
+        else:
+            new_img = self.zeros(3)
+            r = self.zeros(1)
+            g = self.zeros(1)
+            b = self.zeros(1)
+            ro = self.zeros(1)
+            go = self.zeros(1)
+            bo = self.zeros(1)
+            cv.Split(self.bitmap, b, g, r, None)
+            cv.Smooth(r, ro, method, win_x, win_y, sigma, spatial_sigma)
+            cv.Smooth(g, go, method, win_x, win_y, sigma, spatial_sigma)
+            cv.Smooth(b, bo, method, win_x, win_y, sigma, spatial_sigma)
+            cv.Merge(bo, go, ro, None, new_img)
+
+        return Image(new_img, color_space=self._color_space)
 
     def median_filter(self, window='', grayscale=False):
         pass
