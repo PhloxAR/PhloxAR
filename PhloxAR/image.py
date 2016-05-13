@@ -1095,8 +1095,21 @@ class Image(object):
             return 1
 
     def copy(self):
-        pass
+        """
+        Return a full copy of the Image's bitmap.  Note that this is different
+        from using python's implicit copy function in that only the bitmap itself
+        is copied. This method essentially performs a deep copy.
 
+        :return: a copy of this Image
+
+        :Example:
+        >>> img = Image('lena')
+        >>> img2 = img.copy()
+        """
+        img = self.zeros()
+        cv.Copy(self.bitmap, img)
+
+        return Image(img, colorspace=self._color_space)
 
     def scale(self, width, height=-1, interpolation=cv2.INTER_LINEAR):
         pass
