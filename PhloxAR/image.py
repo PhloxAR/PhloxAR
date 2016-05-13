@@ -1338,8 +1338,33 @@ class Image(object):
             img_bilateral = img_bilateral[:, :, ::-1].transpose([1, 0, 2])
             return Image(img_bilateral, color_space=self._color_space)
 
-    def blur(self, window='', grayscale=False):
-        pass
+    def blur(self, window=None, grayscale=False):
+        """
+        Smooth an image using the normalized box filter.
+        The optional parameter is window.
+        see : http://en.wikipedia.org/wiki/Blur
+
+        :param window: should be in the form a tuple (win_x,win_y).
+                       By default it is set to 3x3, i.e window = (3, 3).
+        """
+        if istuple(window):
+            win_x, win_y = window
+            if win_x <= 0 or win_y <= 0:
+                logger.warning("win_x and win_y should be greater than 0.")
+                return None
+        elif isnum(window):
+            window = (window, window)
+        else:
+            window = (3, 3)
+
+        if grayscale:
+            img_blur = cv2.blur(self.gray_narray, window)
+            return Image(img_blur, color_space=ColorSpace.GRAY)
+        else:
+            img_blur = cv2.blur(self.narray[:, :, ::-1].transpose([1, 0, 2]),
+                                window)
+            img_blur = img_blur[:, :, ::-1].transpose([1, 0, 2])
+            return Image(img_blur, color_space=self._color_space)
 
     def gaussian_blur(self, window='', sigmax=0, sigmay=0, grayscale=False):
         pass
