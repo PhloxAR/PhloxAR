@@ -1432,10 +1432,34 @@ class Image(object):
         return Image(self._gray_bitmap_func(), color_space=ColorSpace.GRAY)
 
     def flip_horizontal(self):
-        pass
+        """
+        Horizontally mirror an image.
+        Note that flip does not mean rotate 180 degrees! The two are different.
+
+        :return: flipped image.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> upsidedown = img.flip_horizontal()
+        """
+        new_img = self.zeros()
+        cv.Flip(self.bitmap, new_img, 1)
+        return Image(new_img, color_space=self._color_space)
 
     def flip_vertical(self):
-        pass
+        """
+        Vertically mirror an image.
+        Note that flip does not mean rotate 180 degrees! The two are different.
+
+        :return: flipped image.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> upsidedown = img.flip_vertical()
+        """
+        new_img = self.zeros()
+        cv.Flip(self.bitmap, new_img, 0)
+        return Image(new_img, color_space=self._color_space)
 
     def stretch(self, threshold_low=0, threshold_high=255):
         pass
