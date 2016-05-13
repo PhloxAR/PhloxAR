@@ -93,20 +93,16 @@ except ImportError:
     except ImportError:
         raise ImportError("Cannot load OpenCV library which is required.")
 
-# optional libraies
+# optional libraries
 PIL_ENABLED = True
 try:
-    from PIL import Image as pilImage
-    from PIL import ImageFont as pilImageFont
-    from PIL import GifImagePlugin
-    getheader = GifImagePlugin.getheader
-    getdata = GifImagePlugin.getdata
+    from PIL import Image as PILImage
+    from PIL import ImageFont as PILImageFont
+    from PIL import GifImagePlugin as PILGifImagePlugin
+    getheader = PILGifImagePlugin.getheader
+    getdata = PILGifImagePlugin.getdata
 except ImportError:
-    try:
-        import Image as pil
-        from GifImagePlugin import getheader, getdata
-    except ImportError:
-        PIL_ENABLED = False
+    PIL_ENABLED = False
 
 # kinect
 FREENECT_ENABLED = True
