@@ -1901,10 +1901,53 @@ class Image(object):
         return None
 
     def draw_circle(self, ctr, rad, color=(0, 0, 0), thickness=1):
-        pass
+        """
+        Draw a circle on the image.
+
+        :param ctr: the center of the circle as an (x,y) tuple.
+        :param rad: the radius of the circle in pixels
+        :param color: a color tuple (default black)
+        :param thickness: the thickness of the circle, -1 means filled in.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> img.draw_circle((img.width/2,img.height/2),r=50,color=Color.RED,width=3)
+        >>> img.show()
+
+        :Note:
+        Note that this function is deprecated, try to use DrawingLayer.circle() instead.
+        """
+        if thickness < 0:
+            self.get_drawing_layer().circle((int(ctr[0]), int(ctr[1])),
+                                            int(rad),
+                                            color, int(thickness), filled=True)
+        else:
+            self.get_drawing_layer().circle((int(ctr[0]), int(ctr[1])),
+                                            int(rad), color, int(thickness))
 
     def draw_line(self, pt1, pt2, color=(0, 0, 0), thickness=1):
-        pass
+        """
+        Draw a line on the image.
+
+        :param pt1: the first point for the line (tuple).
+        :param pt2: the second point on the line (tuple).
+        :param color: a color tuple (default black).
+        :param thickness: the thickness of the line in pixels.
+
+        :return: None
+
+
+        :Example:
+        >>> img = Image("lena")
+        >>> img.draw_line((0,0),(img.width,img.height),color=Color.RED,thickness=3)
+        >>> img.show()
+
+        :Note:
+        This function is deprecated, try to use DrawingLayer.line() instead.
+        """
+        pt1 = (int(pt1[0]), int(pt1[1]))
+        pt2 = (int(pt2[0]), int(pt2[1]))
+        self.get_drawing_layer().line(pt1, pt2, color, thickness)
 
     @property
     def size(self):
