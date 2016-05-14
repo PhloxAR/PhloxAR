@@ -6,6 +6,7 @@ from __future__ import unicode_literals, absolute_import
 from PhloxAR.base import *
 from PhloxAR.color import *
 from PhloxAR.linescan import *
+from PhloxAR.features import *
 
 try:
     import urllib2
@@ -1631,29 +1632,322 @@ class Image(object):
             return None
 
     def find_corners(self, maxnum=50, minquality=0.04, mindistance=1.0):
-        pass
+        """
+        This will find corner Feature objects and return them as a FeatureSet
+        strongest corners first.  The parameters give the number of corners
+        to look for, the minimum quality of the corner feature, and the minimum
+        distance between corners.
+
+        :param maxnum: the maximum number of corners to return.
+        :param minquality: the minimum quality metric. This should be a number
+                           between zero and one.
+        :param mindistance: the minimum distance, in pixels, between successive
+                             corners.
+        :return: a featureset of Corner features or None if no corners are found.
+
+        :Example:
+        >>> img = Image("sampleimages/simplecv.png")
+        >>> corners = img.find_corners()
+        >>> if corners: True
+
+        >>> img = Image("sampleimages/black.png")
+        >>> corners = img.find_corners()
+        >>> if not corners: True
+        """
+        # initialize buffer frames
+        eig_image = cv.CreateImage(cv.GetSize(self.bitmap),
+                                   cv.IPL_DEPTH_32F, 1)
+        temp_image = cv.CreateImage(cv.GetSize(self.bitmap),
+                                    cv.IPL_DEPTH_32F, 1)
+
+        corner_coordinates = cv.GoodFeaturesToTrack(self._gray_bitmap_func(),
+                                                    eig_image, temp_image,
+                                                    maxnum, minquality,
+                                                    mindistance, None)
+        corner_features = []
+        for (x, y) in corner_coordinates:
+            corner_features.append(Corner(self, x, y))
+
+        return FeatureSet(corner_features)
 
     def find_blobs(self, threshold=-1, minsize=10, maxsize=0,
                    threshold_blocksize=0,
                    threshold_constant=5, appx_level=3):
-        pass
+        """
+        Find blobs  will look for continuous light regions and return them as
+        Blob features in a FeatureSet.  Parameters specify the binarize filter
+        threshold value, and minimum and maximum size for blobs. If a threshold
+        value is -1, it will use an adaptive threshold.  See binarize() for
+        more information about thresholding.  The threshblocksize and
+        threshconstant parameters are only used for adaptive threshold.
 
-    def find_skintone_blobs(self, minsize=10, maxsiz=0, dilate_iter=1):
-        pass
+        :param threshold: the threshold as an integer or an (r,g,b) tuple,
+                           where pixels below (darker) than thresh are set
+                           to to max value, and all values above this value
+                           are set to black. If this parameter is -1 we use
+                           Otsu's method.
+        :param minsize: the minimum size of the blobs, in pixels, of the
+                         returned blobs. This helps to filter out noise.
+        :param maxsize: the maximim size of the blobs, in pixels, of the
+                        returned blobs.
+        :param threshold_blocksize: the size of the block used in the adaptive
+                                    binarize operation.
+                                    # TODO - make this match binarize
+        :param threshold_constant: the difference from the local mean to use
+                                    for thresholding in Otsu's method.
+                                    # TODO - make this match binarize
+        :param appx_level: the blob approximation level - an integer for
+                            the maximum distance between the true edge and
+                            the approximation edge - lower numbers yield
+                            better approximation.
+
+        :return: a featureset (basically a list) of blob features. If no
+                  blobs are found this method returns None.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> fs = img.find_blobs()
+        >>> if fs is not None:
+            ... fs.draw()
+
+        :Warning:
+        For blobs that live right on the edge of the image OpenCV reports
+        the position and width height as being one over for the true position.
+        E.g. if a blob is at (0,0) OpenCV reports its position as (1,1).
+        Likewise the width and height for the other corners is reported as
+        being one less than the width and height. This is a known bug.
+        """
+        if maxsize == 0:
+            maxsize = self.width * self.height
+        # create a single channel image, thresholded to parameters
+
+        blobmaker = BlobMaker()
+        blobs = blobmaker.extractFromBinary(
+            self.binarize(threshold, 255, threshold_blocksize,
+                          threshold_constant).invert(),
+            self, minsize=minsize, maxsize=maxsize, appx_level=appx_level)
+
+        if not len(blobs):
+            return None
+
+        return FeatureSet(blobs).sort_area()
+
+    def find_skintone_blobs(self, minsize=10, maxsize=0, dilate_iter=1):
+        """
+        Find Skintone blobs will look for continuous regions of Skintone in a
+        color image and return them as Blob features in a FeatureSet. Parameters
+        specify the binarize filter threshold value, and minimum and maximum
+        size for blobs. If a threshold value is -1, it will use an adaptive
+        threshold.  See binarize() for more information about thresholding.
+        The threshblocksize and threshconstant parameters are only used for
+        adaptive threshold.
+
+        :param minsize: the minimum size of the blobs, in pixels, of the
+                         returned blobs. This helps to filter out noise.n
+        :param maxsize: the maximim size of the blobs, in pixels, of the
+                         returned blobs.
+        :param dilate_iter: the number of times to run the dilation operation.
+
+        :return: a featureset (basically a list) of blob features. If no blobs
+                 are found this method returns None.
+        :Example:
+        >>> img = Image("lenna")
+        >>> fs = img.find_skintone_blobs()
+        >>> if fs is not None:
+            ... fs.draw()
+
+        :Note:
+        It will be really awesome for making UI type stuff, where you want
+        to track a hand or a face.
+        """
+        if maxsize == 0:
+            maxsize = self.width * self.height
+        mask = self.get_skintone_mask(dilate_iter)
+        blobmaker = BlobMaker()
+        blobs = blobmaker.extract_from_binary(mask, self, minsize=minsize,
+                                              maxsize=maxsize)
+        if not len(blobs):
+            return None
+
+        return FeatureSet(blobs).sort_area()
 
     def get_skintone_mask(self, dilate_iter=0):
-        pass
+        """
+        Find Skintone mask will look for continuous regions of Skintone in a
+        color image and return a binary mask where the white pixels denote
+        Skintone region.
 
+        :param dilate_iter: the number of times to run the dilation operation.
+
+        :return: a binary mask.
+
+        :Example:
+        >>> img = Image("lenna")
+        >>> mask = img.get_skintone_mask()
+        >>> mask.show()
+        """
+        if self._color_space != ColorSpace.YCrCb:
+            YCrCb = self.to_ycrcb()
+        else:
+            YCrCb = self
+
+        Y = npy.ones((256, 1), dtype=uint8) * 0
+        Y[5:] = 255
+        Cr = npy.ones((256, 1), dtype=uint8) * 0
+        Cr[140:180] = 255
+        Cb = npy.ones((256, 1), dtype=uint8) * 0
+        Cb[77:135] = 255
+        Y_img = YCrCb.zeros(1)
+        Cr_img = YCrCb.zeros(1)
+        Cb_img = YCrCb.zeros(1)
+        cv.Split(YCrCb.bitmap, Y_img, Cr_img, Cb_img, None)
+        cv.LUT(Y_img, Y_img, cv.fromarray(Y))
+        cv.LUT(Cr_img, Cr_img, cv.fromarray(Cr))
+        cv.LUT(Cb_img, Cb_img, cv.fromarray(Cb))
+        temp = self.zeros()
+        cv.Merge(Y_img, Cr_img, Cb_img, None, temp)
+        mask = Image(temp, colorSpace=ColorSpace.YCrCb)
+        mask = mask.binarize((128, 128, 128))
+        mask = mask.to_rgb().binarize()
+        mask.dilate(dilate_iter)
+        return mask
+
+    # this code is based on code that's based on code from
+    # http://blog.jozilla.net/2008/06/27/fun-with-python-opencv-and-face-detection/
     def find_haar_features(self, cascade, scale_factor=1.2, min_neighbors=2,
-                           use_cammy=cv.CV_HAAR_DO_CANNY_PRUNING,
+                           use_canny=cv.CV_HAAR_DO_CANNY_PRUNING,
                            min_size=(20, 20), max_size=(1000, 1000)):
-        pass
+        """
+        A Haar like feature cascase is a really robust way of finding the
+        location of a known object. This technique works really well for a few
+        specific applications like face, pedestrian, and vehicle detection.
+        It is worth noting that this approach **IS NOT A MAGIC BULLET** .
+        Creating a cascade file requires a large number of images that have
+        been sorted by a human. If you want to find Haar Features (useful for
+        face detection among other purposes) this will return Haar feature
+        objects in a FeatureSet.
+        For more information, consult the cv.HaarDetectObjects documentation.
+        To see what features are available run img.listHaarFeatures() or you can
+        provide your own haarcascade file if you have one available.
+        Note that the cascade parameter can be either a filename, or a HaarCascade
+        loaded with cv.Load(), or a HaarCascade object.
+
+        :param cascade: the Haar Cascade file, this can be either the path to
+                        a cascade file or a HaarCascased SimpleCV object that
+                        has already been loaded.
+        :param scale_factor: the scaling factor for subsequent rounds of the
+                             Haar cascade (default 1.2) in terms of a
+                             percentage (i.e. 1.2 = 20% increase in size)
+        :param min_neighbors: the minimum number of rectangles that makes up
+                              an object. Usually detected faces are clustered
+                              around the face, this is the number of detections
+                              in a cluster that we need for detection. Higher
+                              values here should reduce false positives and
+                              decrease false negatives.
+        :param use_canny: whether or not to use Canny pruning to reject areas
+                          with too many edges (default yes, set to 0 to disable)
+        :param min_size: minimum window size. By default, it is set to the size
+                         of samples the classifier has been trained on ((20,20)
+                         for face detection)
+        :param max_size: maximum window size. By default, it is set to the size
+                         of samples the classifier has been trained on
+                         ((1000,1000) for face detection)
+        :return: a feature set of HaarFeatures
+
+        :Example:
+        >>> faces = HaarCascade("face.xml","myFaces")
+        >>> cam = Camera()
+        >>> while True:
+        >>>     f = cam.get_image().find_haar_features(faces)
+        >>>     if f is not None:
+        >>>         f.show()
+
+        :Note:
+        OpenCV Docs:
+        - http://opencv.willowgarage.com/documentation/python/objdetect_cascade_classification.html
+        Wikipedia:
+        - http://en.wikipedia.org/wiki/Viola-Jones_object_detection_framework
+        - http://en.wikipedia.org/wiki/Haar-like_features
+        The video on this pages shows how Haar features and cascades work to located faces:
+        - http://dismagazine.com/dystopia/evolved-lifestyles/8115/anti-surveillance-how-to-hide-from-machines/
+        """
+        storage = cv.CreateMemStorage(0)
+
+        # lovely.  This segfaults if not present
+        from PhloxAR.features.HaarCascade import HaarCascade
+        if isinstance(cascade, str):
+            cascade = HaarCascade(cascade)
+            if not cascade.get_cascade():
+                return None
+        elif isinstance(cascade, HaarCascade):
+            pass
+        else:
+            logger.warning('Could not initialize HaarCascade. Enter Valid'
+                           'cascade value.')
+
+        # added all of the arguments from the opencv docs arglist
+        import cv2
+        haar_classify = cv2.CascadeClassifier(cascade.get_file_handle())
+        objects = haar_classify.detectMultiScale(self.gray_narray,
+                                                 scale_factor=scale_factor,
+                                                 min_neighbors=min_neighbors,
+                                                 min_size=min_size,
+                                                 flags=use_canny)
+        cv2flag = True
+
+        if objects is not None:
+            return FeatureSet([HaarFeature(self, o, cascade, cv2flag) for o in objects])
+
+        return None
 
     def draw_circle(self, ctr, rad, color=(0, 0, 0), thickness=1):
-        pass
+        """
+        Draw a circle on the image.
+
+        :param ctr: the center of the circle as an (x,y) tuple.
+        :param rad: the radius of the circle in pixels
+        :param color: a color tuple (default black)
+        :param thickness: the thickness of the circle, -1 means filled in.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> img.draw_circle((img.width/2,img.height/2),r=50,color=Color.RED,width=3)
+        >>> img.show()
+
+        :Note:
+        Note that this function is deprecated, try to use DrawingLayer.circle() instead.
+        """
+        if thickness < 0:
+            self.get_drawing_layer().circle((int(ctr[0]), int(ctr[1])),
+                                            int(rad),
+                                            color, int(thickness), filled=True)
+        else:
+            self.get_drawing_layer().circle((int(ctr[0]), int(ctr[1])),
+                                            int(rad), color, int(thickness))
 
     def draw_line(self, pt1, pt2, color=(0, 0, 0), thickness=1):
-        pass
+        """
+        Draw a line on the image.
+
+        :param pt1: the first point for the line (tuple).
+        :param pt2: the second point on the line (tuple).
+        :param color: a color tuple (default black).
+        :param thickness: the thickness of the line in pixels.
+
+        :return: None
+
+
+        :Example:
+        >>> img = Image("lena")
+        >>> img.draw_line((0,0),(img.width,img.height),color=Color.RED,thickness=3)
+        >>> img.show()
+
+        :Note:
+        This function is deprecated, try to use DrawingLayer.line() instead.
+        """
+        pt1 = (int(pt1[0]), int(pt1[1]))
+        pt2 = (int(pt2[0]), int(pt2[1]))
+        self.get_drawing_layer().line(pt1, pt2, color, thickness)
 
     @property
     def size(self):
