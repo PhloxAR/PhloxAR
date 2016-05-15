@@ -66,7 +66,6 @@ import math
 import copy  # for deep copy
 import numpy as npy
 import scipy.spatial.distance as spsd
-import scipy.cluster.vq as cluster
 import platform
 import itertools
 
