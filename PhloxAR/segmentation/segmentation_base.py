@@ -64,24 +64,24 @@ class SegmentationBase(object):
         """
         pass
 
-    @abc.abstractmethod
-    def get_raw_image(self):
+    @abc.abstractproperty
+    def raw_image(self):
         """
         Return the segmented image with white representing the foreground
         and black the background.
         """
         pass
 
-    @abc.abstractmethod
-    def get_segmented_image(self, white_fg=True):
+    @abc.abstractproperty
+    def segmented_image(self, white_fg=True):
         """
         Return the segmented image with white representing the foreground
         and black the background.
         """
         pass
 
-    @abc.abstractmethod
-    def get_segmented_blobs(self):
+    @abc.abstractproperty
+    def segmented_blobs(self):
         """
         return the segmented blobs from the fg/bg image
         """
