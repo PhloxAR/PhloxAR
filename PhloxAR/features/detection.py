@@ -345,22 +345,154 @@ class Line(Feature):
         return float(360.0 * (atan2(dy, dx) / (2 * npy.pi)))
 
     def crop2image_edges(self):
-        pass
+        """
+        **SUMMARY**
 
-    def get_vector(self):
-        pass
+        Returns the line with endpoints on edges of image. If some endpoints lies inside image
+        then those points remain the same without extension to the edges.
+        **RETURNS**
+        Returns a :py:class:`Line` object. If line does not cross the image's edges or cross at one point returns None.
+        **EXAMPLE**
+        >>> img = Image("lenna")
+        >>> l = Line(img, ((-100, -50), (1000, 25))
+        >>> cr_l = l.crop2image_edges()
+        """
+        pt1, pt2 = self._end_pts
+        pt1, pt2 = min(pt1, pt2), max(pt1, pt2)
+        x1, y1 = pt1
+        x2, y2 = pt2
+        w, h = self._image.width - 1, self._image.height - 1
+        slope = self.slope
+
+        ep = []
+        if slope == float('inf'):
+            if 0 <= x1 <= w and 0 <= x2 <= w:
+                ep.append((x1, 0))
+                ep.append((x2, h))
+        elif slope == 0:
+            if 0 <= y1 <= w and 0 <= y2 <= w:
+                ep.append((0, y1))
+                ep.append((w, y2))
+        else:
+            x = (slope * x1 - y1) / slope  # top edge y = 0
+            if 0 <= x <= w:
+                ep.append((int(round(x)), 0))
+
+            x = (slope * x1 + h - y1) / slope  # bottom edge y = h
+            if 0 <= x <= w:
+                ep.append((int(round(x)), h))
+
+            y = -slope * x1 + y1  # left edge x = 0
+            if 0 <= y <= h:
+                ep.append((0, (int(round(y)))))
+
+            y = slope * (w - x1) + y1  # right edge x = w
+            if 0 <= y <= h:
+                ep.append((w, (int(round(y)))))
+
+        ep = list(set(
+            ep))  # remove duplicates of points if line cross image at corners
+        ep.sort()
+        if len(ep) == 2:
+            # if points lies outside image then change them
+            if not (0 < x1 < w and 0 < y1 < h):
+                pt1 = ep[0]
+            if not (0 < x2 < w and 0 < y2 < h):
+                pt2 = ep[1]
+        elif len(ep) == 1:
+            logger.warning("Line cross the image only at one point")
+            return None
+        else:
+            logger.warning("Line does not cross the image")
+            return None
+
+        return Line(self._image, (pt1, pt2))
+
+    @lazy_property
+    def vector(self):
+        if self._vector is None:
+            self._vector = [float(self._end_pts[1][0] - self._end_pts[0][0]),
+                            float(self._end_pts[1][1] - self._end_pts[0][1])]
+
+        return self._vector
 
     def dot(self, other):
-        pass
+        return npy.dot(self.vector, other.vector)
 
     def cross(self, other):
-        pass
+        return npy.cross(self.vector, other.vector)
 
     def get_y_intercept(self):
-        pass
+        """
+        **SUMMARY**
+
+        Returns the y intercept based on the lines equation.  Note that this point is potentially not contained in the image itself
+        **RETURNS**
+        Returns a floating point intersection value
+        **EXAMPLE**
+        >>> img = Image("lena")
+        >>> l = Line(img, ((50, 150), (2, 225))
+        >>> b = l.get_y_intercept()
+        """
+        if self._y_intercept is None:
+            pt1, pt2 = self._end_pts
+            m = self.slope
+            # y = mx + b | b = y-mx
+            self._y_intercept = pt1[1] - m * pt1[0]
+        return self._y_intercept
 
     def extend2image_edges(self):
-        pass
+        """
+        **SUMMARY**
+
+        Returns the line with endpoints on edges of image.
+        **RETURNS**
+        Returns a :py:class:`Line` object. If line does not lies entirely inside image then returns None.
+        **EXAMPLE**
+        >>> img = Image("lena")
+        >>> l = Line(img, ((50, 150), (2, 225))
+        >>> cr_l = l.extend2image_edges()
+        """
+        pt1, pt2 = self._end_pts
+        pt1, pt2 = min(pt1, pt2), max(pt1, pt2)
+        x1, y1 = pt1
+        x2, y2 = pt2
+        w, h = self._image.width - 1, self._image.height - 1
+        slope = self.slope
+
+        if not 0 <= x1 <= w or not 0 <= x2 <= w or not 0 <= y1 <= w or not 0 <= y2 <= w:
+            logger.warning("At first the line should be cropped")
+            return None
+
+        ep = []
+        if slope == float('inf'):
+            if 0 <= x1 <= w and 0 <= x2 <= w:
+                return Line(self._image, ((x1, 0), (x2, h)))
+        elif slope == 0:
+            if 0 <= y1 <= w and 0 <= y2 <= w:
+                return Line(self._image, ((0, y1), (w, y2)))
+        else:
+            x = (slope * x1 - y1) / slope  # top edge y = 0
+            if 0 <= x <= w:
+                ep.append((int(round(x)), 0))
+
+            x = (slope * x1 + h - y1) / slope  # bottom edge y = h
+            if 0 <= x <= w:
+                ep.append((int(round(x)), h))
+
+            y = -slope * x1 + y1  # left edge x = 0
+            if 0 <= y <= h:
+                ep.append((0, (int(round(y)))))
+
+            y = slope * (w - x1) + y1  # right edge x = w
+            if 0 <= y <= h:
+                ep.append((w, (int(round(y)))))
+
+        # remove duplicates of points if line cross image at corners
+        ep = list(set(ep))
+        ep.sort()
+
+        return Line(self._image, ep)
 
     @property
     def slope(self):
