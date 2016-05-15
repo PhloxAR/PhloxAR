@@ -18,8 +18,8 @@ class Feature(object):
     default functions for determining angle, area, mean color, etc.
     these functions assume the feature is 1px
     """
-    _x = 0.00
-    _y = 0.00
+    _x = 0.00  # center x coordinate
+    _y = 0.00  # center y coordinate
     _max_x = None
     _max_y = None
     _min_x = None
@@ -448,7 +448,9 @@ class Feature(object):
         bounds = self._points
         if isinstance(other, Feature):  # A feature
             ret_val = True
-            for p in other._points:  # this isn't completely correct - only tests if points lie in poly, not edges.
+            # this isn't completely correct - only tests if points lie
+            # in poly, not edges.
+            for p in other._points:
                 p2 = (int(p[0]), int(p[1]))
                 ret_val = self._point_inside_polygon(p2, bounds)
                 if not ret_val:
@@ -630,12 +632,6 @@ class Feature(object):
         :return: a (x, y, r) tuple where (x, y) is the center of the circle
                   and r is the radius
         """
-        try:
-            import cv2
-        except:
-            logger.warning("Unable to import cv2")
-            return None
-
         contour = self.contour()
 
         points = []
@@ -651,6 +647,14 @@ class Feature(object):
 
     def contour(self):
         return []
+
+    @property
+    def image(self):
+        return self._image
+
+    @property
+    def points(self):
+        return self._points
 
 
 class FeatureSet(list):
