@@ -18,8 +18,8 @@ class Feature(object):
     default functions for determining angle, area, mean color, etc.
     these functions assume the feature is 1px
     """
-    _x = 0.00
-    _y = 0.00
+    _x = 0.00  # center x coordinate
+    _y = 0.00  # center y coordinate
     _max_x = None
     _max_y = None
     _min_x = None
