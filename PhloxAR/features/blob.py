@@ -222,6 +222,10 @@ class Blob(Feature):
     def height(self):
         return
 
+    @property
+    def avg_color(self):
+        return self._avg_color
+
     def draw_rect(self, layer=None, color=Color.DEFAULT, width=1, alpha=128):
         """
         Draws the bounding rectangle for the blob.
