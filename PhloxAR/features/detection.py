@@ -500,20 +500,120 @@ class Line(Feature):
 
 
 class Barcode(Feature):
+    """
+    **SUMMARY**
+    The Barcode Feature wrappers the object returned by find_barcode(),
+    a zbar symbol
+    * The x,y coordinate is the center of the code.
+    * points represents the four boundary points of the feature. Note: for
+      QR codes, these points are the reference rectangls, and are quadrangular,
+      rather than rectangular with other datamatrix types.
+    * data is the parsed data of the code.
+    """
+    _data = ''
+
     def __init__(self, img, zbsymbol):
-        pass
+        locs = zbsymbol.location
+        if len(locs) > 4:
+            xs = [l[0] for l in locs]
+            ys = [l[1] for l in locs]
+            xmax = npy.max(xs)
+            xmin = npy.min(xs)
+            ymax = npy.max(ys)
+            ymin = npy.min(ys)
+            points = ((xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin))
+        else:
+            points = copy(locs)  # hopefully this is in tl clockwise order
+
+        self._data = zbsymbol.data
+        self._points = copy(points)
+        numpoints = len(self._points)
+        self._x = 0
+        self._y = 0
+
+        for p in self._points:
+            self._x += p[0]
+            self._y += p[1]
+
+        if numpoints:
+            self._x /= numpoints
+            self._y /= numpoints
+
+        super(Barcode, self).__init__(img, 0, 0, points)
 
     def __repr__(self):
-        pass
+        return "{}.{} at ({}, {}), read data: {}".format(
+                self.__class__.__module__, self.__class__.__name__,
+                self._x, self._y, self._data
+        )
 
     def draw(self, color=Color.GREEN, width=1):
-        pass
+        """
+        **SUMMARY**
+        Draws the bounding area of the barcode, given by points.  Note that for
+        QR codes, these points are the reference boxes, and so may "stray" into
+        the actual code.
+        **PARAMETERS**
+        * *color* - An RGB color triplet.
+        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        contour using the specified width.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        """
+        self._image.draw_line(self._points[0], self._points[1], color, width)
+        self._image.draw_line(self._points[1], self._points[2], color, width)
+        self._image.draw_line(self._points[2], self._points[3], color, width)
+        self._image.draw_line(self._points[3], self._points[0], color, width)
 
     def length(self):
-        pass
+        """
+        **SUMMARY**
+        Returns the longest side of the quandrangle formed by the boundary points.
+        **RETURNS**
+        A floating point length value.
+        **EXAMPLE**
+        >>> img = Image("mycode.jpg")
+        >>> bc = img.findBarcode()
+        >>> print(bc[-1].length())
+        """
+        sqform = spsd.squareform(spsd.pdist(self._points, "euclidean"))
+        # get pairwise distances for all points
+        # note that the code is a quadrilateral
+        return max(sqform[0][1], sqform[1][2], sqform[2][3], sqform[3][0])
 
     def area(self):
-        pass
+        """
+        **SUMMARY**
+        Returns the area defined by the quandrangle formed by the boundary points
+
+        **RETURNS**
+        An integer area value.
+        **EXAMPLE**
+        >>> img = Image("mycode.jpg")
+        >>> bc = img.findBarcode()
+        >>> print(bc[-1].area())
+        """
+        # calc the length of each side in a square distance matrix
+        sqform = spsd.squareform(spsd.pdist(self._points, "euclidean"))
+
+        # squareform returns a N by N matrix
+        # boundry line lengths
+        a = sqform[0][1]
+        b = sqform[1][2]
+        c = sqform[2][3]
+        d = sqform[3][0]
+
+        # diagonals
+        p = sqform[0][2]
+        q = sqform[1][3]
+
+        # perimeter / 2
+        s = (a + b + c + d) / 2.0
+
+        # i found the formula to do this on wikihow.  Yes, I am that lame.
+        # http://www.wikihow.com/Find-the-Area-of-a-Quadrilateral
+        return sqrt((s - a) * (s - b) * (s - c) * (s - d) -
+                    (a * c + b * d + p * q) * (a * c + b * d - p * q) / 4)
 
 
 class HaarFeature(Feature):
@@ -663,61 +763,265 @@ class Chessboard(Feature):
 
 
 class TemplateMatch(Feature):
+    """
+    **SUMMARY**
+    This class is used for template (pattern) matching in images.
+    The template matching cannot handle scale or rotation.
+    """
+
+    _template_image = None
+    _quality = 0
+    _w = 0
+    _h = 0
+
     def __init__(self, img, template, location, quality):
-        pass
+        self._template_image = template  # -- KAT - TRYING SOMETHING
+        self._image = img
+        self._quality = quality
+        w = template.width
+        h = template.height
+        at_x = location[0]
+        at_y = location[1]
+        points = [(at_x, at_y), (at_x + w, at_y), (at_x + w, at_y + h),
+                  (at_x, at_y + h)]
+
+        super(TemplateMatch, self).__init__(img, at_x, at_y, points)
 
     def _template_overlaps(self, other):
-        pass
+        """
+        Returns true if this feature overlaps another template feature.
+        """
+        (maxx, minx, maxy, miny) = self.extents()
+        overlap = False
+        for p in other.points:
+            if maxx >= p[0] >= minx and maxy >= p[1] >= miny:
+                overlap = True
+                break
+
+        return overlap
 
     def consume(self, other):
-        pass
+        """
+        Given another template feature, make this feature the size of the two features combined.
+        """
+        (maxx, minx, maxy, miny) = self.extents()
+        (maxx0, minx0, maxy0, miny0) = other.extents()
+
+        maxx = max(maxx, maxx0)
+        minx = min(minx, minx0)
+        maxy = max(maxy, maxy0)
+        miny = min(miny, miny0)
+        self._x = minx
+        self._y = miny
+        self._points = [(minx, miny), (minx, maxy), (maxx, maxy), (maxx, miny)]
+        self._update_extents()
 
     def rescale(self, w, h):
-        pass
+        """
+        This method keeps the feature's center the same but sets a new width and height
+        """
+        (maxx, minx, maxy, miny) = self.extents()
+        xc = minx + ((maxx - minx) / 2)
+        yc = miny + ((maxy - miny) / 2)
+        x = xc - (w / 2)
+        y = yc - (h / 2)
+        self._x = x
+        self._y = y
+        self._points = [(x, y),
+                        (x + w, y),
+                        (x + w, y + h),
+                        (x, y + h)]
+        self._update_extents()
 
     def crop(self):
-        pass
+        (maxx, minx, maxy, miny) = self.extents()
+        return self._image.crop(minx, miny, maxx - minx, maxy - miny)
 
     def draw(self, color=Color.GREEN, width=1):
-        pass
+        """
+        **SUMMARY**
+        Draw the bounding rectangle, default color green.
+        **PARAMETERS**
+        * *color* - An RGB color triplet.
+        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+          contour using the specified width.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        """
+        self._image.dl().rectangle((self._x, self._y),
+                                   (self.width(), self.height()),
+                                   color=color, width=width)
 
 
 class Circle(Feature):
-    def __init__(self):
-        pass
+    """
+    Class for a general circle feature with a center at (x,y) and a radius r
+    """
+    _radius = 0.00
+    _avg_color = None
+    _contour = None
+
+    def __init__(self, img, at_x, at_y, r):
+        self._radius = r
+        points = [(at_x - r, at_y - r), (at_x + r, at_y - r),
+                  (at_x + r, at_y + r), (at_x - r, at_y + r)]
+        self._avg_color = None
+        super(Circle, self).__init__(img, at_x, at_y, points)
+        segments = 18
+        rng = range(1, segments + 1)
+        self._contour = []
+
+        for theta in rng:
+            rp = 2.0 * npy.pi * float(theta) / float(segments)
+            x = (r * npy.sin(rp)) + at_x
+            y = (r * npy.cos(rp)) + at_y
+            self._contour.append((x, y))
 
     def draw(self, color=Color.GREEN, width=1):
-        pass
+        """
+        **SUMMARY**
+        With no dimension information, color the x,y point for the feature.
+        **PARAMETERS**
+        * *color* - An RGB color triplet.
+        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        contour using the specified width.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        """
+        self._image.dl().circle((self._x, self._y), self._radius, color, width)
 
     def show(self, color=Color.GREEN):
-        pass
+        """
+        **SUMMARY**
+        This function will automatically draw the features on the image and show it.
+        It is a basically a shortcut function for development and is the same as:
+        **PARAMETERS**
+        * *color* - the color of the feature as an rgb triplet.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        **EXAMPLE**
+        >>> img = Image("logo")
+        >>> feat = img.findCircle()
+        >>> feat[0].show()
+        """
+        self.draw(color)
+        self._image.show()
 
     def distance_from(self, point=(-1, -1)):
-        pass
+        """
+        **SUMMARY**
+        Given a point (default to center of the image), return the euclidean distance of x,y from this point.
+        **PARAMETERS**
+        * *point* - The point, as an (x,y) tuple on the image to measure distance from.
+        **RETURNS**
+        The distance as a floating point value in pixels.
+        **EXAMPLE**
+        >>> img = Image("OWS.jpg")
+        >>> blobs = img.findCircle()
+        >>> blobs[-1].distanceFrom(blobs[-2].coordinates())
+        """
+        if point[0] == -1 or point[1] == -1:
+            point = npy.array(self._image.size()) / 2
+        return spsd.euclidean(point, [self.x, self.y])
 
     def mean_color(self):
-        pass
+        """
+        **SUMMARY**
+        Returns the average color within the circle.
+        **RETURNS**
+        Returns an RGB triplet that corresponds to the mean color of the feature.
+        **EXAMPLE**
+        >>> img = Image("lenna")
+        >>> c = img.findCircle()
+        >>> c[-1].meanColor()
+        """
+        # generate the mask
+        if self._avg_color is None:
+            mask = self._image.zeros(1)
+            cv.Zero(mask)
+            cv.Circle(mask, (self._x, self._y), self._radius,
+                      color=(255, 255, 255), thickness=-1)
+            temp = cv.Avg(self._image.bitmap, mask)
+            self._avg_color = (temp[0], temp[1], temp[2])
+        return self._avg_color
 
+    @property
     def area(self):
-        pass
+        """
+        Area covered by the feature -- for a pixel, 1
+        **SUMMARY**
+        Returns a numpy array of the area of each feature in pixels.
+        **RETURNS**
+        A numpy array of all the positions in the featureset.
+        **EXAMPLE**
+        >>> img = Image("lenna")
+        >>> feats = img.findBlobs()
+        >>> xs = feats.coordinates()
+        >>> print(xs)
+        """
+        return self._radius * self._radius * npy.pi
 
+    @property
     def perimeter(self):
-        pass
+        """
+        Returns the perimeter of the circle feature in pixels.
+        """
+        return 2 * npy.pi * self._radius
 
+    @property
     def width(self):
-        pass
+        """
+        Returns the width of the feature -- for compliance just r*2
+        """
+        return self._radius * 2
 
+    @property
     def height(self):
-        pass
+        """
+        Returns the height of the feature -- for compliance just r*2
+        """
+        return self._radius * 2
 
+    @property
     def radius(self):
-        pass
+        """
+        Returns the radius of the circle in pixels.
+        """
+        return self._radius
 
+    @property
     def diameter(self):
-        pass
+        """
+        Returns the diameter of the circle in pixels.
+        """
+        return self._radius * 2
 
-    def crop(self):
-        pass
+    def crop(self, no_mask=False):
+        """
+        **SUMMARY**
+        This function returns the largest bounding box for an image.
+        **PARAMETERS**
+        * *noMask* - if noMask=True we return the bounding box image of the circle.
+        if noMask=False (default) we return the masked circle with the rest of the area set to black
+        **RETURNS**
+        The masked circle image.
+        """
+        if no_mask:
+            return self._image.crop(self.x, self.y, self.width, self.height,
+                                    centered=True)
+        else:
+            mask = self._image.zeros(1)
+            result = self._image.zeros()
+            cv.Zero(mask)
+            cv.Zero(result)
+            # if you want to shave a bit of time we go do the crop before the blit
+            cv.Circle(mask, (self._x, self._y), self._radius,
+                      color=(255, 255, 255), thickness=-1)
+            cv.Copy(self._image.bitmap, result, mask)
+            ret = Image(result)
+            ret = ret.crop(self._x, self._y, self.width, self.height,
+                                 centered=True)
+            return ret
 
 
 class KeyPoint(Feature):
