@@ -918,7 +918,7 @@ class Circle(Feature):
         **EXAMPLE**
         >>> img = Image("OWS.jpg")
         >>> blobs = img.findCircle()
-        >>> blobs[-1].distanceFrom(blobs[-2].coordinates())
+        >>> blobs[-1].distance_from(blobs[-2].coordinates())
         """
         if point[0] == -1 or point[1] == -1:
             point = npy.array(self._image.size()) / 2
@@ -932,8 +932,8 @@ class Circle(Feature):
         Returns an RGB triplet that corresponds to the mean color of the feature.
         **EXAMPLE**
         >>> img = Image("lenna")
-        >>> c = img.findCircle()
-        >>> c[-1].meanColor()
+        >>> c = img.find_circle()
+        >>> c[-1].mean_color()
         """
         # generate the mask
         if self._avg_color is None:
@@ -955,7 +955,7 @@ class Circle(Feature):
         A numpy array of all the positions in the featureset.
         **EXAMPLE**
         >>> img = Image("lenna")
-        >>> feats = img.findBlobs()
+        >>> feats = img.find_blobs()
         >>> xs = feats.coordinates()
         >>> print(xs)
         """
@@ -1152,7 +1152,7 @@ class KeyPoint(Feature):
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> kp = img.findKeypoints()
-        >>> c = kp[0].meanColor()
+        >>> c = kp[0].mean_color()
         """
         # generate the mask
         if self._avg_color is None:
@@ -1342,7 +1342,7 @@ class Motion(Feature):
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> kp = img.findKeypoints()
-        >>> c = kp.meanColor()
+        >>> c = kp.mean_color()
         """
         x = int(self.x - (self.window / 2))
         y = int(self.y - (self.window / 2))

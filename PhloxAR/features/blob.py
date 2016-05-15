@@ -1130,7 +1130,7 @@ class Blob(Feature):
         yourImg = otherBlob.image.copy()
 
         myPts = myPts.reassign_image(myImg)
-        yourPts = yourPts.reassignImage(yourImg)
+        yourPts = yourPts.reassign_image(yourImg)
 
         myPts.draw()
         myImg = myImg.apply_layers()
