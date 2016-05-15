@@ -658,4 +658,796 @@ class Feature(object):
 
 
 class FeatureSet(list):
-    pass
+    """
+
+    FeatureSet is a class extended from Python's list which has special functions so that it is useful for handling feature metadata on an image.
+    In general, functions dealing with attributes will return numpy arrays, and functions dealing with sorting or filtering will return new FeatureSets.
+
+    >>> image = Image("/path/to/image.png")
+    >>> lines = image.find_lines()  #lines are the feature set
+    >>> lines.draw()
+    >>> lines.x()
+    >>> lines.crop()
+    """
+    def __getitem__(self, key):
+        """
+
+        Returns a FeatureSet when sliced. Previously used to
+        return list. Now it is possible to use FeatureSet member
+        functions on sub-lists
+        """
+        if isinstance(key, types.SliceType):
+            return FeatureSet(list.__getitem__(self, key))
+        else:
+            return list.__getitem__(self, key)
+
+    def count(self, **kwargs):
+        """
+        This function returns the length / count of the all the items in the FeatureSet:
+        """
+        return len(self)
+
+    def draw(self, color=Color.GREEN, width=1, autocolor=False, alpha=-1):
+        """
+
+        Call the draw() method on each feature in the FeatureSet.
+
+
+        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *width* - The width to draw the feature in pixels. A value of -1 usually indicates a filled region.
+        * *autocolor* - If true a color is randomly selected for each feature.
+
+
+        Nada. Nothing. Zilch.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> feats.draw(color=Color.PUCE, width=3)
+        >>> img.show()
+        """
+        for f in self:
+            if autocolor:
+                color = Color.random()
+            if alpha != -1:
+                f.draw(color=color, width=width, alpha=alpha)
+            else:
+                f.draw(color=color, width=width)
+
+    def show(self, color=Color.GREEN, autocolor=False, width=1):
+        """
+
+        This function will automatically draw the features on the image and show it.
+        It is a basically a shortcut function for development and is the same as:
+
+        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *width* - The width to draw the feature in pixels. A value of -1 usually indicates a filled region.
+        * *autocolor* - If true a color is randomly selected for each feature.
+
+        Nada. Nothing. Zilch.
+
+        >>> img = Image("logo")
+        >>> feat = img.find_blobs()
+        >>> if feat: feat.draw()
+        >>> img.show()
+        """
+        self.draw(color, width, autocolor)
+        self[-1].image.show()
+
+    def reassign_image(self, img):
+        """
+
+        Return a new featureset where the features are assigned to a new image.
+
+        * *img* - the new image to which to assign the feature.
+        .. Warning::
+          THIS DOES NOT PERFORM A SIZE CHECK. IF YOUR NEW IMAGE IS NOT THE EXACT SAME SIZE YOU WILL CERTAINLY CAUSE ERRORS.
+
+        >>> img = Image("lenna")
+        >>> img2 = img.invert()
+        >>> l = img.find_lines()
+        >>> l2 = img.reassign_image(img2)
+        >>> l2.show()
+        """
+        ret = FeatureSet()
+        for i in self:
+            ret.append(i.reassign(img))
+        return ret
+
+    def x(self):
+        """
+
+        Returns a numpy array of the x (horizontal) coordinate of each feature.
+
+        A numpy array.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> xs = feats.x()
+        >>> print(xs)
+        """
+        return npy.array([f.x for f in self])
+
+    def y(self):
+        """
+
+        Returns a numpy array of the y (vertical) coordinate of each feature.
+
+        A numpy array.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> xs = feats.y()
+        >>> print(xs)
+        """
+        return npy.array([f.y for f in self])
+
+    def coordinates(self):
+        """
+
+        Returns a 2d numpy array of the x,y coordinates of each feature.  This
+        is particularly useful if you want to use Scipy's Spatial Distance module
+
+        A numpy array of all the positions in the featureset.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> xs = feats.coordinates()
+        >>> print xs
+        """
+        return np.array([[f.x, f.y] for f in self])
+
+    @property
+    def center(self):
+        return self.coordinates()
+
+    @property
+    def area(self):
+        """
+
+        Returns a numpy array of the area of each feature in pixels.
+
+        A numpy array of all the positions in the featureset.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> xs = feats.area()
+        >>> print(xs)
+        """
+        return npy.array([f.area() for f in self])
+
+    def sort_area(self):
+        """
+
+        Returns a new FeatureSet, with the largest area features first.
+
+        A featureset sorted based on area.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> feats = feats.sort_area()
+        >>> print feats[-1] # biggest blob
+        >>> print feats[0] # smallest blob
+        """
+        return FeatureSet(sorted(self, key=lambda f: f.area()))
+
+    def sort_x(self):
+        """
+
+        Returns a new FeatureSet, with the smallest x coordinates features first.
+
+        A featureset sorted based on area.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> feats = feats.sort_x()
+        >>> print(feats[-1]) # biggest blob
+        >>> print(feats[0]) # smallest blob
+        """
+        return FeatureSet(sorted(self, key=lambda f: f.x))
+
+    def sort_y(self):
+        """
+
+        Returns a new FeatureSet, with the smallest y coordinates features first.
+
+        A featureset sorted based on area.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> feats = feats.sortY()
+        >>> print(feats[-1]) # biggest blob
+        >>> print(feats[0]) # smallest blob
+        """
+        return FeatureSet(sorted(self, key=lambda f: f.y))
+
+    def distance_from(self, point=(-1, -1)):
+        """
+
+        Returns a numpy array of the distance each Feature is from a given coordinate.
+        Default is the center of the image.
+
+        * *point* - A point on the image from which we will calculate distance.
+
+        A numpy array of distance values.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> d = feats.distance_from()
+        >>> d[0]  #show the 0th blobs distance to the center.
+
+        Make this accept other features to measure from.
+        """
+        if point[0] == -1 or point[1] == -1 and len(self):
+            point = self[0].image.size()
+
+        return spsd.cdist(self.coordinates(), [point])[:, 0]
+
+    def sort_distance(self, point=(-1, -1)):
+        """
+
+        Returns a sorted FeatureSet with the features closest to a given coordinate first.
+        Default is from the center of the image.
+
+        * *point* - A point on the image from which we will calculate distance.
+
+        A numpy array of distance values.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> d = feats.sort_distance()
+        >>> d[-1].show()  #show the 0th blobs distance to the center.
+        """
+        return FeatureSet(sorted(self, key=lambda f: f.distance_from(point)))
+
+    def distance_pairs(self):
+        """
+
+        Returns the square-form of pairwise distances for the featureset.
+        The resulting N x N array can be used to quickly look up distances
+        between features.
+
+        A NxN np matrix of distance values.
+
+        >>> img = Image("lenna")
+        >>> feats = img.find_blobs()
+        >>> d = feats.distance_pairs()
+        >>> print(d)
+        """
+        return spsd.squareform(spsd.pdist(self.coordinates()))
+
+    def angle(self):
+        """
+
+        Return a numpy array of the angles (theta) of each feature.
+        Note that theta is given in degrees, with 0 being horizontal.
+
+        An array of angle values corresponding to the features.
+
+        >>> img = Image("lenna")
+        >>> l = img.find_lines()
+        >>> angs = l.angle()
+        >>> print angs
+        """
+        return npy.array([f.angle() for f in self])
+
+    def sort_angle(self, theta=0):
+        """
+        Return a sorted FeatureSet with the features closest to a given angle first.
+        Note that theta is given in radians, with 0 being horizontal.
+
+        An array of angle values corresponding to the features.
+
+        >>> img = Image("lenna")
+        >>> l = img.find_lines()
+        >>> l = l.sort_angle()
+        >>> print(l)
+        """
+        return FeatureSet(sorted(self, key=lambda f: abs(f.angle() - theta)))
+
+    def length(self):
+        """
+
+        Return a numpy array of the length (longest dimension) of each feature.
+
+        A numpy array of the length, in pixels, of eatch feature object.
+
+        >>> img = Image("Lenna")
+        >>> l = img.find_lines()
+        >>> lengt = l.length()
+        >>> lengt[0] # length of the 0th element.
+        """
+        return npy.array([f.length() for f in self])
+
+    def sort_length(self):
+        """
+
+        Return a sorted FeatureSet with the longest features first.
+
+        A sorted FeatureSet.
+
+        >>> img = Image("Lenna")
+        >>> l = img.find_lines().sort_length()
+        >>> lengt[-1] # length of the 0th element.
+        """
+        return FeatureSet(sorted(self, key=lambda f: f.length()))
+
+    def mean_color(self):
+        """
+
+        Return a numpy array of the average color of the area covered by each Feature.
+
+        Returns an array of RGB triplets the correspond to the mean color of the feature.
+
+        >>> img = Image("lenna")
+        >>> kp = img.find_keypoints()
+        >>> c = kp.mean_color()
+        """
+        return npy.array([f.meanColor() for f in self])
+
+    def color_distance(self, color=(0, 0, 0)):
+        """
+
+        Return a numpy array of the distance each features average color is from
+        a given color tuple (default black, so color_distance() returns intensity)
+
+        * *color* - The color to calculate the distance from.
+
+        The distance of the average color for the feature from given color as a numpy array.
+
+        >>> img = Image("lenna")
+        >>> circs = img.find_circle()
+        >>> d = circs.color_distance(color=Color.BLUE)
+        >>> print d
+        """
+        return spsd.cdist(self.mean_color(), [color])[:, 0]
+
+    def sort_color_distance(self, color=(0, 0, 0)):
+        """
+        Return a sorted FeatureSet with features closest to a given color first.
+        Default is black, so sort_color_distance() will return darkest to brightest
+        """
+        return FeatureSet(sorted(self, key=lambda f: f.color_distance(color)))
+
+    def filter(self, filterarray):
+        """
+
+        Return a FeatureSet which is filtered on a numpy boolean array.  This
+        will let you use the attribute functions to easily screen Features out
+        of return FeatureSets.
+
+        * *filterarray* - A numpy array, matching  the size of the feature set,
+          made of Boolean values, we return the true values and reject the False value.
+
+        The revised feature set.
+
+        Return all lines < 200px
+        >>> my_lines.filter(my_lines.length() < 200) # returns all lines < 200px
+        >>> my_blobs.filter(my_blobs.area() > 0.9 * my_blobs.length**2) # returns blobs that are nearly square
+        >>> my_lines.filter(abs(my_lines.angle()) < numpy.pi / 4) #any lines within 45 degrees of horizontal
+        >>> my_corners.filter(my_corners.x() - my_corners.y() > 0) #only return corners in the upper diagonal of the image
+        """
+        return FeatureSet(list(np.array(self)[np.array(filterarray)]))
+
+    def width(self):
+        """
+
+        Returns a nparray which is the width of all the objects in the FeatureSet.
+
+        A numpy array of width values.
+
+        >>> img = Image("NotLenna")
+        >>> l = img.find_lines()
+        >>> l.width()
+        """
+        return npy.array([f.width for f in self])
+
+    def height(self):
+        """
+        Returns a nparray which is the height of all the objects in the FeatureSet
+
+        A numpy array of width values.
+
+        >>> img = Image("NotLenna")
+        >>> l = img.find_lines()
+        >>> l.height()
+        """
+        return npy.array([f.height for f in self])
+
+    def crop(self):
+        """
+
+        Returns a nparray with the cropped features as SimpleCV image.
+
+        A SimpleCV image cropped to each image.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs(128)
+        >>> for b in blobs:
+        >>>   newImg = b.crop()
+        >>>   newImg.show()
+        >>>   time.sleep(1)
+        """
+        return npy.array([f.crop() for f in self])
+
+    def inside(self, region):
+        """
+
+        Return only the features inside the region. where region can be a bounding box,
+        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+
+        * *region*
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding circle of the form (x,y,r)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * Any two dimensional feature (e.g. blobs, circle ...)
+
+        Returns a featureset of features that are inside the region.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs()
+        >>> b = blobs[-1]
+        >>> lines = img.find_lines()
+        >>> inside = lines.inside(b)
+
+        This currently performs a bounding box test, not a full polygon test for speed.
+        """
+        fs = FeatureSet()
+        for f in self:
+            if f.is_contained_within(region):
+                fs.append(f)
+        return fs
+
+    def outside(self, region):
+        """
+
+        Return only the features outside the region. where region can be a bounding box,
+        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+
+        * *region*
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding circle of the form (x,y,r)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * Any two dimensional feature (e.g. blobs, circle ...)
+
+        Returns a featureset of features that are outside the region.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs()
+        >>> b = blobs[-1]
+        >>> lines = img.find_lines()
+        >>> outside = lines.outside(b)
+
+        This currently performs a bounding box test, not a full polygon test for speed.
+        """
+        fs = FeatureSet()
+        for f in self:
+            if not f.is_contained_within():
+                fs.append(f)
+        return fs
+
+    def overlaps(self, region):
+        """
+
+        Return only the features that overlap or the region. Where region can be a bounding box,
+        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+
+        * *region*
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding circle of the form (x,y,r)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * Any two dimensional feature (e.g. blobs, circle ...)
+
+        Returns a featureset of features that overlap the region.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs()
+        >>> b = blobs[-1]
+        >>> lines = img.find_lines()
+        >>> outside = lines.overlaps(b)
+
+        This currently performs a bounding box test, not a full polygon test for speed.
+        """
+        fs = FeatureSet()
+        for f in self:
+            if f.overlaps(region):
+                fs.append(f)
+        return fs
+
+    def above(self, region):
+        """
+
+        Return only the features that are above a  region. Where region can be a bounding box,
+        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+
+        * *region*
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding circle of the form (x,y,r)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * Any two dimensional feature (e.g. blobs, circle ...)
+
+        Returns a featureset of features that are above the region.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs()
+        >>> b = blobs[-1]
+        >>> lines = img.find_lines()
+        >>> outside = lines.above(b)
+
+        This currently performs a bounding box test, not a full polygon test for speed.
+        """
+        fs = FeatureSet()
+        for f in self:
+            if f.above(region):
+                fs.append(f)
+        return fs
+
+    def below(self, region):
+        """
+
+        Return only the features below the region. where region can be a bounding box,
+        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+
+        * *region*
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding circle of the form (x,y,r)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * Any two dimensional feature (e.g. blobs, circle ...)
+
+        Returns a featureset of features that are below the region.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs()
+        >>> b = blobs[-1]
+        >>> lines = img.find_lines()
+        >>> inside = lines.below(b)
+
+        This currently performs a bounding box test, not a full polygon test for speed.
+        """
+        fs = FeatureSet()
+        for f in self:
+            if f.below(region):
+                fs.append(f)
+        return fs
+
+    def left(self, region):
+        """
+
+        Return only the features left of the region. where region can be a bounding box,
+        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+
+        * *region*
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding circle of the form (x,y,r)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * Any two dimensional feature (e.g. blobs, circle ...)
+
+        Returns a featureset of features that are left of the region.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs()
+        >>> b = blobs[-1]
+        >>> lines = img.find_lines()
+        >>> left = lines.left(b)
+
+        This currently performs a bounding box test, not a full polygon test for speed.
+        """
+        fs = FeatureSet()
+        for f in self:
+            if f.left(region):
+                fs.append(f)
+        return fs
+
+    def right(self, region):
+        """
+
+        Return only the features right of the region. where region can be a bounding box,
+        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+
+        * *region*
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding circle of the form (x,y,r)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * Any two dimensional feature (e.g. blobs, circle ...)
+
+        Returns a featureset of features that are right of the region.
+
+        >>> img = Image("Lenna")
+        >>> blobs = img.find_blobs()
+        >>> b = blobs[-1]
+        >>> lines = img.find_lines()
+        >>> right = lines.right(b)
+
+        This currently performs a bounding box test, not a full polygon test for speed.
+        """
+        fs = FeatureSet()
+        for f in self:
+            if f.right(region):
+                fs.append(f)
+        return fs
+
+    def on_image_edge(self, tolerance=1):
+        """
+        The method returns a feature set of features that are on or "near" the
+        edge of the image. This is really helpful for removing features that are
+        edge effects.
+
+        * *tolerance* - the distance in pixels from the edge at which a feature
+          qualifies as being "on" the edge of the image.
+
+        Returns a featureset of features that are on the edge of the image.
+
+        >>> img = Image("./sampleimages/EdgeTest1.png")
+        >>> blobs = img.find_blobs()
+        >>> es = blobs.on_image_edge()
+        >>> es.draw(color=Color.RED)
+        >>> img.show()
+        """
+        fs = FeatureSet()
+        for f in self:
+            if f.on_image_edge(tolerance):
+                fs.append(f)
+        return fs
+
+    def top_left_corners(self):
+        """
+
+        This method returns the top left corner of each feature's bounding box.
+
+        A numpy array of x,y position values.
+
+        >>> img = Image("./sampleimages/EdgeTest1.png")
+        >>> blobs = img.find_blobs()
+        >>> tl = img.top_left_corners()
+        >>> print(tl[0])
+        """
+        return npy.array([f.top_left_corner() for f in self])
+
+    def bottom_left_corners(self):
+        """
+
+        This method returns the bottom left corner of each feature's bounding box.
+
+        A numpy array of x,y position values.
+
+        >>> img = Image("./sampleimages/EdgeTest1.png")
+        >>> blobs = img.find_blobs()
+        >>> bl = img.bottom_left_corners()
+        >>> print(bl[0])
+        """
+        return npy.array([f.bottom_left_corner() for f in self])
+
+    def top_left_corners(self):
+        """
+        This method returns the top left corner of each feature's bounding box.
+
+        A numpy array of x,y position values.
+
+        >>> img = Image("./sampleimages/EdgeTest1.png")
+        >>> blobs = img.find_blobs()
+        >>> tl = img.bottom_left_corners()
+        >>> print(tl[0])
+        """
+        return npy.array([f.topLeftCorner() for f in self])
+
+    def top_right_corners(self):
+        """
+
+        This method returns the top right corner of each feature's bounding box.
+
+        A numpy array of x,y position values.
+
+        >>> img = Image("./sampleimages/EdgeTest1.png")
+        >>> blobs = img.find_blobs()
+        >>> tr = img.top_right_corners()
+        >>> print(tr[0])
+        """
+        return npy.array([f.topRightCorner() for f in self])
+
+    def bottom_right_corners(self):
+        """
+
+        This method returns the bottom right corner of each feature's bounding box.
+
+        A numpy array of x,y position values.
+
+        >>> img = Image("./sampleimages/EdgeTest1.png")
+        >>> blobs = img.find_blobs()
+        >>> br = img.bottom_right_corners()
+        >>> print(br[0])
+        """
+        return npy.array([f.bottomRightCorner() for f in self])
+
+    def aspect_ratio(self):
+        """
+
+        Return the aspect ratio of all the features in the feature set, For our purposes
+        aspect ration is max(width,height)/min(width,height).
+
+        A numpy array of the aspect ratio of the features in the featureset.
+
+        >>> img = Image("OWS.jpg")
+        >>> blobs = img.find_blobs(128)
+        >>> print blobs.aspect_ratio()
+        """
+        return npy.array([f.aspect_ratio() for f in self])
+
+    def cluster(self, method="kmeans", properties=None, k=3):
+        """
+        This function clusters the blobs in the featureSet based on the properties.
+        Properties can be "color", "shape" or "position" of blobs.
+        Clustering is done using K-Means or Hierarchical clustering(Ward) algorithm.
+        
+
+        * *properties* - It should be a list with any combination of "color", "shape", "position". properties = ["color","position"]. properties = ["position","shape"]. properties = ["shape"]
+        * *method* - if method is "kmeans", it will cluster using K-Means algorithm, if the method is "hierarchical", no need to spicify the number of clusters
+        * *k* - The number of clusters(kmeans).
+
+        
+        A list of featureset, each being a cluster itself.
+        
+          >>> img = Image("lenna")
+          >>> blobs = img.find_blobs()
+          >>> clusters = blobs.cluster(method="kmeans",properties=["color"],k=5)
+          >>> for i in clusters:
+          >>>     i.draw(color=Color.random(),width=5)
+          >>> img.show()
+
+        """
+        try:
+            from sklearn.cluster import KMeans, Ward
+            from sklearn import __version__
+        except:
+            logger.warning("install scikits-learning package")
+            return
+        X = []  # List of feature vector of each blob
+        if not properties:
+            properties = ['color', 'shape', 'position']
+        if k > len(self):
+            logger.warning(
+                "Number of clusters cannot be greater then the number of blobs in the featureset")
+            return
+        for i in self:
+            featureVector = []
+            if 'color' in properties:
+                featureVector.extend(i.mAvgColor)
+            if 'shape' in properties:
+                featureVector.extend(i.mHu)
+            if 'position' in properties:
+                featureVector.extend(i.extents())
+            if not featureVector:
+                logger.warning("properties parameter is not specified properly")
+                return
+            X.append(featureVector)
+
+        if method == "kmeans":
+
+            # Ignore minor version numbers.
+            sklearn_version = re.search(r'\d+\.\d+', __version__).group()
+
+            if (float(sklearn_version) > 0.11):
+                k_means = KMeans(init='random', n_clusters=k, n_init=10).fit(X)
+            else:
+                k_means = KMeans(init='random', k=k, n_init=10).fit(X)
+            KClusters = [FeatureSet([]) for i in range(k)]
+            for i in range(len(self)):
+                KClusters[k_means.labels_[i]].append(self[i])
+            return KClusters
+
+        if method == "hierarchical":
+            ward = Ward(n_clusters=int(sqrt(len(self)))).fit(
+                X)  # n_clusters = sqrt(n)
+            WClusters = [FeatureSet([]) for i in range(int(sqrt(len(self))))]
+            for i in range(len(self)):
+                WClusters[ward.labels_[i]].append(self[i])
+            return WClusters
+
+    @property
+    def image(self):
+        if not len(self):
+            return None
+        return self[0].image
+
+    @image.setter
+    def image(self, i):
+        for f in self:
+            f.image = i
