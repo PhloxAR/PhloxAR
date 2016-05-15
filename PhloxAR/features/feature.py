@@ -448,7 +448,9 @@ class Feature(object):
         bounds = self._points
         if isinstance(other, Feature):  # A feature
             ret_val = True
-            for p in other._points:  # this isn't completely correct - only tests if points lie in poly, not edges.
+            # this isn't completely correct - only tests if points lie
+            # in poly, not edges.
+            for p in other._points:
                 p2 = (int(p[0]), int(p[1]))
                 ret_val = self._point_inside_polygon(p2, bounds)
                 if not ret_val:
@@ -649,6 +651,10 @@ class Feature(object):
     @property
     def image(self):
         return self._image
+
+    @property
+    def points(self):
+        return self._points
 
 
 class FeatureSet(list):
