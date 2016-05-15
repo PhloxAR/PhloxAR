@@ -630,12 +630,6 @@ class Feature(object):
         :return: a (x, y, r) tuple where (x, y) is the center of the circle
                   and r is the radius
         """
-        try:
-            import cv2
-        except:
-            logger.warning("Unable to import cv2")
-            return None
-
         contour = self.contour()
 
         points = []
@@ -651,6 +645,10 @@ class Feature(object):
 
     def contour(self):
         return []
+
+    @property
+    def image(self):
+        return self._image
 
 
 class FeatureSet(list):
