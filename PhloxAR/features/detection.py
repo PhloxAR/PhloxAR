@@ -1228,55 +1228,254 @@ class KeyPoint(Feature):
 
 
 class Motion(Feature):
-    def __init__(self, img, x, y, dx, dy, wndw):
-        pass
+    """
+    The motion feature is used to encapsulate optical flow vectors. The feature
+    holds the length and direction of the vector.
+    """
+    dx = 0.00
+    dy = 0.00
+    norm_dx = 0.00
+    norm_dy = 0.00
+    window = 7
+
+    def __init__(self, img, at_x, at_y, dx, dy, wndw):
+        """
+        img  - the source image.
+        at_x - the sample x pixel position on the image.
+        at_y - the sample y pixel position on the image.
+        dx   - the x component of the optical flow vector.
+        dy   - the y component of the optical flow vector.
+        wndw - the size of the sample window (we assume it is square).
+        """
+        self.dx = dx  # the direction of the vector
+        self.dy = dy
+        self.window = wndw  # the size of the sample window
+        sz = wndw / 2
+        # so we center at the flow vector
+        points = [(at_x + sz, at_y + sz), (at_x - sz, at_y + sz),
+                  (at_x + sz, at_y + sz), (at_x + sz, at_y - sz)]
+        super(Motion, self).__init__(img, at_x, at_y, points)
 
     def draw(self, color=Color.GREEN, width=1, normalize=True):
-        pass
+        """
+        **SUMMARY**
+        Draw the optical flow vector going from the sample point along the length of the motion vector.
+        **PARAMETERS**
+        * *color* - An RGB color triplet.
+        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        contour using the specified width.
+        * *normalize* - normalize the vector size to the size of the block (i.e. the biggest optical flow
+        vector is scaled to the size of the block, all other vectors are scaled relative to
+        the longest vector.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        """
+        new_x = 0
+        new_y = 0
+        if normalize:
+            win = self.window / 2
+            w = math.sqrt((win * win) * 2)
+            new_x = self.norm_dx * w + self.x
+            new_y = self.norm_dy * w + self.y
+        else:
+            new_x = self._x + self.dx
+            new_y = self._y + self.dy
+
+        self._image.dl().line((self.x, self.y), (new_x, new_y), color, width)
 
     def normalize2(self, max_mag):
-        pass
+        """
+        **SUMMARY**
+        This helper method normalizes the vector give an input magnitude.
+        This is helpful for keeping the flow vector inside the sample window.
+        """
+        if max_mag == 0:
+            self.norm_dx = 0
+            self.norm_dy = 0
+            return None
 
+        mag = self.magnitude
+        new_mag = mag / max_mag
+        unit = self.unit_vec
+        self.norm_dx = unit[0] * new_mag
+        self.norm_dy = unit[1] * new_mag
+
+    @property
     def magnitude(self):
-        pass
+        """
+        Returns the magnitude of the optical flow vector.
+        """
+        return npy.sqrt((self.dx * self.dx) + (self.dy * self.dy))
 
+    @property
     def unit_vec(self):
-        pass
+        """
+        Returns the unit vector direction of the flow vector as an (x,y) tuple.
+        """
+        mag = self.magnitude
+        if mag != 0.00:
+            return float(self.dx) / mag, float(self.dy) / mag
+        else:
+            return 0.00, 0.00
 
+    @property
     def vector(self):
-        pass
+        """
+        Returns the raw direction vector as an (x,y) tuple.
+        """
+        return self.dx, self.dy
 
+    @property
     def window_size(self):
-        pass
+        """
+        Return the window size that we sampled over.
+        """
+        return self.window
 
     def mean_color(self):
-        pass
+        """
+        Return the color tuple from x,y
+        **SUMMARY**
+        Return a numpy array of the average color of the area covered by each Feature.
+        **RETURNS**
+        Returns an array of RGB triplets the correspond to the mean color of the feature.
+        **EXAMPLE**
+        >>> img = Image("lenna")
+        >>> kp = img.findKeypoints()
+        >>> c = kp.meanColor()
+        """
+        x = int(self.x - (self.window / 2))
+        y = int(self.y - (self.window / 2))
+        return self._image.crop(x, y, int(self.window),
+                                int(self.window)).mean_color()
 
     def crop(self):
-        pass
+        """
+        This function returns the image in the sample window around the flow vector.
+        Returns Image
+        """
+        x = int(self._x - (self.window / 2))
+        y = int(self._y - (self.window / 2))
+
+        return self._image.crop(x, y, int(self.window), int(self.window))
 
 
 class KeyPointMatch(Feature):
-    def __init__(self):
-        pass
+    """
+    This class encapsulates a keypoint match between images of an object.
+    It is used to record a template of one image as it appears in another image
+    """
+    _min_rect = []
+    _avg_color = None
+    _homography = []
+    _template = None
+
+    def __init__(self, img, template, min_rect, homography):
+        self._template = template
+        self._min_rect = min_rect
+        self._homography = homography
+        xmax = 0
+        ymax = 0
+        xmin = img.width
+        ymin = img.height
+        for p in min_rect:
+            if p[0] > xmax:
+                xmax = p[0]
+            if p[0] < xmin:
+                xmin = p[0]
+            if p[1] > ymax:
+                ymax = p[1]
+            if p[1] < ymin:
+                ymin = p[1]
+
+        width = xmax - xmin
+        height = ymax - ymin
+        at_x = xmin + width / 2
+        at_y = ymin + height / 2
+        points = [(xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin)]
+        super(KeyPointMatch, self).__init__(img, at_x, at_y, points)
 
     def draw(self, color=Color.GREEN, width=1):
-        pass
+        """
+        The default drawing operation is to draw the min bounding
+        rectangle in an image.
+        **SUMMARY**
+        Draw a small circle around the corner.  Color tuple is single parameter, default is Red.
+        **PARAMETERS**
+        * *color* - An RGB color triplet.
+        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        contour using the specified width.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        """
+        self._image.dl().line(self._min_rect[0], self._min_rect[1], color, width)
+        self._image.dl().line(self._min_rect[1], self._min_rect[2], color, width)
+        self._image.dl().line(self._min_rect[2], self._min_rect[3], color, width)
+        self._image.dl().line(self._min_rect[3], self._min_rect[0], color, width)
 
     def draw_rect(self, color=Color.GREEN, width=1):
-        pass
+        """
+            This method draws the axes alligned square box of the template
+            match. This box holds the minimum bounding rectangle that describes
+            the object. If the minimum bounding rectangle is axes aligned
+            then the two bounding rectangles will match.
+            """
+        self._image.dl().line(self._points[0], self._points[1], color, width)
+        self._image.dl().line(self._points[1], self._points[2], color, width)
+        self._image.dl().line(self._points[2], self._points[3], color, width)
+        self._image.dl().line(self._points[3], self._points[0], color, width)
 
     def crop(self):
-        pass
+        """
+        Returns a cropped image of the feature match. This cropped version is the
+        axes aligned box masked to just include the image data of the minimum bounding
+        rectangle.
+        """
+        tl = self.top_left_corner()
+        # crop the minbouding rect
+        raw = self._image.crop(tl[0], tl[1], self.width, self.height)
+        return raw
 
     def mean_color(self):
-        pass
+        """
+        return the average color within the circle
+        **SUMMARY**
+        Return a numpy array of the average color of the area covered by each Feature.
+        **RETURNS**
+        Returns an array of RGB triplets the correspond to the mean color of the feature.
+        **EXAMPLE**
+        >>> img = Image("lena")
+        >>> kp = img.find_keypoints()
+        >>> c = kp.mean_color()
+        """
+        if self._avg_color is None:
+            tl = self.top_left_corner()
+            # crop the minbouding rect
+            raw = self._image.crop(tl[0], tl[0], self.width, self.height)
+            mask = Image((self.width, self.height))
+            mask.dl().polygon(self._min_rect, color=Color.WHITE, filled=TRUE)
+            mask = mask.apply_layers()
+            ret = cv.Avg(raw.getBitmap(), mask._gray_bitmap_func())
+            self._avg_color = ret
+        else:
+            ret = self._avg_color
+        return ret
 
-    def get_min_rect(self):
-        pass
+    @property
+    def min_rect(self):
+        """
+        Returns the minimum bounding rectangle of the feature as a list
+        of (x,y) tuples.
+        """
+        return self._min_rect
 
-    def get_homography(self):
-        pass
+    @property
+    def homography(self):
+        """
+        Returns the _homography matrix used to calulate the minimum bounding
+        rectangle.
+        """
+        return self._homography
 
 
 class ShapeContextDescriptor(Feature):
@@ -1311,74 +1510,810 @@ class ShapeContextDescriptor(Feature):
 
 
 class ROI(Feature):
-    def __init__(self):
-        pass
+    """
+    This class creates a region of interest that inherit from one
+    or more features or no features at all.
+    """
+    w = 0
+    h = 0
+    xtl = 0  # top left x
+    ytl = 0  # top left y
+    # we are going to assume x,y,w,h is our canonical form
+    _sub_features = []
+    _mean_color = None
+
+    def __init__(self, x, y=None, w=None, h=None, img=None):
+        """
+        **SUMMARY**
+        This function can handle just about whatever you throw at it
+        and makes a it into a feature. Valid input items are tuples and lists
+        of x,y points, features, featuresets, two x,y points, and a
+        set of x,y,width,height values.
+        **PARAMETERS**
+        * *x* - this can be just about anything, a list or tuple of x points,
+        a corner of the image, a list of (x,y) points, a Feature, a FeatureSet
+        * *y* - this is usually a second point or set of y values.
+        * *w* - a width
+        * *h* - a height.
+
+        **RETURNS**
+        Nothing.
+        **EXAMPLE**
+        >>> img = Image('lenna')
+        >>> x,y = npy.where(img.threshold(230).getGrayNumpy() > 128 )
+        >>> roi = ROI(zip(x,y),img)
+        >>> roi = ROI(x,y,img)
+        """
+        # After forgetting to set img=Image I put this catch
+        # in to save some debugging headache.
+        if isinstance(y, Image):
+            self._image = y
+            y = None
+        elif isinstance(w, Image):
+            self._image = w
+            w = None
+        elif isinstance(h, Image):
+            self._image = h
+            h = None
+        else:
+            self._image = img
+
+        if img is None and isinstance(x, (Feature, FeatureSet)):
+            if isinstance(x, Feature):
+                self._image = x.image
+            if isinstance(x, FeatureSet) and len(x) > 0:
+                self._image = x[0].image
+
+        if isinstance(x, Feature):
+            self._sub_features = FeatureSet([x])
+        elif isinstance(x, (list, tuple) and len(x) > 0 and
+              isinstance(x, Feature)):
+            self._sub_features = FeatureSet(x)
+
+        result = self._standardize(x, y, w, h)
+        if result is None:
+            logger.warning("Could not create an ROI from your data.")
+            return
+        self._rebase(result)
+        super(ROI, self).__init__(img, 0, 0, None)
 
     def resize(self, w, h=None, percentage=True):
-        pass
+        """
+        **SUMMARY**
+        Contract/Expand the roi. By default use a percentage, otherwise use pixels.
+        This is all done relative to the center of the roi
+
+        **PARAMETERS**
+        * *w* - the percent to grow shrink the region is the only parameter, otherwise
+                it is the new ROI width
+        * *h* - The new roi height in terms of pixels or a percentage.
+        * *percentage* - If true use percentages (e.g. 2 doubles the size), otherwise
+                         use pixel values.
+        * *h* - a height.
+
+        **RETURNS**
+        Nothing.
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> roi.resize(2)
+        >>> roi.show()
+        """
+        if h is None and isinstance(w, (tuple, list)):
+            h = w[1]
+            w = w[0]
+
+        if percentage:
+            if h is None:
+                h = w
+            nw = self.w * w
+            nh = self.h * h
+            nx = self.xtl + ((self.w - nw) / 2.0)
+            ny = self.ytl + ((self.h - nh) / 2.0)
+            self._rebase([nx, ny, nw, nh])
+        else:
+            nw = self.w + w
+            nh = self.h + h
+            nx = self.xtl + ((self.w - nw) / 2.0)
+            ny = self.ytl + ((self.h - nh) / 2.0)
+            self._rebase([nx, ny, nw, nh])
 
     def overlaps(self, other):
-        pass
+        for p in other.points:
+            if (self.max_x() >= p[0] >= self.min_x() and
+                    self.max_y() >= p[1] >= self.min_y()):
+                return True
+        return False
 
     def translate(self, x=0, y=0):
-        pass
+        """
+        Move the roi.
+
+        **PARAMETERS**
+        * *x* - Move the ROI horizontally.
+        * *y* - Move the ROI vertically
+
+        **RETURNS**
+        Nothing.
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> roi.translate(30,30)
+        >>> roi.show()
+        """
+        if x == 0 and y == 0:
+            return
+
+        if y == 0 and isinstance(x, (tuple, list)):
+            y = x[1]
+            x = x[0]
+
+        if isinstance(x, (float, int)) and isinstance(y, (float, int)):
+            self._rebase([self.xtl + x, self.ytl + y, self.w, self.h])
 
     def to_xywh(self):
-        pass
+        """
+        Get the ROI as a list of the top left corner's x and y position
+        and the roi's width and height in pixels.
+        **RETURNS**
+        A list of the form [x,y,w,h]
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> roi.translate(30,30)
+        >>> print(roi.to_xywh())
+        """
+        return [self.xtl, self.ytl, self.w, self.h]
 
     def to_tl_br(self):
-        pass
+        """
+        Get the ROI as a list of tuples of the ROI's top left
+        corner and bottom right corner.
+        **RETURNS**
+        A list of the form [(x,y),(x,y)]
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> roi.translate(30,30)
+        >>> print(roi.to_tl_br())
+        """
+        return [(self.xtl, self.ytl), (self.xtl + self.w, self.ytl + self.h)]
 
     def to_points(self):
-        pass
+        """
+        Get the ROI as a list of four points that make up the bounding rectangle.
+
+        **RETURNS**
+        A list of the form [(x,y),(x,y),(x,y),(x,y)]
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> print(roi.to_points())
+        """
+        tl = (self.xtl, self.ytl)
+        tr = (self.xtl + self.w, self.ytl)
+        br = (self.xtl + self.w, self.ytl + self.h)
+        bl = (self.xtl, self.ytl + self.h)
+        return [tl, tr, br, bl]
 
     def to_unit_xywh(self):
-        pass
+        """
+        Get the ROI as a list, the values are top left x, to left y,
+        width and height. These values are scaled to unit values with
+        respect to the source image..
+
+
+        **RETURNS**
+        A list of the form [x,y,w,h]
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> print(roi.to_unit_xywh())
+        """
+        if self._image is None:
+            return None
+
+        srcw = float(self._image.width)
+        srch = float(self._image.height)
+        x, y, w, h = self.to_xywh()
+        nx = 0
+        ny = 0
+
+        if x != 0:
+            nx = x / srcw
+
+        if y != 0:
+            ny = y / srch
+
+        return [nx, ny, w / srcw, h / srch]
 
     def to_unit_tl_br(self):
-        pass
+        """
+        Get the ROI as a list of tuples of the ROI's top left
+        corner and bottom right corner. These coordinates are in unit
+        length values with respect to the source image.
+        **RETURNS**
+        A list of the form [(x,y),(x,y)]
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> roi.translate(30,30)
+        >>> print(roi.to_unit_tl_br())
+        """
+
+        if self._image is None:
+            return None
+        srcw = float(self._image.width)
+        srch = float(self._image.height)
+        x, y, w, h = self.to_xywh()
+        nx = 0
+        ny = 0
+        nw = w / srcw
+        nh = h / srch
+        if x != 0:
+            nx = x / srcw
+
+        if y != 0:
+            ny = y / srch
+
+        return [(nx, ny), (nx + nw, ny + nh)]
 
     def to_unit_points(self):
-        pass
+        """
+        Get the ROI as a list of four points that make up the bounding rectangle.
+        Each point is represented in unit coordinates with respect to the
+        souce image.
+
+        **RETURNS**
+        A list of the form [(x,y),(x,y),(x,y),(x,y)]
+        **EXAMPLE**
+        >>> roi = ROI(10,10,100,100,img)
+        >>> print(roi.to_unit_points())
+        """
+        if self._image is None:
+            return None
+        srcw = float(self._image.width)
+        srch = float(self._image.height)
+
+        pts = self.to_points()
+        ret = []
+        for p in pts:
+            x, y = p
+            if x != 0:
+                x /= srcw
+
+            if y != 0:
+                y /= srch
+            ret.append((x, y))
+        return ret
 
     def coord_transform_x(self, x, intype='ROI', output='SRC'):
-        pass
+        """
+        Transform a single or a set of x values from one reference frame to another.
+        Options are:
+
+        SRC - the coordinates of the source image.
+        ROI - the coordinates of the ROI
+        ROI_UNIT - unit coordinates in the frame of reference of the ROI
+        SRC_UNIT - unit coordinates in the frame of reference of source image.
+        **PARAMETERS**
+        * *x* - A list of x values or a single x value.
+        * *intype* - A string indicating the input format of the data.
+        * *output* - A string indicating the output format of the data.
+        **RETURNS**
+        A list of the transformed values.
+        **EXAMPLE**
+        >>> img = Image('lenna')
+        >>> blobs = img.findBlobs()
+        >>> roi = ROI(blobs[0])
+        >>> x = roi.crop()..... /find some x values in the crop region
+        >>> xt = roi.coord_transform_x(x)
+        >>> #xt are no in the space of the original image.
+        """
+        if self._image is None:
+            logger.warning("No image to perform that calculation")
+            return None
+
+        if isinstance(x, (float, int)):
+            x = [x]
+
+        intype = intype.upper()
+        output = output.upper()
+
+        if intype == output:
+            return x
+
+        return self._transform(x, self._image.width, self.w, self.xtl, intype,
+                               output)
 
     def coord_transform_y(self, y, intype='ROI', output='SRC'):
-        pass
+        """
+        Transform a single or a set of y values from one reference frame to another.
+        Options are:
+
+        SRC - the coordinates of the source image.
+        ROI - the coordinates of the ROI
+        ROI_UNIT - unit coordinates in the frame of reference of the ROI
+        SRC_UNIT - unit coordinates in the frame of reference of source image.
+        **PARAMETERS**
+        * *y* - A list of y values or a single y value.
+        * *intype* - A string indicating the input format of the data.
+        * *output* - A string indicating the output format of the data.
+        **RETURNS**
+        A list of the transformed values.
+        **EXAMPLE**
+        >>> img = Image('lenna')
+        >>> blobs = img.findBlobs()
+        >>> roi = ROI(blobs[0])
+        >>> y = roi.crop()..... /find some y values in the crop region
+        >>> yt = roi.coord_transform_y(y)
+        >>> #yt are no in the space of the original image.
+        """
+
+        if self._image is None:
+            logger.warning("No image to perform that calculation")
+            return None
+
+        if isinstance(y, (float, int)):
+            y = [y]
+
+        intype = intype.upper()
+        output = output.upper()
+
+        if intype == output:
+            return y
+        return self._transform(y, self._image.height, self.h, self.ytl, intype,
+                               output)
 
     def coord_transform_pts(self, pts, intype='ROI', output='SRC'):
-        pass
+        """
+        Transform a set of (x,y) values from one reference frame to another.
+        Options are:
+
+        SRC - the coordinates of the source image.
+        ROI - the coordinates of the ROI
+        ROI_UNIT - unit coordinates in the frame of reference of the ROI
+        SRC_UNIT - unit coordinates in the frame of reference of source image.
+        **PARAMETERS**
+        * *pts* - A list of (x,y) values or a single (x,y) value.
+        * *intype* - A string indicating the input format of the data.
+        * *output* - A string indicating the output format of the data.
+        **RETURNS**
+        A list of the transformed values.
+        **EXAMPLE**
+        >>> img = Image('lenna')
+        >>> blobs = img.findBlobs()
+        >>> roi = ROI(blobs[0])
+        >>> pts = roi.crop()..... /find some x,y values in the crop region
+        >>> pts = roi.coord_transform_pts(pts)
+        >>> #yt are no in the space of the original image.
+        """
+        if self._image is None:
+            logger.warning("No image to perform that calculation")
+            return None
+        if isinstance(pts, tuple) and len(pts) == 2:
+            pts = [pts]
+        intype = intype.upper()
+        output = output.upper()
+        x = [pt[0] for pt in pts]
+        y = [pt[1] for pt in pts]
+
+        if intype == output:
+            return pts
+
+        x = self._transform(x, self._image.width, self.w, self.xtl, intype,
+                            output)
+        y = self._transform(y, self._image.height, self.h, self.ytl, intype,
+                            output)
+        return zip(x, y)
 
     def _transform(self, x, img_size, roi_size, offset, intype, output):
-        pass
+        xtemp = []
+        # we are going to go to src unit coordinates
+        # and then we'll go back.
+        if intype == "SRC":
+            xtemp = [xt / float(img_size) for xt in x]
+        elif intype == "ROI":
+            xtemp = [(xt + offset) / float(img_size) for xt in x]
+        elif intype == "ROI_UNIT":
+            xtemp = [((xt * roi_size) + offset) / float(img_size) for xt in x]
+        elif intype == "SRC_UNIT":
+            xtemp = x
+        else:
+            logger.warning("Bad Parameter to CoordTransformX")
+            return None
+
+        ret = []
+        if output == "SRC":
+            ret = [int(xt * img_size) for xt in xtemp]
+        elif output == "ROI":
+            ret = [int((xt * img_size) - offset) for xt in xtemp]
+        elif output == "ROI_UNIT":
+            ret = [int(((xt * img_size) - offset) / float(roi_size)) for xt in
+                      xtemp]
+        elif output == "SRC_UNIT":
+            ret = xtemp
+        else:
+            logger.warning("Bad Parameter to CoordTransformX")
+            return None
+
+        return ret
 
     def split_x(self, x, unit_vals=False, src_vals=False):
-        pass
+        """
+        **SUMMARY**
+        Split the ROI at an x value.
+        x can be a list of sequentianl tuples of x split points  e.g [0.3,0.6]
+        where we assume the top and bottom are also on the list.
+        Use units to split as a percentage (e.g. 30% down).
+        The srcVals means use coordinates of the original image.
+        **PARAMETERS**
+        * *x*-The split point. Can be a single point or a list of points. the type is determined by the flags.
+        * *unitVals* - Use unit vals for the split point. E.g. 0.5 means split at 50% of the ROI.
+        * *srcVals* - Use x values relative to the source image rather than relative to the ROI.
 
-    def split_y(self, y, init_vals=False, src_vals=False):
-        pass
+
+        **RETURNS**
+
+        Returns a feature set of ROIs split from the source ROI.
+        **EXAMPLE**
+        >>> roi = ROI(0,0,100,100,img)
+        >>> splits = roi.split_x(50) # create two ROIs
+
+        """
+        retVal = FeatureSet()
+        if unit_vals and src_vals:
+            logger.warning("Not sure how you would like to split the feature")
+            return None
+
+        if not isinstance(x, (list, tuple)):
+            x = [x]
+
+        if unit_vals:
+            x = self.coord_transform_x(x, intype="ROI_UNIT", output="SRC")
+        elif not src_vals:
+            x = self.coord_transform_x(x, intype="ROI", output="SRC")
+
+        for xt in x:
+            if xt < self.xtl or xt > self.xtl + self.w:
+                logger.warning("Invalid split point.")
+                return None
+
+        x.insert(0, self.xtl)
+        x.append(self.xtl + self.w)
+        for i in range(0, len(x) - 1):
+            xstart = x[i]
+            xstop = x[i + 1]
+            w = xstop - xstart
+            retVal.append(ROI(xstart, self.ytl, w, self.h, self._image))
+        return retVal
+
+    def split_y(self, y, unit_vals=False, src_vals=False):
+        """
+        Split the ROI at an x value.
+        y can be a list of sequentianl tuples of y split points  e.g [0.3,0.6]
+        where we assume the top and bottom are also on the list.
+        Use units to split as a percentage (e.g. 30% down).
+        The srcVals means use coordinates of the original image.
+        **PARAMETERS**
+        * *y*-The split point. Can be a single point or a list of points. the type is determined by the flags.
+        * *unitVals* - Use unit vals for the split point. E.g. 0.5 means split at 50% of the ROI.
+        * *srcVals* - Use x values relative to the source image rather than relative to the ROI.
+
+        **RETURNS**
+
+        Returns a feature set of ROIs split from the source ROI.
+        **EXAMPLE**
+        >>> roi = ROI(0,0,100,100,img)
+        >>> splits = roi.split_y(50) # create two ROIs
+
+        """
+        ret = FeatureSet()
+        if unit_vals and src_vals:
+            logger.warning("Not sure how you would like to split the feature")
+            return None
+
+        if not isinstance(y, (list, tuple)):
+            y = [y]
+
+        if unit_vals:
+            y = self.coord_transform_y(y, intype="ROI_UNIT", output="SRC")
+        elif not src_vals:
+            y = self.coord_transform_y(y, intype="ROI", output="SRC")
+
+        for yt in y:
+            if yt < self.ytl or yt > self.ytl + self.h:
+                logger.warning("Invalid split point.")
+                return None
+
+        y.insert(0, self.ytl)
+        y.append(self.ytl + self.h)
+
+        for i in range(0, len(y) - 1):
+            ystart = y[i]
+            ystop = y[i + 1]
+            h = ystop - ystart
+            ret.append(ROI(self.xtl, ystart, self.w, h, self._image))
+        return ret
 
     def merge(self, regions):
-        pass
+        """
+        **SUMMARY**
+
+        Combine another region, or regions with this ROI. Everything must be
+        in the source image coordinates. Regions can be a ROIs, [ROI], features,
+        FeatureSets, or anything that can be cajoled into a region.
+        **PARAMETERS**
+        * *regions* - A region or list of regions. Regions are just about anything that has position.
+
+        **RETURNS**
+        Nothing, but modifies this region.
+        **EXAMPLE**
+        >>>  blobs = img.find_blobs()
+        >>>  roi = ROI(blobs[0])
+        >>>  print(roi.to_xywh())
+        >>>  roi.merge(blobs[2])
+        >>>  print(roi.to_xywh())
+
+        """
+        result = self._standardize(regions)
+
+        if result is not None:
+            xo, yo, wo, ho = result
+            x = npy.min([xo, self.xtl])
+            y = npy.min([yo, self.ytl])
+            w = npy.max([self.xtl + self.w, xo + wo]) - x
+            h = npy.max([self.ytl + self.h, yo + ho]) - y
+
+            if self._image is not None:
+                x = npy.clip(x, 0, self._image.width)
+                y = npy.clip(y, 0, self._image.height)
+                w = npy.clip(w, 0, self._image.width - x)
+                h = npy.clip(h, 0, self._image.height - y)
+
+            self._rebase([x, y, w, h])
+
+            if isinstance(regions, ROI):
+                self._sub_features += regions
+            elif isinstance(regions, Feature):
+                self.subFeatures.append(regions)
+            elif isinstance(regions, (list, tuple)):
+                if isinstance(regions[0], ROI):
+                    for r in regions:
+                        self._sub_features += r._sub_features
+                elif isinstance(regions[0], Feature):
+                    for r in regions:
+                        self._sub_features.append(r)
 
     def rebase(self, x, y=None, w=None, h=None):
-        pass
+        """
+        Completely alter roi using whatever source coordinates you wish.
+        """
+        if isinstance(x, Feature):
+            self._sub_features.append(x)
+        elif (isinstance(x, (list, tuple)) and
+                len(x) > 0 and isinstance(x, Feature)):
+            self._sub_features += list(x)
+
+        result = self._standardize(x, y, w, h)
+
+        if result is None:
+            logger.warning("Could not create an ROI from your data.")
+            return
+
+        self._rebase(result)
 
     def draw(self, color=Color.GREEN, width=3):
-        pass
+        """
+        **SUMMARY**
+        This method will draw the feature on the source image.
+        **PARAMETERS**
+        * *color* - The color as an RGB tuple to render the image.
+        **RETURNS**
+        Nothing.
+        **EXAMPLE**
+        >>> img = Image("RedDog2.jpg")
+        >>> blobs = img.find_blobs()
+        >>> blobs[-1].draw()
+        >>> img.show()
+        """
+        x, y, w, h = self.to_xywh()
+        self._image.drawRectangle(x,y,w,h,width=width,color=color)
 
     def show(self, color=Color.GREEN, width=2):
-        pass
+        """
+        **SUMMARY**
+        This function will automatically draw the features on the image and show it.
+        **RETURNS**
+        Nothing.
+        **EXAMPLE**
+        >>> img = Image("logo")
+        >>> feat = img.find_blobs()
+        >>> feat[-1].show()
+        """
+        self.draw(color, width)
+        self._image.show()
 
     def mean_color(self):
-        pass
+        """
+        **SUMMARY**
+        Return the average color within the feature as a tuple.
+        **RETURNS**
+        An RGB color tuple.
+        **EXAMPLE**
+        >>> img = Image("OWS.jpg")
+        >>> blobs = img.find_blobs(128)
+        >>> for b in blobs:
+        >>>    if b.mean_color() == Color.WHITE:
+        >>>       print("Found a white thing")
+        """
+        x, y, w, h = self.to_xywh()
+        return self._image.crop(x, y, w, h).mean_color()
 
     def _rebase(self, roi):
-        pass
+        x, y, w, h = roi
+        self._max_x = None
+        self._max_y = None
+        self._min_x = None
+        self._min_y = None
+        self._width = None
+        self._height = None
+        self._extents = None
+        self._bbox = None
+        self.xtl = x
+        self.ytl = y
+        self.w = w
+        self.h = h
+        self._points = [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
+        # WE MAY WANT TO DO A SANITY CHECK HERE
+        self._update_extents()
 
     def _standardize(self, x, y=None, w=None, h=None):
-        pass
+        if isinstance(x, npy.ndarray):
+            x = x.tolist()
+        if isinstance(y, npy.ndarray):
+            y = y.tolist()
+
+        # make the common case fast
+        if (isinstance(x, (int, float)) and isinstance(y, (int, float)) and
+                isinstance(w, (int, float)) and isinstance(h, (int, float))):
+            if self._image is not None:
+                x = npy.clip(x, 0, self._image.width)
+                y = npy.clip(y, 0, self._image.height)
+                w = npy.clip(w, 0, self._image.width - x)
+                h = npy.clip(h, 0, self._image.height - y)
+
+                return [x, y, w, h]
+        elif isinstance(x, ROI):
+            x, y, w, h = x.to_xywh()
+        # If it's a feature extract what we need
+        elif isinstance(x, FeatureSet) and len(x) > 0:
+            # double check that everything in the list is a feature
+            features = [feat for feat in x if isinstance(feat, Feature)]
+            xmax = npy.max([feat.maxX() for feat in features])
+            xmin = npy.min([feat.minX() for feat in features])
+            ymax = npy.max([feat.maxY() for feat in features])
+            ymin = npy.min([feat.minY() for feat in features])
+            x = xmin
+            y = ymin
+            w = xmax - xmin
+            h = ymax - ymin
+
+        elif isinstance(x, Feature):
+            feature = x
+            x = feature.points[0][0]
+            y = feature.points[0][1]
+            w = feature.width()
+            h = feature.height()
+
+        # [x,y,w,h] (x,y,w,h)
+        elif (isinstance(x, (tuple, list)) and len(x) == 4 and
+                isinstance(x[0], (int, long, float)) and
+                y is None and w is None and h is None):
+            x, y, w, h = x
+        # x of the form [(x,y),(x1,y1),(x2,y2),(x3,y3)]
+        # x of the form [[x,y],[x1,y1],[x2,y2],[x3,y3]]
+        # x of the form ([x,y],[x1,y1],[x2,y2],[x3,y3])
+        # x of the form ((x,y),(x1,y1),(x2,y2),(x3,y3))
+        elif (isinstance(x, (list, tuple)) and
+                isinstance(x[0], (list, tuple)) and
+                len(x) == 4 and len(x[0]) == 2 and
+                y is None is w is None is h is None):
+            if (len(x[0]) == 2 and len(x[1]) == 2 and
+                    len(x[2]) == 2 and len(x[3]) == 2):
+                xmax = npy.max([x[0][0], x[1][0], x[2][0], x[3][0]])
+                ymax = npy.max([x[0][1], x[1][1], x[2][1], x[3][1]])
+                xmin = npy.min([x[0][0], x[1][0], x[2][0], x[3][0]])
+                ymin = npy.min([x[0][1], x[1][1], x[2][1], x[3][1]])
+                x = xmin
+                y = ymin
+                w = xmax - xmin
+                h = ymax - ymin
+            else:
+                logger.warning(
+                    "x should be in the form  ((x,y),(x1,y1),(x2,y2),(x3,y3))")
+                return None
+
+        # x,y of the form [x1,x2,x3,x4,x5....] and y similar
+        elif (isinstance(x, (tuple, list)) and
+                isinstance(y, (tuple, list)) and
+                len(x) > 4 and len(y) > 4):
+            if (isinstance(x[0], (int, long, float)) and
+                isinstance(y[0], (int, long, float))):
+                xmax = npy.max(x)
+                ymax = npy.max(y)
+                xmin = npy.min(x)
+                ymin = npy.min(y)
+                x = xmin
+                y = ymin
+                w = xmax - xmin
+                h = ymax - ymin
+            else:
+                logger.warning("x should be in the form x = [1,2,3,4,5] "
+                               "y =[0,2,4,6,8]")
+                return None
+
+        # x of the form [(x,y),(x,y),(x,y),(x,y),(x,y),(x,y)]
+        elif isinstance(x, (list, tuple) and len(x) > 4 and
+                        len(x[0]) == 2 and y is None and
+                        w is None and h is None):
+            if isinstance(x[0][0], (int, long, float)):
+                xs = [pt[0] for pt in x]
+                ys = [pt[1] for pt in x]
+                xmax = npy.max(xs)
+                ymax = npy.max(ys)
+                xmin = npy.min(xs)
+                ymin = npy.min(ys)
+                x = xmin
+                y = ymin
+                w = xmax - xmin
+                h = ymax - ymin
+            else:
+                logger.warning("x should be in the form [(x,y),(x,y),(x,y),"
+                               "(x,y),(x,y),(x,y)]")
+                return None
+
+        # x of the form [(x,y),(x1,y1)]
+        elif (isinstance(x, (list, tuple)) and len(x) == 2 and
+                isinstance(x[0], (list, tuple)) and
+                isinstance(x[1], (list, tuple)) and
+                y is None and w is None and h is None):
+            if (len(x[0]) == 2 and len(x[1]) == 2):
+                xt = npy.min([x[0][0], x[1][0]])
+                yt = npy.min([x[0][0], x[1][0]])
+                w = npy.abs(x[0][0] - x[1][0])
+                h = npy.abs(x[0][1] - x[1][1])
+                x = xt
+                y = yt
+            else:
+                logger.warning("x should be in the form [(x1,y1),(x2,y2)]")
+                return None
+
+        # x and y of the form (x,y),(x1,y2)
+        elif (isinstance(x, (tuple, list)) and isinstance(y, (tuple, list)) and
+                      w is None and h is None):
+            if len(x) == 2 and len(y) == 2:
+                xt = npy.min([x[0], y[0]])
+                yt = npy.min([x[1], y[1]])
+                w = npy.abs(y[0] - x[0])
+                h = npy.abs(y[1] - x[1])
+                x = xt
+                y = yt
+
+            else:
+                logger.warning("if x and y are tuple it should be in the form "
+                               "(x1,y1) and (x2,y2)")
+                return None
+
+        if y is None or w is None or h is None:
+            logger.warning('Not a valid roi')
+        elif w <= 0 or h <= 0:
+            logger.warning("ROI can't have a negative dimension")
+            return None
+
+        if self._image is not None:
+            x = npy.clip(x, 0, self._image.width)
+            y = npy.clip(y, 0, self._image.height)
+            w = npy.clip(w, 0, self._image.width - x)
+            h = npy.clip(h, 0, self._image.height - y)
+
+        return [x, y, w, h]
 
     def crop(self):
-        pass
+        ret = None
+        if self._image is not None:
+            ret = self._image.crop(self.xtl, self.ytl, self.w, self.h)
+        return ret
