@@ -1025,59 +1025,206 @@ class Circle(Feature):
 
 
 class KeyPoint(Feature):
+    """
+    The class is place holder for SURF/SIFT/ORB/STAR keypoints.
+    """
+    _radius = 0.00
+    _avg_color = None
+    _angle = 0
+    _octave = 0
+    _response = 0.00
+    _flavor = ''
+    _descriptor = None
+    _keypoint = None
+
     def __init__(self, img, keypoint, descriptor=None, flavor='SURF'):
-        pass
+        self._keypoint = keypoint
+        x = keypoint.pt[1]  # KAT
+        y = keypoint.pt[0]
+        self._radius = keypoint.size / 2.0
+        self._avg_color = None
+        self._image = img
+        self._angle = keypoint.angle
+        self._octave = keypoint.octave
+        self._response = keypoint.response
+        self._flavor = flavor
+        self._descriptor = descriptor
+        r = self._radius
+        points = ((x + r, y + r), (x + r, y - r),
+                  (x - r, y - r), (x - r, y + r))
+        super(KeyPoint, self).__init__(img, x, y, points)
 
-    def get_object(self):
-        pass
+        segments = 18
+        rng = range(1, segments + 1)
+        self._points = []
+        for theta in rng:
+            rp = 2.0 * npy.pi * float(theta) / float(segments)
+            x = (r * npy.sin(rp)) + self.x
+            y = (r * npy.cos(rp)) + self.y
+            self._points.append((x, y))
 
+    @property
+    def keypoint(self):
+        """
+        Returns the raw keypoint object
+        """
+        return self._keypoint
+
+    @property
     def descriptor(self):
-        pass
+        """
+        Returns the raw keypoint descriptor
+        """
+        return self._descriptor
 
+    @property
     def quality(self):
-        pass
+        """
+        Returns the quality metric for the keypoint object.
+        """
+        return self._response
 
-    def ocatve(self):
-        pass
+    @property
+    def octave(self):
+        """
+        Returns the raw keypoint's octave (if it has)
+        """
+        return self._octave
 
+    @property
     def flavor(self):
-        pass
+        """
+        Returns the type of keypoint as a string (e.g. SURF/MSER/ETC)
+        """
+        return self._flavor
 
     def angle(self):
-        pass
+        """
+        Return the angle (theta) in degrees of the feature. The default is 0 (horizontal).
+        """
+        return self._angle
 
     def draw(self, color=Color.GREEN, width=1):
-        pass
+        """
+        **SUMMARY**
+        Draw a circle around the feature.  Color tuple is single parameter, default is Green.
+        **PARAMETERS**
+        * *color* - An RGB color triplet.
+        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        contour using the specified width.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        """
+        self._image.dl().circle((self._x, self._y), self._radius, color, width)
+        pt1 = (int(self._x), int(self._y))
+        pt2 = (int(self._x + (self.radius * sin(radians(self.angle)))),
+               int(self._y + (self.radius * cos(radians(self.angle)))))
+        self._image.dl().line(pt1, pt2, color, width)
 
     def show(self, color=Color.GREEN):
-        pass
+        """
+        **SUMMARY**
+        This function will automatically draw the features on the image and show it.
+        It is a basically a shortcut function for development and is the same as:
+        >>> img = Image("logo")
+        >>> feat = img.find_blobs()
+        >>> if feat: feat.draw()
+        >>> img.show()
+        """
+        self.draw(color)
+        self._image.show()
 
     def distance_from(self, point=(-1, -1)):
-        pass
+        """
+        **SUMMARY**
+        Given a point (default to center of the image), return the euclidean distance of x,y from this point
+        """
+        if point[0] == -1 or point[1] == -1:
+            point = npy.array(self._image.size()) / 2
+        return spsd.euclidean(point, [self._x, self._y])
 
     def mean_color(self):
-        pass
+        """
+        **SUMMARY**
+        Return the average color within the feature's radius
+        **RETURNS**
+        Returns an  RGB triplet that corresponds to the mean color of the feature.
+        **EXAMPLE**
+        >>> img = Image("lenna")
+        >>> kp = img.findKeypoints()
+        >>> c = kp[0].meanColor()
+        """
+        # generate the mask
+        if self._avg_color is None:
+            mask = self._image.zeros(1)
+            cv.Zero(mask)
+            cv.Circle(mask, (int(self._x), int(self._y)), int(self._radius),
+                      color=(255, 255, 255), thickness=-1)
+            temp = cv.Avg(self._image.bitmap, mask)
+            self._avg_color = (temp[0], temp[1], temp[2])
+        return self._avg_color
 
     def color_distance(self, color=(0, 0, 0)):
-        pass
+        """
+        Return the euclidean color distance of the color tuple at x,y from a given color (default black)
+        """
+        return spsd.euclidean(npy.array(color), npy.array(self.mean_color()))
 
+    @property
     def perimeter(self):
-        pass
+        """
+        **SUMMARY**
+        Returns the perimeter of the circle feature in pixels.
+        """
+        return 2 * npy.pi * self._radius
 
+    @property
     def width(self):
-        pass
+        """
+        Returns the width of the feature -- for compliance just r*2
+        """
+        return self._radius * 2
 
     def height(self):
-        pass
+        """
+        Returns the height of the feature -- for compliance just r*2
+        """
+        return self._radius * 2
 
+    @property
     def radius(self):
-        pass
+        return self._radius
 
+    @property
     def diameter(self):
-        pass
+        return self._radius * 2
 
     def crop(self, no_mask=False):
-        pass
+        """
+        **SUMMARY**
+        This function returns the largest bounding box for an image.
+        **PARAMETERS**
+        * *noMask* - if noMask=True we return the bounding box image of the circle.
+        if noMask=False (default) we return the masked circle with the rest of the area set to black
+        **RETURNS**
+        The masked circle image.
+        """
+        if no_mask:
+            return self._image.crop(self._x, self._y, self.width, self.height,
+                                   centered=True)
+        else:
+            mask = self._image.zeros(1)
+            result = self._image.zeros()
+            cv.Zero(mask)
+            cv.Zero(result)
+            # if you want to shave a bit of time we go do the crop before the blit
+            cv.Circle(mask, (int(self._x), int(self._y)), int(self._radius),
+                      color=(255, 255, 255), thickness=-1)
+            cv.Copy(self._image.bitmap, result, mask)
+            ret = Image(result)
+            ret = ret.crop(self._x, self._y, self.width, self.height,
+                                 centered=True)
+            return ret
 
 
 class Motion(Feature):
@@ -1133,11 +1280,34 @@ class KeyPointMatch(Feature):
 
 
 class ShapeContextDescriptor(Feature):
-    def __init__(self):
-        pass
+    _min_rect = []
+    _avg_color = None
+    _descriptor = None
+    _src_blob = None
+
+    def __init__(self, img, point, descriptor, blob):
+        self._descriptor = descriptor
+        self._sourceBlob = blob
+        x = point[0]
+        y = point[1]
+        points = [(x - 1, y - 1), (x + 1, y - 1), (x + 1, y + 1),
+                  (x - 1, y + 1)]
+        super(ShapeContextDescriptor, self).__init__(img, x, y, points)
 
     def draw(self, color=Color.GREEN, width=1):
-        pass
+        """
+        The default drawing operation is to draw the min bounding
+        rectangle in an image.
+        **SUMMARY**
+        Draw a small circle around the corner.  Color tuple is single parameter, default is Red.
+        **PARAMETERS**
+        * *color* - An RGB color triplet.
+        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+          contour using the specified width.
+        **RETURNS**
+        Nothing - this is an inplace operation that modifies the source images drawing layer.
+        """
+        self._image.dl().circle((self._x, self._y), 3, color, width)
 
 
 class ROI(Feature):
