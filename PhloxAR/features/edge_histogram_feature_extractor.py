@@ -6,6 +6,10 @@ from PhloxAR.base import *
 from PhloxAR.image import Image
 from PhloxAR.features.feature_extractor_base import FeatureExtractorBase
 
+__all__ = [
+    'EdgeHistogramFeatureExtractor'
+]
+
 
 class EdgeHistogramFeatureExtractor(FeatureExtractorBase):
     """

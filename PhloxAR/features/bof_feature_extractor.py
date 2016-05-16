@@ -7,6 +7,11 @@ from PhloxAR.image import Image
 from PhloxAR.features.feature_extractor_base import FeatureExtractorBase
 
 
+__all__ = [
+    'BOFFeatureExtractor'
+]
+
+
 class BOFFeatureExtractor(FeatureExtractorBase):
     """
     For a discussion of bag of features please see:

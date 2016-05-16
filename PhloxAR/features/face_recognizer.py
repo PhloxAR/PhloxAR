@@ -6,6 +6,11 @@ from PhloxAR.base import *
 from PhloxAR.image import Image
 
 
+__all__ = [
+    'FaceRecognizer'
+]
+
+
 class FaceRecognizer(object):
     def __init__(self):
         """
