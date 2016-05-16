@@ -19,7 +19,7 @@ def camshift_tracker(img, bb, ts, **kwargs):
     **PARAMETERS**
     * *img* - Image - Image to be tracked.
     * *bb*  - tuple - Bounding Box tuple (x, y, w, h)
-    * *ts*  - TrackSet - SimpleCV.Features.TrackSet.
+    * *ts*  - TrackSet - TrackSet.
     Optional PARAMETERS:
     lower      - Lower HSV value for inRange thresholding
                  tuple of (H, S, V)
@@ -30,7 +30,7 @@ def camshift_tracker(img, bb, ts, **kwargs):
                  if you don't provide one.
     num_frames - number of frames to be backtracked.
     **RETURNS**
-    SimpleCV.Features.Tracking.CAMShift
+    Tracking.CAMShift
     **HOW TO USE**
     >>> cam = Camera()
     >>> ts = []
