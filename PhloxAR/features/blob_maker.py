@@ -9,6 +9,11 @@ from PhloxAR.base import *
 import cv2
 
 
+__all__ = [
+    'BlobMaker'
+]
+
+
 class BlobMaker(object):
     """
     Blob maker encapsulates all of the contour extraction process and data, so

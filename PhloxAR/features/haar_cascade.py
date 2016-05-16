@@ -4,6 +4,11 @@ from __future__ import absolute_import, unicode_literals
 from PhloxAR.base import *
 
 
+__all__ = [
+    'HaarCascade'
+]
+
+
 class HaarCascade(object):
     """
     This class wraps HaarCascade files for the findHaarFeatures file.

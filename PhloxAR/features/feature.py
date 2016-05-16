@@ -2,10 +2,13 @@
 
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
-from ..base import *
-from ..color import *
+from PhloxAR.base import *
+from PhloxAR.color import *
 
-# TODO: FeatureSet class.
+
+__all__ = [
+    'Feature', 'FeatureSet'
+]
 
 
 class Feature(object):

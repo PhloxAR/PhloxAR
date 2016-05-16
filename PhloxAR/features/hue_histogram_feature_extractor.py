@@ -3,8 +3,12 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PhloxAR.base import *
-from PhloxAR.image import Image
 from PhloxAR.features.feature_extractor_base import FeatureExtractorBase
+
+
+__all__ = [
+    'HueHistogramFeatureExtractor'
+]
 
 
 class HueHistogramFeatureExtractor(FeatureExtractorBase):
