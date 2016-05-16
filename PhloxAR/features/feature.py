@@ -794,7 +794,7 @@ class FeatureSet(list):
         >>> xs = feats.coordinates()
         >>> print xs
         """
-        return np.array([[f.x, f.y] for f in self])
+        return npy.array([[f.x, f.y] for f in self])
 
     @property
     def center(self):
