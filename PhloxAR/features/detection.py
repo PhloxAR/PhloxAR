@@ -1868,7 +1868,7 @@ class ROI(Feature):
         ROI_UNIT - unit coordinates in the frame of reference of the ROI
         SRC_UNIT - unit coordinates in the frame of reference of source image.
         **PARAMETERS**
-        * *pts* - A list of (x,y) values or a single (x,y) value.
+        * *_track_pts* - A list of (x,y) values or a single (x,y) value.
         * *intype* - A string indicating the input format of the data.
         * *output* - A string indicating the output format of the data.
         **RETURNS**
@@ -1877,8 +1877,8 @@ class ROI(Feature):
         >>> img = Image('lenna')
         >>> blobs = img.findBlobs()
         >>> roi = ROI(blobs[0])
-        >>> pts = roi.crop()..... /find some x,y values in the crop region
-        >>> pts = roi.coord_transform_pts(pts)
+        >>> _track_pts = roi.crop()..... /find some x,y values in the crop region
+        >>> _track_pts = roi.coord_transform_pts(_track_pts)
         >>> #yt are no in the space of the original image.
         """
         if self._image is None:
