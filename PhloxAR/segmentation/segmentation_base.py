@@ -4,10 +4,12 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PhloxAR.base import *
-from PhloxAR.features.feature import Feature, FeatureSet
-from PhloxAR.color import Color
-from PhloxAR.image import Image
 import six
+
+
+__all__ = [
+    'SegmentationBase'
+]
 
 
 @six.add_metaclass(abc.ABCMeta)

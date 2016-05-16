@@ -9,22 +9,30 @@ from PhloxAR.image import Image
 from PhloxAR.segmentation.segmentation_base import SegmentationBase
 
 
+__all__ = [
+    'MOGSegmentation'
+]
+
+
 class MOGSegmentation(SegmentationBase):
     """
     Background subtraction using mixture of gaussians.
-    For each pixel store a set of gaussian distributions and try to fit new pixels
-    into those distributions. One of the distributions will represent the background.
+    For each pixel store a set of gaussian distributions and try to fit new
+    pixels into those distributions. One of the distributions will represent
+    the background.
 
     history - length of the pixel history to be stored
     nMixtures - number of gaussian distributions to be stored per pixel
     backgroundRatio - chance of a pixel being included into the background model
     noiseSigma - noise amount
-    learning rate - higher learning rate means the system will adapt faster to new backgrounds
+    learning rate - higher learning rate means the system will adapt faster to
+    new backgrounds
     """
 
     _error = False
     _diff_img = None
     _color_img = None
+    _model_img = None
     _ready = False
 
     # OpenCV default parameters
@@ -43,10 +51,8 @@ class MOGSegmentation(SegmentationBase):
         except ImportError:
             raise ImportError(
                 "Cannot load OpenCV library which is required by SimpleCV")
-            return
         if not hasattr(cv2, 'BackgroundSubtractorMOG'):
             raise ImportError("A newer version of OpenCV is needed")
-            return
 
         self._error = False
         self._ready = False

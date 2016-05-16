@@ -3,12 +3,15 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PhloxAR.base import *
-from PhloxAR.features.feature import Feature, FeatureSet
 from PhloxAR.features.blob_maker import BlobMaker
 from PhloxAR.color_model import ColorModel
-from PhloxAR.color import Color
 from PhloxAR.image import Image
 from PhloxAR.segmentation.segmentation_base import SegmentationBase
+
+
+__all__ = [
+    'ColorSegmentation'
+]
 
 
 class ColorSegmentation(SegmentationBase):
@@ -73,7 +76,7 @@ class ColorSegmentation(SegmentationBase):
         return self._cur_img
 
     @property
-    def segmented_image(self, fgwhite=True):
+    def segmented_image(self, white_fg=True):
         """
         Return the segmented image with white representing the foreground
         and black the background.
@@ -97,10 +100,10 @@ class ColorSegmentation(SegmentationBase):
         self._color_model.remove(data)
 
     def __getstate__(self):
-        keys = self.__dict__.copy()
+        state = self.__dict__.copy()
         self._blob_maker = None
-        del keys['_blob_maker']
-        return keys
+        del state['_blob_maker']
+        return state
 
     def __setstate__(self, state):
         self.__dict__ = state

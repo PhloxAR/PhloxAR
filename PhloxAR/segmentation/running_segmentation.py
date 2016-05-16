@@ -3,18 +3,21 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PhloxAR.base import *
-from PhloxAR.features.feature import Feature, FeatureSet
 from PhloxAR.features.blob_maker import BlobMaker
 from PhloxAR.image import Image
 from PhloxAR.segmentation.segmentation_base import SegmentationBase
 
 
+__all__ = [
+    'RunningSegmentation'
+]
+
+
 class RunningSegmentation(SegmentationBase):
     """
     RunningSegmentation performs segmentation using a running background model.
-    This model uses an accumulator which performs a running average of previous frames
-    where:
-    accumulator = ((1-alpha)input_image)+((alpha)accumulator)
+    This model uses an accumulator which performs a running average of previous
+    frames where: accumulator = ((1-alpha)input_image)+((alpha)accumulator)
     """
 
     _error = False
@@ -110,7 +113,6 @@ class RunningSegmentation(SegmentationBase):
         Return the segmented image with white representing the foreground
         and black the background.
         """
-        ret = None
         img = self._float2int(self._diff_img)
         if white_fg:
             ret = img.binarize(thresh=self._thresh)
@@ -125,18 +127,18 @@ class RunningSegmentation(SegmentationBase):
         """
         ret = []
         if self._color_img is not None and self._diff_img is not None:
-            eightBit = self._float2int(self._diff_img)
+            eight_bit = self._float2int(self._diff_img)
             ret = self._blob_maker.extract_from_binary(
-                eightBit.binarize(thresh=self._thresh), self._color_img)
+                eight_bit.binarize(thresh=self._thresh), self._color_img)
 
         return ret
 
-    def _float2int(self, input):
+    def _float2int(self, img):
         """
         convert a 32bit floating point cv array to an int array
         """
-        temp = cv.CreateImage((input.width, input.height), cv.IPL_DEPTH_8U, 3)
-        cv.Convert(input.bitmap, temp)
+        temp = cv.CreateImage((img.width, img.height), cv.IPL_DEPTH_8U, 3)
+        cv.Convert(img.bitmap, temp)
 
         return Image(temp)
 
