@@ -1805,7 +1805,7 @@ class Image(object):
         cv.LUT(Cb_img, Cb_img, cv.fromarray(Cb))
         temp = self.zeros()
         cv.Merge(Y_img, Cr_img, Cb_img, None, temp)
-        mask = Image(temp, colorSpace=ColorSpace.YCrCb)
+        mask = Image(temp, color_space=ColorSpace.YCrCb)
         mask = mask.binarize((128, 128, 128))
         mask = mask.to_rgb().binarize()
         mask.dilate(dilate_iter)
@@ -2279,37 +2279,167 @@ class Image(object):
                                  range=(0.0, 360.0))[0]
 
     def hue_peaks(self, bins=179):
-        pass
+        y_axis, x_axis = npy.histogram(self.to_hsv().narray[:, :, 2],
+                                       bins=bins)
+        x_axis = x_axis[0:bins]
+        lookahead = int(bins / 17)
+        delta = 0
 
-    def __getitem__(self, coord):
-        pass
+        maxtab = []
+        mintab = []
+        dump = []  # Used to pop the first hit which always if false
+
+        length = len(y_axis)
+        if x_axis is None:
+            x_axis = range(length)
+
+        # perform some checks
+        if length != len(x_axis):
+            raise ValueError, "Input vectors y_axis and x_axis must have same length"
+        if lookahead < 1:
+            raise ValueError, "Lookahead must be above '1' in value"
+        if not (npy.isscalar(delta) and delta >= 0):
+            raise ValueError, "delta must be a positive number"
+
+        # needs to be a numpy array
+        y_axis = npy.asarray(y_axis)
+
+        # maxima and minima candidates are temporarily stored in
+        # mx and mn respectively
+        mn, mx = npy.Inf, -npy.Inf
+
+        # Only detect peak if there is 'lookahead' amount of points after it
+        for index, (x, y) in enumerate(
+                zip(x_axis[:-lookahead], y_axis[:-lookahead])):
+            if y > mx:
+                mx = y
+                mxpos = x
+            if y < mn:
+                mn = y
+                mnpos = x
+
+            ####look for max####
+            if y < mx - delta and mx != npy.Inf:
+                # Maxima peak candidate found
+                # look ahead in signal to ensure that this is a peak and not jitter
+                if y_axis[index:index + lookahead].max() < mx:
+                    maxtab.append((mxpos, mx))
+                    dump.append(True)
+                    # set algorithm to only find minima now
+                    mx = npy.Inf
+                    mn = npy.Inf
+
+            ####look for min####
+            if y > mn + delta and mn != -npy.Inf:
+                # Minima peak candidate found
+                # look ahead in signal to ensure that this is a peak and not jitter
+                if y_axis[index:index + lookahead].min() > mn:
+                    mintab.append((mnpos, mn))
+                    dump.append(False)
+                    # set algorithm to only find maxima now
+                    mn = -npy.Inf
+                    mx = -npy.Inf
+
+        # Remove the false hit on the first value of the y_axis
+        try:
+            if dump[0]:
+                maxtab.pop(0)
+                # print "pop max"
+            else:
+                mintab.pop(0)
+                # print "pop min"
+            del dump
+        except IndexError:
+            # no peaks were found, should the function return empty lists?
+            pass
+
+        huetab = []
+        for hue, pixelcount in maxtab:
+            huetab.append((hue, pixelcount / float(self.width * self.height)))
+        return huetab
+
+    def __getitem__(self, key):
+        ret = self.matrix[tuple(reversed(key))]
+        if isinstance(ret, cv.cvmat):
+            (width, height) = cv.GetSize(ret)
+            newmat = cv.CreateMat(height, width, ret.type)
+            cv.Copy(ret, newmat)  # this seems to be a bug in opencv
+            # if you don't copy the matrix slice, when you convert to bmp you get
+            # a slice-sized hunk starting at 0, 0
+            return Image(newmat)
+
+        if self.is_bgr():
+            return tuple(reversed(ret))
+        else:
+            return tuple(ret)
 
     def __setitem__(self, key, value):
-        pass
+        value = tuple(reversed(value))  # RGB -> BGR
+
+        if isinstance(key[0], slice):
+            cv.Set(self.matrix[tuple(reversed(key))], value)
+            self._clear_buffers("_matrix")
+        else:
+            self.matrix[tuple(reversed(key))] = value
+            self._clear_buffers("_matrix")
 
     def __sub__(self, other):
-        pass
+        bitmap = self.zeros()
+        if isnum(other):
+            cv.SubS(self.bitmap, cv.Scalar(other, other, other), bitmap)
+        else:
+            cv.Sub(self.bitmap, other.bitmap, bitmap)
+        return Image(bitmap, color_space=self._color_space)
 
     def __add__(self, other):
-        pass
+        bitmap = self.zeros()
+        if isnum(other):
+            cv.AddS(self.bitmap, cv.Scalar(other, other, other), bitmap)
+        else:
+            cv.Add(self.bitmap, other.bitmap, bitmap)
+        return Image(bitmap, color_space=self._color_space)
 
     def __and__(self, other):
-        pass
+        bitmap = self.zeros()
+        if isnum(other):
+            cv.AndS(self.bitmap, cv.Scalar(other, other, other), bitmap)
+        else:
+            cv.And(self.bitmap, other.bitmap, bitmap)
+        return Image(bitmap, color_space=self._color_space)
 
     def __or__(self, other):
-        pass
+        bitmap = self.zeros()
+        if isnum(other):
+            cv.OrS(self.bitmap, cv.Scalar(other, other, other), bitmap)
+        else:
+            cv.Or(self.bitmap, other.bitmap, bitmap)
+        return Image(bitmap, color_space=self._color_space)
 
     def __div__(self, other):
-        pass
+        bitmap = self.zeros()
+        if not isnum(other):
+            cv.Div(self.bitmap, other.bitmap, bitmap)
+        else:
+            cv.ConvertScale(self.bitmap, bitmap, 1.0 / float(other))
+        return Image(bitmap, color_space=self._color_space)
 
     def __mul__(self, other):
-        pass
+        bitmap = self.zeros()
+        if not isnum(other):
+            cv.Mul(self.bitmap, other.bitmap, bitmap)
+        else:
+            cv.ConvertScale(self.bitmap, bitmap, float(other))
+        return Image(bitmap, color_space=self._color_space)
 
     def __pow__(self, power, modulo=None):
-        pass
+        bitmap = self.zeros()
+        cv.Pow(self.bitmap, bitmap, power)
+        return Image(bitmap, color_space=self._color_space)
 
     def __neg__(self):
-        pass
+        bitmap = self.zeros()
+        cv.Not(self.bitmap, bitmap)
+        return Image(bitmap, color_space=self._color_space)
 
     def __invert__(self):
         return self.invert()
