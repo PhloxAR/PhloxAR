@@ -12,6 +12,11 @@ from PhloxAR.image import Image
 import scipy.stats as sps
 
 
+__all__ = [
+    'Blob'
+]
+
+
 class Blob(Feature):
     """
     Blob is a typical cluster of pixels that form a feature or unique

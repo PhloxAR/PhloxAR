@@ -11,10 +11,16 @@ the right hand rule.
 '''
 
 from PhloxAR.base import *
-import numpy as npy
 from PhloxAR.image import *
 from PhloxAR.color import *
 from PhloxAR.features.feature import Feature, FeatureSet
+
+
+__all__ = [
+    'Corner', 'Line', 'Barcode', 'HaarFeature', 'Chessboard', 'TemplateMatch',
+    'Circle', 'KeyPoint', 'Motion', 'KeyPointMatch', 'ShapeContextDescriptor',
+    'ROI'
+]
 
 
 class Corner(Feature):

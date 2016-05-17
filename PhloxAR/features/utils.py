@@ -14,6 +14,11 @@ featureset if we can make it specific to a type of features
 """
 
 
+__all__ = [
+    'GetParallelSets', 'ParallelDistance'
+]
+
+
 def GetParallelSets(line_fs, parallel_thresh=2):
     result = []
     sz = len(line_fs)
