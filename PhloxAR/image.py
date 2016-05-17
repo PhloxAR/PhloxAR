@@ -2445,42 +2445,311 @@ class Image(object):
         return self.invert()
 
     def max(self, other):
-        pass
+        newbitmap = self.zeros()
+        if isnum(other):
+            cv.MaxS(self.bitmap, other, newbitmap)
+        else:
+            if self.size() != other.size():
+                warnings.warn(
+                    "Both images should have same sizes. Returning None.")
+                return None
+            cv.Max(self.bitmap, other.bitmap, newbitmap)
+        return Image(newbitmap, color_space=self._color_space)
 
     def min(self, other):
-        pass
+        newbitmap = self.zeros()
+        if isnum(other):
+            cv.MinS(self.bitmap, other, newbitmap)
+        else:
+            if self.size() != other.size():
+                warnings.warn("Both images should have same sizes. Returning "
+                              "None.")
+                return None
+            cv.Min(self.bitmap, other.bitmap, newbitmap)
+        return Image(newbitmap, color_space=self._color_space)
 
     def _clear_buffers(self, clearexcept='_bitmap'):
-        pass
+        for k, v in self._initialized_buffers.items():
+            if k == clearexcept:
+                continue
+            self.__dict__[k] = v
 
     def find_barcode(self, dozlib=True, zxing_path=''):
-        pass
+        if doZLib:
+            try:
+                import zbar
+            except:
+                logger.warning('The zbar library is not installed, please '
+                               'install to read barcodes')
+                return None
 
-    def find_lines(self, threshold=80, minlinlen=30, maxlinegap=10, cannyth1=50,
+            # configure zbar
+            scanner = zbar.ImageScanner()
+            scanner.parse_config('enable')
+            raw = self.pilimg.convert('L').tostring()
+            width = self.width
+            height = self.height
+
+            # wrap image data
+            image = zbar.Image(width, height, 'Y800', raw)
+
+            # scan the image for barcodes
+            scanner.scan(image)
+            barcode = None
+            # extract results
+            for symbol in image:
+                # do something useful with results
+                barcode = symbol
+            # clean up
+            del (image)
+
+        else:
+            if not ZXING_ENABLED:
+                warnings.warn("Zebra Crossing (ZXing) Library not installed. "
+                              "Please see the release notes.")
+                return None
+
+            if not self._barcode_reader:
+                if not zxing_path:
+                    self._barcode_reader = zxing.BarCodeReader()
+                else:
+                    self._barcode_reader = zxing.BarCodeReader(zxing_path)
+
+            tmp_filename = os.tmpnam() + ".png"
+            self.save(tmp_filename)
+            barcode = self._barcode_reader.decode(tmp_filename)
+            os.unlink(tmp_filename)
+
+        if barcode:
+            f = Barcode(self, barcode)
+            return FeatureSet([f])
+        else:
+            return None
+
+    def find_lines(self, threshold=80, minlinelen=30, maxlinegap=10, cannyth1=50,
                    cannyth2=100, standard=False, nlines=-1, maxpixelgap=1):
-        pass
+        em = self._get_edge_map(cannyth1, cannyth2)
+
+        linesFS = FeatureSet()
+
+        if standard:
+            lines = cv.HoughLines2(em, cv.CreateMemStorage(),
+                                   cv.CV_HOUGH_STANDARD, 1.0, cv.CV_PI / 180.0,
+                                   threshold, minlinelen, maxlinegap)
+            if nlines == -1:
+                nlines = len(lines)
+            # All white points (edges) in Canny edge image
+            em = Image(em)
+            x, y = npy.where(em.gray_narray > 128)
+            # Put points in dictionary for fast checkout if point is white
+            pts = dict((p, 1) for p in zip(x, y))
+
+            w, h = self.width - 1, self.height - 1
+            for rho, theta in lines[:nlines]:
+                ep = []
+                ls = []
+                a = math.cos(theta)
+                b = math.sin(theta)
+                # Find endpoints of line on the image's edges
+                if round(b, 4) == 0:  # slope of the line is infinity
+                    ep.append((int(round(abs(rho))), 0))
+                    ep.append((int(round(abs(rho))), h))
+                elif round(a, 4) == 0:  # slope of the line is zero
+                    ep.append((0, int(round(abs(rho)))))
+                    ep.append((w, int(round(abs(rho)))))
+                else:
+                    # top edge
+                    x = rho / float(a)
+                    if 0 <= x <= w:
+                        ep.append((int(round(x)), 0))
+                    # bottom edge
+                    x = (rho - h * b) / float(a)
+                    if 0 <= x <= w:
+                        ep.append((int(round(x)), h))
+                    # left edge
+                    y = rho / float(b)
+                    if 0 <= y <= h:
+                        ep.append((0, int(round(y))))
+                    # right edge
+                    y = (rho - w * a) / float(b)
+                    if 0 <= y <= h:
+                        ep.append((w, int(round(y))))
+                ep = list(set(
+                    ep))  # remove duplicates if line crosses the image at corners
+                ep.sort()
+                brl = self.bresenham_line(ep[0], ep[1])
+
+                # Follow the points on Bresenham's line. Look for white points.
+                # If the distance between two adjacent white points (dist) is less than or
+                # equal maxpixelgap then consider them the same line. If dist is bigger
+                # maxpixelgap then check if length of the line is bigger than minlinelength.
+                # If so then add line.
+                dist = float(
+                    'inf')  # distance between two adjacent white points
+                len_l = float('-inf')  # length of the line
+                for p in brl:
+                    if p in pts:
+                        if dist > maxpixelgap:  # found the end of the previous line and the start of the new line
+                            if len_l >= minlinelen:
+                                if ls:
+                                    # If the gap between current line and previous
+                                    # is less than maxlinegap then merge this lines
+                                    l = ls[-1]
+                                    gap = round(math.sqrt(
+                                        (start_p[0] - l[1][0]) ** 2 + (
+                                        start_p[1] - l[1][1]) ** 2))
+                                    if gap <= maxlinegap:
+                                        ls.pop()
+                                        start_p = l[0]
+                                ls.append((start_p, last_p))
+                            # First white point of the new line found
+                            dist = 1
+                            len_l = 1
+                            start_p = p  # first endpoint of the line
+                        else:
+                            # dist is less than or equal maxpixelgap, so line doesn't end yet
+                            len_l += dist
+                            dist = 1
+                        last_p = p  # last white point
+                    else:
+                        dist += 1
+
+                for l in ls:
+                    linesFS.append(Line(self, l))
+            linesFS = linesFS[:nlines]
+        else:
+            lines = cv.HoughLines2(em, cv.CreateMemStorage(),
+                                   cv.CV_HOUGH_PROBABILISTIC, 1.0,
+                                   cv.CV_PI / 180.0, threshold, minlinelen,
+                                   maxlinegap)
+            if nlines == -1:
+                nlines = len(lines)
+
+            for l in lines[:nlines]:
+                linesFS.append(Line(self, l))
+
+        return linesFS
 
     def find_chessboard(self, dimensions=(8, 5), subpixel=True):
-        pass
+        corners = cv.FindChessboardCorners(self._equalized_gray_bitmap(),
+                                           dimensions,
+                                           cv.CV_CALIB_CB_ADAPTIVE_THRESH + cv.CV_CALIB_CB_NORMALIZE_IMAGE)
+        if len(corners[1]) == dimensions[0] * dimensions[1]:
+            if subpixel:
+                spCorners = cv.FindCornerSubPix(self.gray_matrix,
+                                                corners[1], (11, 11), (-1, -1),
+                                                (
+                                                cv.CV_TERMCRIT_ITER | cv.CV_TERMCRIT_EPS,
+                                                10, 0.01))
+            else:
+                spCorners = corners[1]
+            return FeatureSet([Chessboard(self, dimensions, spCorners)])
+        else:
+            return None
 
     def edges(self, t1=50, t2=100):
-        pass
+        return Image(self._get_edge_map(t1, t2), color_space=self._color_space)
 
     def _get_edge_map(self, t1=50, t2=100):
-        pass
+        if (self._edge_map and self._canny_param[0] == t1 and
+                    self._canny_param[1] == t2):
+            return self._edge_map
+
+        self._edge_map = self.zeros(1)
+        cv.Canny(self._gray_bitmap_func(), self._edge_map, t1, t2)
+        self._canny_param = (t1, t2)
+
+        return self._edge_map
 
     def rotate(self, angle, fixed=True, point=None, scale=1.0):
-        if point is None:
-            point = [-1, -1]
+        if point[0] == -1 or point[1] == -1:
+            point[0] = (self.width - 1) / 2
+            point[1] = (self.height - 1) / 2
+
+        if fixed:
+            ret = self.zeros()
+            cv.Zero(ret)
+            rot_mat = cv.CreateMat(2, 3, cv.CV_32FC1y)
+            cv.GetRotationMatrix2D((float(point[0]), float(point[1])),
+                                   float(angle), float(scale), rot_mat)
+            cv.WarpAffine(self.bitmap, ret, rot_mat)
+            return Image(ret, color_space=self._color_space)
+
+        # otherwise, we're expanding the matrix to fit the image at original size
+        rot_mat = cv.CreateMat(2, 3, cv.CV_32FC1)
+        # first we create what we thing the rotation matrix should be
+        cv.GetRotationMatrix2D((float(point[0]), float(point[1])), float(angle),
+                               float(scale), rot_mat)
+        A = npy.array([0, 0, 1])
+        B = npy.array([self.width, 0, 1])
+        C = npy.array([self.width, self.height, 1])
+        D = npy.array([0, self.height, 1])
+        # So we have defined our image ABC in homogenous coordinates
+        # and apply the rotation so we can figure out the image size
+        a = npy.dot(rot_mat, A)
+        b = npy.dot(rot_mat, B)
+        c = npy.dot(rot_mat, C)
+        d = npy.dot(rot_mat, D)
+        # I am not sure about this but I think the a/b/c/d are transposed
+        # now we calculate the extents of the rotated components.
+        minY = min(a[1], b[1], c[1], d[1])
+        minX = min(a[0], b[0], c[0], d[0])
+        maxY = max(a[1], b[1], c[1], d[1])
+        maxX = max(a[0], b[0], c[0], d[0])
+        # from the extents we calculate the new size
+        newWidth = npy.ceil(maxX - minX)
+        newHeight = npy.ceil(maxY - minY)
+        # now we calculate a new translation
+        tX = 0
+        tY = 0
+        # calculate the translation that will get us centered in the new image
+        if minX < 0:
+            tX = -1.0 * minX
+        elif maxX > newWidth - 1:
+            tX = -1.0 * (maxX - newWidth)
+
+        if minY < 0:
+            tY = -1.0 * minY
+        elif maxY > newHeight - 1:
+            tY = -1.0 * (maxY - newHeight)
+
+        # now we construct an affine map that will the rotation and scaling we want with the
+        # the corners all lined up nicely with the output image.
+        src = ((A[0], A[1]), (B[0], B[1]), (C[0], C[1]))
+        dst = (
+        (a[0] + tX, a[1] + tY), (b[0] + tX, b[1] + tY), (c[0] + tX, c[1] + tY))
+
+        cv.GetAffineTransform(src, dst, rot_mat)
+
+        # calculate the translation of the corners to center the image
+        # use these new corner positions as the input to cvGetAffineTransform
+        ret = cv.CreateImage((int(newWidth), int(newHeight)), 8, int(3))
+        cv.Zero(ret)
+
+        cv.WarpAffine(self.bitmap, ret, rot_mat)
+        # cv.AddS(retVal,(0,255,0),retVal)
+        return Image(ret, color_space=self._color_space)
 
     def transpose(self):
-        pass
+        ret = cv.CreateImage((self.height, self.width), cv.IPL_DEPTH_8U, 3)
+        cv.Transpose(self.bitmap, ret)
+        return Image(ret, color_space=self._color_space)
 
     def shear(self, cornerpoints):
-        pass
+        src = ((0, 0), (self.width - 1, 0), (self.width - 1, self.height - 1))
+        # set the original points
+        warp = cv.CreateMat(2, 3, cv.CV_32FC1)
+        # create the empty warp matrix
+        cv.GetAffineTransform(src, cornerpoints, warp)
+
+        return self.transform_affine(warp)
 
     def transform_affine(self, rot_matrix):
-        pass
+        ret = self.zeros()
+        if isinstance(rot_matrix, npy.ndarray):
+            rot_matrix = npArray2cvMat(rot_matrix)
+        cv.WarpAffine(self.bitmap, ret, rot_matrix)
+        return Image(ret, color_space=self._color_space)
 
     def warp(self, cornerpoints):
         pass
