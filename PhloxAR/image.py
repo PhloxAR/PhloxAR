@@ -470,7 +470,6 @@ class Image(object):
         :return: Bool
         """
         return self._color_space == ColorSpace.YCrCb
-        pass
 
     def to_rgb(self):
         """
@@ -1988,41 +1987,270 @@ class Image(object):
         return crops
 
     def split_channels(self, grayscale=True):
-        pass
+        """
+        Split the channels of an image into RGB (not the default BGR)
+        single parameter is whether to return the channels as grey images (default)
+        or to return them as tinted color image
+        :param: grayscale: if this is true we return three grayscale images,
+        one per channel. if it is False return tinted images.
+
+        :return: a tuple of of 3 image objects.
+
+        :Example:
+        >>> img = Image("lena")
+        >>> data = img.split_channels()
+        >>> for d in data:
+        >>>    d.show()
+        >>>    time.sleep(1)
+        """
+        r = self.zeros(1)
+        g = self.zeros(1)
+        b = self.zeros(1)
+        cv.Split(self.bitmap, b, g, r, None)
+
+        red = self.zeros()
+        green = self.zeros()
+        blue = self.zeros()
+
+        if grayscale:
+            cv.Merge(r, r, r, None, red)
+            cv.Merge(g, g, g, None, green)
+            cv.Merge(b, b, b, None, blue)
+        else:
+            cv.Merge(None, None, r, None, red)
+            cv.Merge(None, g, None, None, green)
+            cv.Merge(b, None, None, None, blue)
+
+        return Image(red), Image(green), Image(blue)
 
     def merge_channels(self, r=None, g=None, b=None):
-        pass
+        """
+        Merge channels is the opposite of splitChannels. The image takes one
+        image for each of the R,G,B channels and then recombines them into a
+        single image. Optionally any of these channels can be None.
+
+        :param r: the r or last channel  of the result SimpleCV Image.
+        :param g: the g or center channel of the result SimpleCV Image.
+        :param b: the b or first channel of the result SimpleCV Image.
+        :return: Image
+
+        :Example:
+        >>> img = Image("lenna")
+        >>> [r,g,b] = img.split_channels()
+        >>> r = r.binarize()
+        >>> g = g.binarize()
+        >>> b = b.binarize()
+        >>> result = img.merge_channels(r,g,b)
+        >>> result.show()
+        """
+        if r is None and g is None and b is None:
+            logger.warning("Image.merge_channels - we need at least one "
+                           "valid channel")
+            return None
+        if r is None:
+            r = self.zeros(1)
+            cv.Zero(r)
+        else:
+            rt = r.zeros(1)
+            cv.Split(r.bitmap, rt, rt, rt, None)
+            r = rt
+        if g is None:
+            g = self.zeros(1)
+            cv.Zero(g)
+        else:
+            gt = g.zeros(1)
+            cv.Split(g.bitmap, gt, gt, gt, None)
+            g = gt
+        if b is None:
+            b = self.zeros(1)
+            cv.Zero(b)
+        else:
+            bt = b.zeros(1)
+            cv.Split(b.bitmap, bt, bt, bt, None)
+            b = bt
+
+        ret = self.zeros()
+        cv.Merge(b, g, r, None, ret)
+        return Image(ret)
 
     def apply_hls_curve(self, hcurve, lcurve, scurve):
-        pass
+        """
+        Apply a color correction curve in HSL space. This method can be used
+        to change values for each channel. The curves are :py:class:`ColorCurve`
+        class objects.
+
+        :param hcurve: the hue ColorCurve object.
+        :param lcurve: the lightness / value ColorCurve object.
+        :param scurve: the saturation ColorCurve object
+
+        :return: Image
+
+        :Example:
+        >>> img = Image("lena")
+        >>> hc = ColorCurve([[0,0], [100, 120], [180, 230], [255, 255]])
+        >>> lc = ColorCurve([[0,0], [90, 120], [180, 230], [255, 255]])
+        >>> sc = ColorCurve([[0,0], [70, 110], [180, 230], [240, 255]])
+        >>> img2 = img.apply_hls_curve(hc, lc, sc)
+        """
+        #TODO CHECK ROI
+        #TODO CHECK CURVE SIZE
+        #TODO CHECK COLORSPACE
+        #TODO CHECK CURVE SIZE
+        temp = cv.CreateImage(self.size(), 8, 3)
+        # Move to HLS spacecol
+        cv.CvtColor(self._bitmap, temp, cv.CV_RGB2HLS)
+        tmp_mat = cv.GetMat(temp)  # convert the bitmap to a matrix
+        # now apply the color curve correction
+        tmp_mat = npy.array(self.matrix).copy()
+        tmp_mat[:, :, 0] = npy.take(hcurve.curve, tmp_mat[:, :, 0])
+        tmp_mat[:, :, 1] = npy.take(scurve.curve, tmp_mat[:, :, 1])
+        tmp_mat[:, :, 2] = npy.take(lcurve.curve, tmp_mat[:, :, 2])
+        # Now we jimmy the np array into a cvMat
+        image = cv.CreateImageHeader((tmp_mat.shape[1], tmp_mat.shape[0]),
+                                     cv.IPL_DEPTH_8U, 3)
+        cv.SetData(image, tmp_mat.tostring(),
+                   tmp_mat.dtype.itemsize * 3 * tmp_mat.shape[1])
+        cv.CvtColor(image, image, cv.CV_HLS2RGB)
+        return Image(image, color_space=self._color_space)
 
     def apply_rgb_curve(self, rcurve, gcurve, bcurve):
-        pass
+        """
+        Apply a color correction curve in RGB space. This method can be used
+        to change values for each channel. The curves are :py:class:`ColorCurve`
+        class objects.
+
+        :param rcurve: the red ColorCurve object, or appropriately formatted list
+        :param gcurve: the green ColorCurve object, or appropriately formatted list
+        :param bcurve: the blue ColorCurve object, or appropriately formatted list
+
+        :return: Image
+
+        :Example:
+        >>> img = Image("lena")
+        >>> rc = ColorCurve([[0,0], [100, 120], [180, 230], [255, 255]])
+        >>> gc = ColorCurve([[0,0], [90, 120], [180, 230], [255, 255]])
+        >>> bc = ColorCurve([[0,0], [70, 110], [180, 230], [240, 255]])
+        >>> img2 = img.apply_rgb_curve(rc, gc, bc)
+        """
+        if isinstance(bcurve, list):
+            bcurve = ColorCurve(bcurve)
+        if isinstance(gcurve, list):
+            gcurve = ColorCurve(gcurve)
+        if isinstance(rcurve, list):
+            rcurve = ColorCurve(rcurve)
+
+        tmp_mat = npy.array(self.matrix).copy()
+        tmp_mat[:, :, 0] = npy.take(bcurve.curve, tmp_mat[:, :, 0])
+        tmp_mat[:, :, 1] = npy.take(gcurve.curve, tmp_mat[:, :, 1])
+        tmp_mat[:, :, 2] = npy.take(rcurve.curve, tmp_mat[:, :, 2])
+        # Now we jimmy the np array into a cvMat
+        image = cv.CreateImageHeader((tmp_mat.shape[1], tmp_mat.shape[0]),
+                                     cv.IPL_DEPTH_8U, 3)
+        cv.SetData(image, tmp_mat.tostring(),
+                   tmp_mat.dtype.itemsize * 3 * tmp_mat.shape[1])
+        return Image(image, color_space=self._color_space)
 
     def apply_intensity_curve(self, curve):
-        pass
+        """
+        Intensity applied to all three color channels
+
+        :param curve: a ColorCurve object, or 2d list that can be conditioned
+                      into one
+        :return:
+        Image
+
+        >>> img = Image("lenna")
+        >>> rc = ColorCurve([[0,0], [100, 120], [180, 230], [255, 255]])
+        >>> gc = ColorCurve([[0,0], [90, 120], [180, 230], [255, 255]])
+        >>> bc = ColorCurve([[0,0], [70, 110], [180, 230], [240, 255]])
+        >>> img2 = img.apply_rgb_curve(rc,gc,bc)
+        """
+        return self.apply_rgb_curve(curve, curve, curve)
 
     def color_distance(self, color=Color.BLACK):
-        pass
+        # reshape our matrix to 1xN
+        pixels = npy.array(self.narray).reshape(-1, 3)
+        # calculate the distance each pixel is
+        distances = spsd.cdist(pixels, [color])
+        distances *= (255.0 / distances.max())  # normalize to 0 - 255
+        # return an Image
+        return Image(distances.reshape(self.width, self.height))
 
     def hue_distance(self, color=Color.BLACK, minsaturation=20, minvalue=20,
                      maxvalue=255):
-        pass
+        if isinstance(color, (float, int, long, complex)):
+            color_hue = color
+        else:
+            color_hue = Color.rgb_to_hsv(color)[0]
+
+        # again, gets transposed to vsh
+        vsh_matrix = self.to_bgr().narray.reshape(-1, 3)
+        hue_channel = npy.cast['int'](vsh_matrix[:, 2])
+
+        if color_hue < 90:
+            hue_loop = 180
+        else:
+            hue_loop = -180
+        # set whether we need to move back or forward on the hue circle
+
+        distances = npy.minimum(npy.abs(hue_channel - color_hue),
+                               npy.abs(hue_channel - (color_hue + hue_loop)))
+        # take the minimum distance for each pixel
+
+
+        distances = npy.where(npy.logical_and(vsh_matrix[:, 0] > minvalue,
+                                              vsh_matrix[:, 1] > minsaturation),
+                              distances * (255.0 / 90.0),  # normalize 0 - 90 -> 0 - 255
+                              255.0)  # use the maxvalue if it false outside of our value/saturation tolerances
+
+        return Image(distances.reshape(self.width, self.height))
 
     def erode(self, iterations=1, kernelsize=3):
-        pass
+        ret = self.zeros()
+        kern = cv.CreateStructuringElementEx(kernelsize, kernelsize, 1, 1,
+                                             cv.CV_SHAPE_RECT)
+        cv.Erode(self.bitmap, ret, kern, iterations)
+        return Image(ret, color_space=self._color_space)
 
     def dilate(self, iteration=1):
-        pass
+        ret = self.zeros()
+        kern = cv.CreateStructuringElementEx(3, 3, 1, 1, cv.CV_SHAPE_RECT)
+        cv.Dilate(self.bitmap, ret, kern, iteration)
+        return Image(ret, color_space=self._color_space)
 
     def morph_open(self):
-        pass
+        ret = self.zeros()
+        temp = self.zeros()
+        kern = cv.CreateStructuringElementEx(3, 3, 1, 1, cv.CV_SHAPE_RECT)
+        try:
+            cv.MorphologyEx(self.bitmap, ret, temp, kern, cv.MORPH_OPEN, 1)
+        except:
+            cv.MorphologyEx(self.bitmap, ret, temp, kern, cv.CV_MOP_OPEN, 1)
+            # OPENCV 2.2 vs 2.3 compatability
+
+        return Image(ret)
 
     def morph_close(self):
-        pass
+        ret = self.zeros()
+        temp = self.zeros()
+        kern = cv.CreateStructuringElementEx(3, 3, 1, 1, cv.CV_SHAPE_RECT)
+        try:
+            cv.MorphologyEx(self.bitmap, ret, temp, kern, cv.MORPH_CLOSE, 1)
+        except:
+            cv.MorphologyEx(self.bitmap, ret, temp, kern, cv.CV_MOP_CLOSE, 1)
+            # OPENCV 2.2 vs 2.3 compatability
+
+        return Image(ret, color_space=self._color_space)
 
     def morph_gradient(self):
-        pass
+        ret = self.zeros()
+        temp = self.zeros()
+        kern = cv.CreateStructuringElementEx(3, 3, 1, 1, cv.CV_SHAPE_RECT)
+        try:
+            cv.MorphologyEx(self.bitmap, ret, temp, kern, cv.MORPH_GRADIENT, 1)
+        except:
+            cv.MorphologyEx(self.bitmap, ret, temp, kern, cv.CV_MOP_GRADIENT, 1)
+        return Image(ret, color_space=self._color_space)
 
     def histogram(self, bins=50):
         """
