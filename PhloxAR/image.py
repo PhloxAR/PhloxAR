@@ -1731,7 +1731,7 @@ class Image(object):
         # create a single channel image, thresholded to parameters
 
         blobmaker = BlobMaker()
-        blobs = blobmaker.extractFromBinary(
+        blobs = blobmaker.extract_from_binary(
                 self.binarize(threshold, 255, threshold_blocksize,
                               threshold_constant).invert(),
                 self, minsize=minsize, maxsize=maxsize, appx_level=appx_level)
@@ -2953,7 +2953,7 @@ class Image(object):
                   isinstance(x[0], (list, tuple)) and
                   isinstance(x[1], (list, tuple)) and
                       y is None and w is None and h is None):
-            if (len(x[0]) == 2 and len(x[1]) == 2):
+            if len(x[0]) == 2 and len(x[1]) == 2:
                 xt = npy.min([x[0][0], x[1][0]])
                 yt = npy.min([x[0][0], x[1][0]])
                 w = npy.abs(x[0][0] - x[1][0])
@@ -2981,8 +2981,7 @@ class Image(object):
                 return None
 
         if y is None or w is None or h is None:
-            print
-            "Please provide an x, y, width, height to function"
+            print("Please provide an x, y, width, height to function")
 
         if w <= 0 or h <= 0:
             logger.warning("Can't do a negative crop!")
@@ -3002,7 +3001,7 @@ class Image(object):
                 (rectangle[2], rectangle[3]), (self.width, self.height),
                 (rectangle[0], rectangle[1]))
 
-        if (bottomROI is None):
+        if bottomROI is None:
             logger.warning(
                     "Hi, your crop rectangle doesn't even overlap your image. I have no choice but to return None.")
             return None
@@ -3015,8 +3014,8 @@ class Image(object):
         img = Image(ret, color_space=self._color_space, cv2image=True)
 
         # Buffering the top left point (x, y) in a image.
-        img._uncroppedX = self._uncroppedX + int(x)
-        img._uncroppedY = self._uncroppedY + int(y)
+        img._uncropped_x = self._uncropped_x + int(x)
+        img._uncropped_y = self._uncropped_y + int(y)
         return img
 
     def region_select(self, x1, y1, x2, y2):
@@ -3024,15 +3023,15 @@ class Image(object):
         h = abs(y1 - y2)
 
         ret = None
-        if (w <= 0 or h <= 0 or w > self.width or h > self.height):
-            logger.warning(
-                    "regionSelect: the given values will not fit in the image or are too small.")
+        if w <= 0 or h <= 0 or w > self.width or h > self.height:
+            logger.warning("regionSelect: the given values will not fit in the "
+                           "image or are too small.")
         else:
             xf = x2
-            if (x1 < x2):
+            if x1 < x2:
                 xf = x1
             yf = y2
-            if (y1 < y2):
+            if y1 < y2:
                 yf = y1
             ret = self.crop(xf, yf, w, h)
 
@@ -3040,9 +3039,9 @@ class Image(object):
 
     def clear(self):
         cv.SetZero(self._bitmap)
-        self._clearBuffers()
+        self._clear_buffers()
 
-    def draw(self, features, color=Color.GRAEEN, width=1, autocolor=False):
+    def draw(self, features, color=Color.GREEN, width=1, autocolor=False):
         if type(features) == type(self):
             warnings.warn("You need to pass drawable features.")
             return None
@@ -3062,10 +3061,10 @@ class Image(object):
         return None
 
     def draw_text(self, text='', x=None, y=None, color=Color.BLUE, fontsize=16):
-        if (x is None):
-            x = (self.width / 2)
-        if (y is None):
-            y = (self.height / 2)
+        if x is None:
+            x = self.width / 2
+        if y is None:
+            y = self.height / 2
 
         self.get_drawing_layer().setFontSize(fontsize)
         self.get_drawing_layer().text(text, (x, y), color)
@@ -3073,10 +3072,10 @@ class Image(object):
     def draw_rect(self, x, y, w, h, color=Color.RED, width=1, alpha=255):
         if width < 1:
             self.get_drawing_layer().rectangle((x, y), (w, h), color, filled=True,
-                                             alpha=alpha)
+                                               alpha=alpha)
         else:
             self.get_drawing_layer().rectangle((x, y), (w, h), color, width,
-                                             alpha=alpha)
+                                               alpha=alpha)
 
     def draw_rotated_rect(self, bbox, color=Color.RED, width=1):
         cv.EllipseBox(self.bitmap, box=bbox, color=color, thicness=width)
@@ -3089,7 +3088,6 @@ class Image(object):
             webbrowser.open("http://localhost:8080", 2)
             return js
         elif type == 'window':
-            from PhloxAR.Display import Display
             if init_options_handler.on_notebook:
                 d = Display(displaytype='notebook')
             else:
@@ -3253,8 +3251,8 @@ class Image(object):
                 img = img.scale(targw, targh)
 
         else:  # we're going to crop instead
-            if (self.width <= resolution[0] and self.height <= resolution[
-                1]):  # center a too small image
+            # center a too small image
+            if (self.width <= resolution[0] and self.height <= resolution[1]):
                 # we're too small just center the thing
                 ret = npy.zeros((resolution[1], resolution[0], 3),
                                dtype='uint8')
@@ -3289,7 +3287,7 @@ class Image(object):
                 1]):  # width too big
                 # crop along the y dimension and center along the x dimension
                 ret = npy.zeros((resolution[1], resolution[0], 3),
-                               dtype='uint8')
+                                dtype='uint8')
                 targw = resolution[0]
                 targh = self.height
                 targx = 0
@@ -3309,7 +3307,7 @@ class Image(object):
         w = img.width
         h = img.height
 
-        if (pos is None):
+        if pos is None:
             pos = (0, 0)
 
         topROI, bottomROI = self. _rect_overlap_rois((img.width, img.height),
@@ -3585,7 +3583,7 @@ class Image(object):
         # do an overlap test to weed out corner cases and errors
         def inBounds((w, h), (x, y)):
             ret = True
-            if (x < 0 or y < 0 or x > w or y > h):
+            if x < 0 or y < 0 or x > w or y > h:
                 ret = False
             return ret
 
@@ -3595,7 +3593,7 @@ class Image(object):
         blc = inBounds(bottom, bl)
         if not trc and not tlc and not brc and not blc:  # no overlap
             return None, None
-        elif (trc and tlc and brc and blc):  # easy case top is fully inside bottom
+        elif trc and tlc and brc and blc:  # easy case top is fully inside bottom
             tRet = (0, 0, top[0], top[1])
             bRet = (pos[0], pos[1], top[0], top[1])
             return tRet, bRet
@@ -3629,8 +3627,8 @@ class Image(object):
         if (color1[0] - color2[0] == 0 or
                         color1[1] - color2[1] == 0 or
                         color1[2] - color2[2] == 0):
-            logger.warning(
-                    "No color range selected, the result will be black, returning None instead.")
+            logger.warning("No color range selected, the result will be black, "
+                           "returning None instead.")
             return None
         if (color1[0] > 255 or color1[0] < 0 or
                     color1[1] > 255 or color1[1] < 0 or
@@ -3638,8 +3636,8 @@ class Image(object):
                     color2[0] > 255 or color2[0] < 0 or
                     color2[1] > 255 or color2[1] < 0 or
                     color2[2] > 255 or color2[2] < 0):
-            logger.warning(
-                    "One of the tuple values falls outside of the range of 0 to 255")
+            logger.warning("One of the tuple values falls outside of the range "
+                           "of 0 to 255")
             return None
 
         r = self.zeros(1)
@@ -3664,7 +3662,7 @@ class Image(object):
         # right now we throw an error on this case.
         # also we use the triplets directly as OpenCV is
         # SUPER FINICKY about the type of the threshold.
-        elif (color1[0] < color2[0]):
+        elif color1[0] < color2[0]:
             cv.Threshold(r, rl, color1[0], 255, cv.CV_THRESH_BINARY)
             cv.Threshold(r, rh, color2[0], 255, cv.CV_THRESH_BINARY)
             cv.Sub(rl, rh, rl)
@@ -3688,7 +3686,7 @@ class Image(object):
         if abs(color1[2] - color2[2]) == 255:
             cv.Zero(bl)
             cv.AddS(bl, 255, bl)
-        elif (color1[2] < color2[2]):
+        elif color1[2] < color2[2]:
             cv.Threshold(b, bl, color1[2], 255, cv.CV_THRESH_BINARY)
             cv.Threshold(b, bh, color2[2], 255, cv.CV_THRESH_BINARY)
             cv.Sub(bl, bh, bl)
@@ -3730,8 +3728,8 @@ class Image(object):
         ret = hsv.zeros(1)
         mask = hsv.zeros(1)
         cv.Split(hsv.bitmap, h, None, s, None)
-        hlut = npy.zeros((256, 1),
-                        dtype=uint8)  # thankfully we're not doing a LUT on saturation
+        # thankfully we're not doing a LUT on saturation
+        hlut = npy.zeros((256, 1), dtype=uint8)
         if hue_lb is not None and hue_ub is not None:
             hlut[hue_lb:hue_ub] = 255
         else:
@@ -3751,7 +3749,7 @@ class Image(object):
         return Image(result)
 
     def integral_image(self, titled=False):
-        if (tilted):
+        if titled:
             img2 = cv.CreateImage((self.width + 1, self.height + 1),
                                   cv.IPL_DEPTH_32F, 1)
             img3 = cv.CreateImage((self.width + 1, self.height + 1),
@@ -3767,22 +3765,22 @@ class Image(object):
         if isinstance(kernel, list):
             kernel = npy.array(kernel)
 
-        if isinstance(kernel, npy.ndimage):
+        if isinstance(kernel, npy.ndarray):
             sz = kernel.shape
             kernel = kernel.astype(npy.float32)
-            myKernel = cv.CreateMat(sz[0], sz[1], cv.CV_32FC1)
-            cv.SetData(myKernel, kernel.tostring(),
+            ker = cv.CreateMat(sz[0], sz[1], cv.CV_32FC1)
+            cv.SetData(ker, kernel.tostring(),
                        kernel.dtype.itemsize * kernel.shape[1])
         elif isinstance(kernel, cv.mat):
-            myKernel = kernel
+            ker = kernel
         else:
             logger.warning("Convolution uses numpy arrays or cv.mat type.")
             return None
         ret = self.zeros(3)
         if center is None:
-            cv.Filter2D(self.bitmap, ret, myKernel)
+            cv.Filter2D(self.bitmap, ret, ker)
         else:
-            cv.Filter2D(self.bitmap, ret, myKernel, center)
+            cv.Filter2D(self.bitmap, ret, ker, center)
         return Image(ret)
 
     def find_template(self, template=None, threshold=5, method='SQR_DIFF_NORM',
@@ -3958,7 +3956,7 @@ class Image(object):
     def find_circle(self, canny=100, thresh=350, distance=-1):
         storage = cv.CreateMat(self.width, 1, cv.CV_32FC3)
         # a distance metric for how apart our circles should be - this is sa good bench mark
-        if (distance < 0):
+        if distance < 0:
             distance = 1 + max(self.width, self.height) / 50
         cv.HoughCircles(self._gray_bitmap_func(), storage,
                         cv.CV_HOUGH_GRADIENT, 2, distance, canny, thresh)
@@ -4026,52 +4024,52 @@ class Image(object):
             ret = img.zeros()
             cv.Merge(b, g, r, None, ret);
             ret = Image(ret)
-        elif (method == "Simple"):
+        elif method == "Simple":
             thresh = 0.003
             sz = img.width * img.height
-            tempMat = img.narray
-            bcf = sss.cumfreq(tempMat[:, :, 0], numbins=256)
-            bcf = bcf[
-                0]  # get our cumulative histogram of values for this color
+            tmp_mat = img.narray
+            bcf = sss.cumfreq(tmp_mat[:, :, 0], numbins=256)
+            # get our cumulative histogram of values for this color
+            bcf = bcf[0]
 
             blb = -1  # our upper bound
             bub = 256  # our lower bound
             lower_thresh = 0.00
             upper_thresh = 0.00
             # now find the upper and lower thresh% of our values live
-            while (lower_thresh < thresh):
+            while lower_thresh < thresh:
                 blb = blb + 1
                 lower_thresh = bcf[blb] / sz
-            while (upper_thresh < thresh):
+            while upper_thresh < thresh:
                 bub = bub - 1
                 upper_thresh = (sz - bcf[bub]) / sz
 
-            gcf = sss.cumfreq(tempMat[:, :, 1], numbins=256)
+            gcf = sss.cumfreq(tmp_mat[:, :, 1], numbins=256)
             gcf = gcf[0]
             glb = -1  # our upper bound
             gub = 256  # our lower bound
             lower_thresh = 0.00
             upper_thresh = 0.00
             # now find the upper and lower thresh% of our values live
-            while (lower_thresh < thresh):
-                glb = glb + 1
+            while lower_thresh < thresh:
+                glb += 1
                 lower_thresh = gcf[glb] / sz
-            while (upper_thresh < thresh):
-                gub = gub - 1
+            while upper_thresh < thresh:
+                gub -= 1
                 upper_thresh = (sz - gcf[gub]) / sz
 
-            rcf = sss.cumfreq(tempMat[:, :, 2], numbins=256)
+            rcf = sss.cumfreq(tmp_mat[:, :, 2], numbins=256)
             rcf = rcf[0]
             rlb = -1  # our upper bound
             rub = 256  # our lower bound
             lower_thresh = 0.00
             upper_thresh = 0.00
             # now find the upper and lower thresh% of our values live
-            while (lower_thresh < thresh):
-                rlb = rlb + 1
+            while lower_thresh < thresh:
+                rlb += 1
                 lower_thresh = rcf[rlb] / sz
-            while (upper_thresh < thresh):
-                rub = rub - 1
+            while upper_thresh < thresh:
+                rub -= 1
                 upper_thresh = (sz - rcf[rub]) / sz
             # now we create the scale factors for the remaining pixels
             rlbf = float(rlb)
@@ -4085,28 +4083,28 @@ class Image(object):
             gLUT = npy.ones((256, 1), dtype=uint8)
             bLUT = npy.ones((256, 1), dtype=uint8)
             for i in range(256):
-                if (i <= rlb):
+                if i <= rlb:
                     rLUT[i][0] = 0
-                elif (i >= rub):
+                elif i >= rub:
                     rLUT[i][0] = 255
                 else:
                     rf = ((float(i) - rlbf) * 255.00 / (rubf - rlbf))
                     rLUT[i][0] = int(rf)
-                if (i <= glb):
+                if glb >= i:
                     gLUT[i][0] = 0
-                elif (i >= gub):
+                elif i >= gub:
                     gLUT[i][0] = 255
                 else:
                     gf = ((float(i) - glbf) * 255.00 / (gubf - glbf))
                     gLUT[i][0] = int(gf)
-                if (i <= blb):
+                if i <= blb:
                     bLUT[i][0] = 0
-                elif (i >= bub):
+                elif i >= bub:
                     bLUT[i][0] = 255
                 else:
                     bf = ((float(i) - blbf) * 255.00 / (bubf - blbf))
                     bLUT[i][0] = int(bf)
-            ret = img.applyLUT(bLUT, rLUT, gLUT)
+            ret = img.apply_lut(bLUT, rLUT, gLUT)
         return ret
 
     def apply_lut(self, rlut=None, blut=None, glut=None):
@@ -4128,7 +4126,7 @@ class Image(object):
 
         return Image(temp)
 
-    def _get_raw_keypoints(self, threshold=500.00, flavor='SURF', highQuality=1,
+    def _get_raw_keypoints(self, thresh=500.00, flavor='SURF', highQuality=1,
                            force_reset=False):
         try:
             import cv2
@@ -4140,7 +4138,7 @@ class Image(object):
                     new_version = 1
         except:
             warnings.warn("Can't run Keypoints without OpenCV >= 2.3.0")
-            return (None, None)
+            return None, None
 
         if force_reset:
             self._keypoints = None
@@ -4153,13 +4151,11 @@ class Image(object):
             warnings.warn("Invalid choice of keypoint detector.")
             return (None, None)
 
-        if self._keypoints != None and self._kp_flavor == flavor:
-            return (self._keypoints, self._kp_descriptors)
+        if self._keypoints is None and self._kp_flavor == flavor:
+            return self._keypoints, self._kp_descriptors
 
         if hasattr(cv2, flavor):
-
             if flavor == "SURF":
-                # cv2.SURF(hessianThreshold, nOctaves, nOctaveLayers, extended, upright)
                 detector = cv2.SURF(thresh, 4, 2, highQuality, 1)
                 if new_version == 0:
                     self._keypoints, self._kp_descriptors = detector.detect(
@@ -4378,8 +4374,8 @@ class Image(object):
 
         if (
                         self.width != previous_frame.width or self.height != previous_frame.height):
-            logger.warning(
-                    "Image.getMotion: To find motion the current and previous frames must match")
+            logger.warning("Image.getMotion: To find motion the current and"
+                           "previous frames must match")
             return None
         fs = FeatureSet()
         max_mag = 0.00
@@ -4481,8 +4477,10 @@ class Image(object):
                     if (mag > max_mag):
                         max_mag = mag
         else:
-            logger.warning(
-                    "Image.findMotion: I don't know what algorithm you want to use. Valid method choices are Block Matching -> \"BM\" Horn-Schunck -> \"HS\" and Lucas-Kanade->\"LK\" ")
+            logger.warning("Image.findMotion: I don't know what algorithm you "
+                           "want to use. Valid method choices are Block "
+                           "Matching -> \"BM\" Horn-Schunck -> \"HS\" and "
+                           "Lucas-Kanade->\"LK\" ")
             return None
 
         max_mag = math.sqrt(max_mag)  # do the normalization
@@ -4496,8 +4494,8 @@ class Image(object):
             percentages = []
             result = None
             if not hue:
-                pixels = npy.array(self.narray).reshape(-1,
-                                                           3)  # reshape our matrix to 1xN
+                # reshape our matrix to 1xN
+                pixels = npy.array(self.narray).reshape(-1, 3)
                 if centroids is None:
                     result = scv.kmeans(pixels, bins)
                 else:
@@ -4583,8 +4581,8 @@ class Image(object):
                             hue=False):
         self._generate_palette(bins, hue)
         ret = None
-        if (not hue):
-            if (horizontal):
+        if not hue:
+            if horizontal:
                 if (size[0] == -1 or size[1] == -1):
                     size = (int(self.width), int(self.height * .1))
                 pal = cv.CreateImage(size, cv.IPL_DEPTH_8U, 3)
@@ -4598,9 +4596,9 @@ class Image(object):
                             size[0] - 1)
                     roi = (int(idxL), 0, int(idxH - idxL), size[1])
                     cv.SetImageROI(pal, roi)
-                    color = npy.array((float(self._mPalette[i][2]),
-                                      float(self._mPalette[i][1]),
-                                      float(self._mPalette[i][0])))
+                    color = npy.array((float(self._palette[i][2]),
+                                      float(self._palette[i][1]),
+                                      float(self._palette[i][0])))
                     cv.AddS(pal, color, pal)
                     cv.ResetImageROI(pal)
                     idxL = idxH
@@ -4618,9 +4616,9 @@ class Image(object):
                         size[1] - 1)
                     roi = (0, int(idxL), size[0], int(idxH - idxL))
                     cv.SetImageROI(pal, roi)
-                    color = npy.array((float(self._mPalette[i][2]),
-                                      float(self._mPalette[i][1]),
-                                      float(self._mPalette[i][0])))
+                    color = npy.array((float(self._palette[i][2]),
+                                      float(self._palette[i][1]),
+                                      float(self._palette[i][0])))
                     cv.AddS(pal, color, pal)
                     cv.ResetImageROI(pal)
                     idxL = idxH
@@ -4640,7 +4638,7 @@ class Image(object):
                             size[0] - 1)
                     roi = (int(idxL), 0, int(idxH - idxL), size[1])
                     cv.SetImageROI(pal, roi)
-                    cv.AddS(pal, float(self._mPalette[i]), pal)
+                    cv.AddS(pal, float(self._palette[i]), pal)
                     cv.ResetImageROI(pal)
                     idxL = idxH
                 ret = Image(pal)
@@ -4657,7 +4655,7 @@ class Image(object):
                         size[1] - 1)
                     roi = (0, int(idxL), size[0], int(idxH - idxL))
                     cv.SetImageROI(pal, roi)
-                    cv.AddS(pal, float(self._mPalette[i]), pal)
+                    cv.AddS(pal, float(self._palette[i]), pal)
                     cv.ResetImageROI(pal)
                     idxL = idxH
                 ret = Image(pal)
@@ -4668,12 +4666,12 @@ class Image(object):
         ret = None
         self._generate_palette(bins, hue, centroids)
         if (hue):
-            derp = self._mPalette[self._palette_members]
+            derp = self._palette[self._palette_members]
             ret = Image(derp[::-1].reshape(self.height, self.width)[::-1])
             ret = ret.rotate(-90, fixed=False)
         else:
             ret = Image(
-                self._mPalette[self._palette_members].reshape(self.width,
+                self._palette[self._palette_members].reshape(self.width,
                                                               self.height,
                                                               3))
         return ret
@@ -4681,18 +4679,18 @@ class Image(object):
     def find_blobs_from_palette(self, palette_selection, dilate=0, minsize=5,
                                 maxsize=0, appx_level=3):
         bwimg = self.binarizeFromPalette(palette_selection)
-        if (dilate > 0):
+        if dilate > 0:
             bwimg = bwimg.dilate(dilate)
 
-        if (maxsize == 0):
+        if maxsize == 0:
             maxsize = self.width * self.height
         # create a single channel image, thresholded to parameters
 
         blobmaker = BlobMaker()
-        blobs = blobmaker.extractFromBinary(bwimg,
-                                            self, minsize=minsize,
-                                            maxsize=maxsize,
-                                            appx_level=appx_level)
+        blobs = blobmaker.extract_from_binary(bwimg,
+                                              self, minsize=minsize,
+                                              maxsize=maxsize,
+                                              appx_level=appx_level)
 
         if not len(blobs):
             return None
@@ -4813,7 +4811,7 @@ class Image(object):
             elif (thresh_level > 2):
                 result = result.threshold(1)
             bm = BlobMaker()
-            ret = bm.extractFromBinary(result, self, appx_level)
+            ret = bm.extract_from_binary(result, self, appx_level)
 
         return ret
 
@@ -4955,7 +4953,7 @@ class Image(object):
         gray = mask._gray_bitmap_func()
         result = mask.zeros(1)
         cv.Threshold(gray, result, threshold, 255, cv.CV_THRESH_BINARY)
-        blobs = blobmaker.extractFromBinary(Image(result), self,
+        blobs = blobmaker.extract_from_binary(Image(result), self,
                                             minsize=minsize,
                                             maxsize=maxsize,
                                             appx_level=appx_level)
