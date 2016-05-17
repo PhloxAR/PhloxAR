@@ -8,6 +8,11 @@ import itertools
 import cv2
 
 
+__all__ = [
+    'surf_tracker'
+]
+
+
 def surf_tracker(img, bb, ts, **kwargs):
     """
     **DESCRIPTION**

@@ -11,6 +11,11 @@ except ImportError:
     pass
 
 
+__all__ = [
+    'camshift_tracker'
+]
+
+
 def camshift_tracker(img, bb, ts, **kwargs):
     """
     **DESCRIPTION**

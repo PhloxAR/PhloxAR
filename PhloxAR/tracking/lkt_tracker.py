@@ -11,6 +11,11 @@ except ImportError:
     pass
 
 
+__all__ = [
+    'lk_tracker'
+]
+
+
 def lk_tracker(img, bb, ts, oldimg, **kwargs):
     """
     **DESCRIPTION**
