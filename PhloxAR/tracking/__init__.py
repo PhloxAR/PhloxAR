@@ -4,7 +4,7 @@ from .track import *
 from .camshift_tracker import *
 from .lkt_tracker import *
 from .mf_tracker import *
-from surf_tracker import *
+from .surf_tracker import *
 
 __all__ = [
     'Track', 'CAMShiftTrack', 'SURFTrack', 'LKTrack', 'MFTrack',
