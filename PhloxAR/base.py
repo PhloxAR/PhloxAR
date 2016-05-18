@@ -85,12 +85,9 @@ from pygame import gfxdraw
 from pickle import *
 
 try:
-    import cv2.cv as cv
+    import cv2
 except ImportError:
-    try:
-        import cv
-    except ImportError:
-        raise ImportError("Cannot load OpenCV library which is required.")
+    raise ImportError("Cannot load OpenCV library which is required.")
 
 # optional libraries
 PIL_ENABLED = True
