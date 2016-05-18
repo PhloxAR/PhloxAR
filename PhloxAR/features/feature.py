@@ -3,7 +3,8 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 from PhloxAR.base import *
-from PhloxAR.color import *
+from PhloxAR.color import Color
+import cv2
 
 
 __all__ = [
@@ -795,7 +796,7 @@ class FeatureSet(list):
         >>> img = Image("lenna")
         >>> feats = img.find_blobs()
         >>> xs = feats.coordinates()
-        >>> print xs
+        >>> print(xs)
         """
         return npy.array([[f.x, f.y] for f in self])
 
@@ -1029,7 +1030,7 @@ class FeatureSet(list):
         >>> my_lines.filter(abs(my_lines.angle()) < numpy.pi / 4) #any lines within 45 degrees of horizontal
         >>> my_corners.filter(my_corners.x() - my_corners.y() > 0) #only return corners in the upper diagonal of the image
         """
-        return FeatureSet(list(np.array(self)[np.array(filterarray)]))
+        return FeatureSet(list(npy.array(self)[npy.array(filterarray)]))
 
     def width(self):
         """
@@ -1148,7 +1149,8 @@ class FeatureSet(list):
         >>> lines = img.find_lines()
         >>> outside = lines.overlaps(b)
 
-        This currently performs a bounding box test, not a full polygon test for speed.
+        This currently performs a bounding box test, not a full polygon test
+        for speed.
         """
         fs = FeatureSet()
         for f in self:
@@ -1159,8 +1161,9 @@ class FeatureSet(list):
     def above(self, region):
         """
 
-        Return only the features that are above a  region. Where region can be a bounding box,
-        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+        Return only the features that are above a  region. Where region can be
+        a bounding box, bounding circle, a list of tuples in a closed polygon,
+        or any other featutres.
 
         * *region*
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
@@ -1176,7 +1179,8 @@ class FeatureSet(list):
         >>> lines = img.find_lines()
         >>> outside = lines.above(b)
 
-        This currently performs a bounding box test, not a full polygon test for speed.
+        This currently performs a bounding box test, not a full polygon test
+        for speed.
         """
         fs = FeatureSet()
         for f in self:
@@ -1187,13 +1191,15 @@ class FeatureSet(list):
     def below(self, region):
         """
 
-        Return only the features below the region. where region can be a bounding box,
-        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+        Return only the features below the region. where region can be a
+        bounding box, bounding circle, a list of tuples in a closed polygon,
+        or any other featutres.
 
         * *region*
-          * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
+          * A bounding box - of the form (x,y,w,h) where x,y is the upper left
+                             corner
           * A bounding circle of the form (x,y,r)
-          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
+          * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),..)
           * Any two dimensional feature (e.g. blobs, circle ...)
 
         Returns a featureset of features that are below the region.
@@ -1214,9 +1220,9 @@ class FeatureSet(list):
 
     def left(self, region):
         """
-
-        Return only the features left of the region. where region can be a bounding box,
-        bounding circle, a list of tuples in a closed polygon, or any other featutres.
+        Return only the features left of the region. where region can be a
+        bounding box, bounding circle, a list of tuples in a closed polygon,
+        or any other featutres.
 
         * *region*
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
