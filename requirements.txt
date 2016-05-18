@@ -5,4 +5,3 @@ Pyglet
 Matplotlib
 Pillow
 multipledispatch
-OpenCV>=3.0
