@@ -2,7 +2,7 @@
 
 from __future__ import unicode_literals
 from .utils import s2n_motorola, s2n_intel, Ratio, get_logger, make_string
-from tags import *
+from .tags import *
 import makernote
 
 import sys
