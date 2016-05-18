@@ -1,14 +1,15 @@
-from .exif import *
+from __future__ import unicode_literals
+from .core import *
 from .tags import *
 from .utils import *
 
-__version__ = '0.1.0'
+__version__ = '0.1.0.dev1'
 
 logger = get_logger()
 
 
 def increment_base(data, base):
-    return ord_(data[base + 2]) * 256 + ord_(data[base + 3]) + 2
+    return ord(data[base + 2]) * 256 + ord(data[base + 3]) + 2
 
 
 def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug=False):
@@ -32,12 +33,12 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
         offset = 0
     elif data[0:2] == b'\xFF\xD8':
         # it's a JPEG file
-        logger.debug("JPEG format recognized data[0:2]=0x%X%X", ord_(data[0]), ord_(data[1]))
+        logger.debug("JPEG format recognized data[0:2]=0x%X%X", ord(data[0]), ord(data[1]))
         base = 2
         logger.debug("data[2]=0x%X data[3]=0x%X data[6:10]=%s",
-                     ord_(data[2]), ord_(data[3]), data[6:10])
-        while ord_(data[2]) == 0xFF and data[6:10] in (b'JFIF', b'JFXX', b'OLYM', b'Phot'):
-            length = ord_(data[4]) * 256 + ord_(data[5])
+                     ord(data[2]), ord(data[3]), data[6:10])
+        while ord(data[2]) == 0xFF and data[6:10] in (b'JFIF', b'JFXX', b'OLYM', b'Phot'):
+            length = ord(data[4]) * 256 + ord(data[5])
             logger.debug(" Length offset is %s", length)
             f.read(length - 8)
             # fake an EXIF beginning of file
@@ -62,8 +63,8 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
             if data[base:base + 2] == b'\xFF\xE1':
                 # APP1
                 logger.debug("  APP1 at base 0x%X", base)
-                logger.debug("  Length: 0x%X 0x%X", ord_(data[base + 2]),
-                             ord_(data[base + 3]))
+                logger.debug("  Length: 0x%X 0x%X", ord(data[base + 2]),
+                             ord(data[base + 3]))
                 logger.debug("  Code: %s", data[base + 4:base + 8])
                 if data[base + 4:base + 8] == b"Exif":
                     logger.debug("  Decrement base by 2 to get to pre-segment header (for compatibility with later code)")
@@ -75,8 +76,8 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
             elif data[base:base + 2] == b'\xFF\xE0':
                 # APP0
                 logger.debug("  APP0 at base 0x%X", base)
-                logger.debug("  Length: 0x%X 0x%X", ord_(data[base + 2]),
-                             ord_(data[base + 3]))
+                logger.debug("  Length: 0x%X 0x%X", ord(data[base + 2]),
+                             ord(data[base + 3]))
                 logger.debug("  Code: %s", data[base + 4:base + 8])
                 increment = increment_base(data, base)
                 logger.debug(" Increment base by %s", increment)
@@ -84,8 +85,8 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
             elif data[base:base + 2] == b'\xFF\xE2':
                 # APP2
                 logger.debug("  APP2 at base 0x%X", base)
-                logger.debug("  Length: 0x%X 0x%X", ord_(data[base + 2]),
-                             ord_(data[base + 3]))
+                logger.debug("  Length: 0x%X 0x%X", ord(data[base + 2]),
+                             ord(data[base + 3]))
                 logger.debug(" Code: %s", data[base + 4:base + 8])
                 increment = increment_base(data, base)
                 logger.debug(" Increment base by %s", increment)
@@ -93,8 +94,8 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
             elif data[base:base + 2] == b'\xFF\xEE':
                 # APP14
                 logger.debug("  APP14 Adobe segment at base 0x%X", base)
-                logger.debug("  Length: 0x%X 0x%X", ord_(data[base + 2]),
-                             ord_(data[base + 3]))
+                logger.debug("  Length: 0x%X 0x%X", ord(data[base + 2]),
+                             ord(data[base + 3]))
                 logger.debug("  Code: %s", data[base + 4:base + 8])
                 increment = increment_base(data, base)
                 logger.debug(" Increment base by %s", increment)
@@ -108,11 +109,11 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
                 # APP12
                 logger.debug("  FFD8 segment at base 0x%X", base)
                 logger.debug("  Got 0x%X 0x%X and %s instead",
-                             ord_(data[base]),
-                             ord_(data[base + 1]),
+                             ord(data[base]),
+                             ord(data[base + 1]),
                              data[4 + base:10 + base])
-                logger.debug("  Length: 0x%X 0x%X", ord_(data[base + 2]),
-                             ord_(data[base + 3]))
+                logger.debug("  Length: 0x%X 0x%X", ord(data[base + 2]),
+                             ord(data[base + 3]))
                 logger.debug("  Code: %s", data[base + 4:base + 8])
                 increment = increment_base(data, base)
                 logger.debug("  Increment base by %s", increment)
@@ -121,11 +122,11 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
                 # APP12
                 logger.debug("  APP12 XMP (Ducky) or Pictureinfo segment at base 0x%X",
                              base)
-                logger.debug("  Got 0x%X and 0x%X instead", ord_(data[base]),
-                             ord_(data[base + 1]))
+                logger.debug("  Got 0x%X and 0x%X instead", ord(data[base]),
+                             ord(data[base + 1]))
                 logger.debug("  Length: 0x%X 0x%X",
-                             ord_(data[base + 2]),
-                             ord_(data[base + 3]))
+                             ord(data[base + 2]),
+                             ord(data[base + 3]))
                 logger.debug("Code: %s", data[base + 4:base + 8])
                 increment = increment_base(data, base)
                 logger.debug("  Increment base by %s", increment)
@@ -136,8 +137,8 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
                 try:
                     increment = increment_base(data, base)
                     logger.debug("  Got 0x%X and 0x%X instead",
-                                 ord_(data[base]),
-                                 ord_(data[base + 1]))
+                                 ord(data[base]),
+                                 ord(data[base + 1]))
                 except IndexError:
                     logger.debug("  Unexpected/unhandled segment type or file content.")
                     return {}
@@ -145,35 +146,35 @@ def process_file(f, stop_tag=DEFAULT_STOP_TAG, details=True, strict=False, debug
                     logger.debug("  Increment base by %s", increment)
                     base += increment
         f.seek(base + 12)
-        if ord_(data[2 + base]) == 0xFF and data[6 + base:10 + base] == b'Exif':
+        if ord(data[2 + base]) == 0xFF and data[6 + base:10 + base] == b'Exif':
             # detected EXIF header
             offset = f.tell()
             endian = f.read(1)
             #HACK TEST:  endian = 'M'
-        elif ord_(data[2 + base]) == 0xFF and data[6 + base:10 + base + 1] == b'Ducky':
+        elif ord(data[2 + base]) == 0xFF and data[6 + base:10 + base + 1] == b'Ducky':
             # detected Ducky header.
             logger.debug("EXIF-like header (normally 0xFF and code): 0x%X and %s",
-                         ord_(data[2 + base]), data[6 + base:10 + base + 1])
+                         ord(data[2 + base]), data[6 + base:10 + base + 1])
             offset = f.tell()
             endian = f.read(1)
-        elif ord_(data[2 + base]) == 0xFF and data[6 + base:10 + base + 1] == b'Adobe':
+        elif ord(data[2 + base]) == 0xFF and data[6 + base:10 + base + 1] == b'Adobe':
             # detected APP14 (Adobe)
             logger.debug("EXIF-like header (normally 0xFF and code): 0x%X and %s",
-                         ord_(data[2 + base]), data[6 + base:10 + base + 1])
+                         ord(data[2 + base]), data[6 + base:10 + base + 1])
             offset = f.tell()
             endian = f.read(1)
         else:
             # no EXIF information
             logger.debug("No EXIF header expected data[2+base]==0xFF and data[6+base:10+base]===Exif (or Duck)")
             logger.debug("Did get 0x%X and %s",
-                         ord_(data[2 + base]), data[6 + base:10 + base + 1])
+                         ord(data[2 + base]), data[6 + base:10 + base + 1])
             return {}
     else:
         # file format not recognized
         logger.debug("File format not recognized.")
         return {}
 
-    endian = chr(ord_(endian[0]))
+    endian = chr(ord(endian[0]))
     # deal with the EXIF info we found
     logger.debug("Endian format is %s (%s)", endian, {
         'I': 'Intel',
