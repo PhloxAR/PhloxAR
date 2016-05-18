@@ -3,7 +3,7 @@
 from __future__ import division, print_function
 from __future__ import unicode_literals, absolute_import
 
-from utils import make_string, Ratio
+from ..utils import make_string, Ratio
 
 
 def ev_bias(seq):
