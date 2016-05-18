@@ -163,7 +163,7 @@ class Blob(Feature):
         hack = (self._bbox[0], self._bbox[1], self._bbox[2], self._bbox[3])
         cv.SetImageROI(self._image.bitmap, hack)
         # may need the offset parameter
-        avg = cv.Avg(self._image.bitmap, self._mask._gray_bitmap_func())
+        avg = cv.Avg(self._image.bitmap, self._mask._get_gray_narray())
         cv.ResetImageROI(self._image.bitmap)
 
         return tuple(reversed(avg[0:3]))
@@ -441,30 +441,30 @@ class Blob(Feature):
         if width == -1:
             # copy the mask into 3 channels and multiply by the appropriate color
             maskred = cv.CreateImage(
-                cv.GetSize(self._mask._gray_bitmap_func()), cv.IPL_DEPTH_8U,
+                cv.GetSize(self._mask._get_gray_narray()), cv.IPL_DEPTH_8U,
                 1
             )
             
             maskgrn = cv.CreateImage(
-                cv.GetSize(self._mask._gray_bitmap_func()), cv.IPL_DEPTH_8U,
+                cv.GetSize(self._mask._get_gray_narray()), cv.IPL_DEPTH_8U,
                 1
             )
             
             maskblu = cv.CreateImage(
-                cv.GetSize(self._mask._gray_bitmap_func()), cv.IPL_DEPTH_8U,
+                cv.GetSize(self._mask._get_gray_narray()), cv.IPL_DEPTH_8U,
                 1
             )
 
             maskbit = cv.CreateImage(
-                cv.GetSize(self._mask._gray_bitmap_func()), cv.IPL_DEPTH_8U,
+                cv.GetSize(self._mask._get_gray_narray()), cv.IPL_DEPTH_8U,
                 3
             )
 
-            cv.ConvertScale(self._mask._gray_bitmap_func(), maskred,
+            cv.ConvertScale(self._mask._get_gray_narray(), maskred,
                             color[0] / 255.0)
-            cv.ConvertScale(self._mask._gray_bitmap_func(), maskgrn,
+            cv.ConvertScale(self._mask._get_gray_narray(), maskgrn,
                             color[1] / 255.0)
-            cv.ConvertScale(self._mask._gray_bitmap_func(), maskblu,
+            cv.ConvertScale(self._mask._get_gray_narray(), maskblu,
                             color[2] / 255.0)
 
             cv.Merge(maskblu, maskgrn, maskred, None, maskbit)

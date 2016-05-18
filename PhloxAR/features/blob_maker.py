@@ -108,7 +108,7 @@ class BlobMaker(object):
         if test[0] <= ptest and test[1] <= ptest and test[2] <= ptest:
             return ret
 
-        seq = cv.FindContours(binaryImg._gray_bitmap_func(),
+        seq = cv.FindContours(binaryImg._get_gray_narray(),
                               self._mem_storage, cv.CV_RETR_TREE,
                               cv.CV_CHAIN_APPROX_SIMPLE)
         if not list(seq):

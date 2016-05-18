@@ -7,7 +7,7 @@ import svgwrite
 from PhloxAR.color import *
 from PhloxAR.base import pg
 from PhloxAR.base import gfxdraw
-from PhloxAR.base import npy
+from PhloxAR.base import np
 from PhloxAR.base import warnings
 from PhloxAR.image import Image
 

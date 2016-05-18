@@ -64,7 +64,7 @@ import scipy.cluster.vq as scv
 import scipy.linalg as nla  # for linear algebra/least squares
 import math
 import copy  # for deep copy
-import numpy as npy
+import numpy as np
 import scipy.spatial.distance as spsd
 import platform
 import itertools
@@ -271,19 +271,20 @@ def int2byte(i):
     return chr(i1) + chr(i2)
 
 
+# deprecated
 def npArray2cvMat(mat, dtype=cv.CV_32FC1):
     """
     This function is a utility for converting numpy arrays to
     the cv.cvMat format.
     Returns: cvMatrix
     """
-    if type(mat) == npy.ndarray:
+    if type(mat) == np.ndarray:
         size = len(mat.shape)
         tmp_mat = None
         if dtype in (cv.CV_32FC1, cv.cv32FC2, cv.CV_32FC3, cv.CV_32FC4):
-            tmp_mat = npy.array(mat, dtype='float32')
+            tmp_mat = np.array(mat, dtype='float32')
         elif dtype in (cv.CV_8UC1, cv.CV_8UC2, cv.CV_8UC3, cv.CV_8UC3):
-            tmp_mat = npy.array(mat, dtype='uint8')
+            tmp_mat = np.array(mat, dtype='uint8')
         else:
             logger.warning("Input matrix type is not supported")
             return None

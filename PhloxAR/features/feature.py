@@ -4,7 +4,6 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 from PhloxAR.base import *
 from PhloxAR.color import Color
-import cv2
 
 
 __all__ = [

@@ -103,7 +103,7 @@ class FrameSource(object):
         while successes < n_boards:
             found = 0
             img = image_list[img_idx]
-            found, corners = cv.FindChessboardCorners(
+            found, corners = cv2.findChessboardCorners(
                 img.gray_matrix, board_size,
                 cv.CV_CALIB_CB_ADAPTIVE_THRESH | cv.CV_CALIB_CB_FILTER_QUADS
             )
@@ -1041,8 +1041,8 @@ class Scanner(FrameSource):
     >>> scan = Scanner(0, { "mode": "gray" })
     >>> preview = scan.get_preview()
     >>> stuff = preview.find_blobs(minsize = 1000)
-    >>> topleft = (npy.min(stuff.x()), npy.min(stuff.y()))
-    >>> bottomright = (npy.max(stuff.x()), npy.max(stuff.y()))
+    >>> topleft = (np.min(stuff.x()), np.min(stuff.y()))
+    >>> bottomright = (np.max(stuff.x()), np.max(stuff.y()))
     >>> scan.set_roi(topleft, bottomright)
     >>> scan.set_property("resolution", 1200) #set high resolution
     >>> scan.set_property("mode", "color")

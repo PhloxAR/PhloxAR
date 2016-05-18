@@ -1461,7 +1461,7 @@ class KeyPointMatch(Feature):
             mask = Image((self.width, self.height))
             mask.dl().polygon(self._min_rect, color=Color.WHITE, filled=TRUE)
             mask = mask.apply_layers()
-            ret = cv.Avg(raw.getBitmap(), mask._gray_bitmap_func())
+            ret = cv.Avg(raw.getBitmap(), mask._get_gray_narray())
             self._avg_color = ret
         else:
             ret = self._avg_color
@@ -1546,7 +1546,7 @@ class ROI(Feature):
         Nothing.
         **EXAMPLE**
         >>> img = Image('lenna')
-        >>> x,y = npy.where(img.threshold(230).getGrayNumpy() > 128 )
+        >>> x,y = np.where(img.threshold(230).getGrayNumpy() > 128 )
         >>> roi = ROI(zip(x,y),img)
         >>> roi = ROI(x,y,img)
         """

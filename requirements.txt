@@ -3,5 +3,5 @@ Numpy
 PyGame
 Pyglet
 Matplotlib
-Pillow
+Pillow>=2.8.2
 multipledispatch

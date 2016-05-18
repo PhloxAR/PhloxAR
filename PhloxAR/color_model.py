@@ -54,7 +54,7 @@ class ColorModel(object):
             ret = npy.array(tmp, dtype='uint8')
         elif data.__class__.__name__ == 'tuple':
             ret = npy.array((data[2], data[1], data[0]), 'uint8')
-        elif data.__class__.__name__ == 'npy.array':
+        elif data.__class__.__name__ == 'np.array':
             ret = data
         else:
             logger.warning("ColorModel: color is not in an accepted format!")

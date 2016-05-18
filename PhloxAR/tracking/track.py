@@ -3,7 +3,7 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PhloxAR.color import Color
-from PhloxAR.base import time, npy, warnings, cv
+from PhloxAR.base import time, np, warnings, cv
 from PhloxAR.features.feature import Feature, FeatureSet
 from PhloxAR.image import Image
 import cv2
@@ -549,8 +549,8 @@ class SURFTrack(Track):
             self._descriptor = descriptor
             return
 
-        np_pts = npy.asarray([kp.pt for kp in new_pts])
-        t, pts, center = cv2.kmeans(npy.asarray(np_pts, dtype=npy.float32), K=1,
+        np_pts = np.asarray([kp.pt for kp in new_pts])
+        t, pts, center = cv2.kmeans(np.asarray(np_pts, dtype=np.float32), K=1,
                                     bestLabels=None,
                                     criteria=(
                                         cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER,
@@ -863,7 +863,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print(ts.area_ratio)
         """
-        return npy.array([f.area_ratio for f in self])
+        return np.array([f.area_ratio for f in self])
 
     def draw_path(self, color=Color.GREEN, thickness=2):
         """
@@ -1011,7 +1011,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print(ts.pixel_velocity())
         """
-        return npy.array([f.vel for f in self])
+        return np.array([f.vel for f in self])
 
     def _pixel_velocity_real_time(self):
         """
@@ -1044,7 +1044,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print(ts.pixel_velocity_real_time())
         """
-        return npy.array([f.rt_vel for f in self])
+        return np.array([f.rt_vel for f in self])
 
     def show_coordinates(self, pos=None, color=Color.GREEN, size=None):
         """
@@ -1197,7 +1197,7 @@ class TrackSet(FeatureSet):
         """
         imgs = self.track_images(cv2_numpy=True)
         f = imgs[0]
-        avg = npy.float32(f)
+        avg = np.float32(f)
         for img in imgs[1:]:
             f = img
             cv2.accumulateWeighted(f, avg, 0.01)
@@ -1275,7 +1275,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print ts.predicted_coordinates()
         """
-        return npy.array([f.predict_pt for f in self])
+        return np.array([f.predict_pt for f in self])
 
     def predict_x(self):
         """
@@ -1290,7 +1290,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print(ts.predict_x())
         """
-        return npy.array([f.predict_pt[0] for f in self])
+        return np.array([f.predict_pt[0] for f in self])
 
     def predict_y(self):
         """
@@ -1305,7 +1305,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print(ts.predict_y())
         """
-        return npy.array([f.predict_pt[1] for f in self])
+        return np.array([f.predict_pt[1] for f in self])
 
     def draw_predicted(self, color=Color.GREEN, rad=1, thickness=1):
         """
@@ -1440,7 +1440,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print(ts.correct_x())
         """
-        return npy.array([f.state_pt[0] for f in self])
+        return np.array([f.state_pt[0] for f in self])
 
     def correct_y(self):
         """
@@ -1455,7 +1455,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print(ts.correct_y())
         """
-        return npy.array([f.state_pt[1] for f in self])
+        return np.array([f.state_pt[1] for f in self])
 
     def corrected_coordinates(self):
         """
@@ -1470,7 +1470,7 @@ class TrackSet(FeatureSet):
             ... img = img1
         >>> print ts.predicted_coordinates()
         """
-        return npy.array([f.state_pt for f in self])
+        return np.array([f.state_pt for f in self])
 
     def draw_corrected_path(self, color=Color.GREEN, thickness=2):
         """

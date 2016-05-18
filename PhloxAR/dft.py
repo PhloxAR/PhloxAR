@@ -3,7 +3,7 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import npy, warnings
+from PhloxAR.base import np, warnings
 from PhloxAR.image import Image
 
 
@@ -184,9 +184,9 @@ class DFT(object):
             sx, sy = size
             x0 = sx / 2
             y0 = sy / 2
-            x, y = npy.meshgrid(npy.arange(sx), npy.arange(sy))
-            d = npy.sqrt((x - x0)**2 + (y - y0)**2)
-            flt = 255 * npy.exp(-0.5 * (d/dia)**2)
+            x, y = np.meshgrid(np.arange(sx), np.arange(sy))
+            d = np.sqrt((x - x0) ** 2 + (y - y0) ** 2)
+            flt = 255 * np.exp(-0.5 * (d / dia) ** 2)
 
             if fpass == 'high':
                 flt = 255 - flt
@@ -223,8 +223,8 @@ class DFT(object):
             sx, sy = size
             x0 = sx / 2
             y0 = sy / 2
-            x, y = npy.meshgrid(npy.arange(sx), npy.arange(sy))
-            d = npy.sqrt((x - x0)**2 + (y-y0)**2)
+            x, y = np.meshgrid(np.arange(sx), np.arange(sy))
+            d = np.sqrt((x - x0) ** 2 + (y - y0) ** 2)
             flt = 255 / (1.0 + (d / dia)**(order * 2))
 
             if fpass == 'high':
@@ -278,13 +278,13 @@ class DFT(object):
             return retVal
 
         w, h = size
-        xco = npy.clip(int(xco), 0, w / 2)
+        xco = np.clip(int(xco), 0, w / 2)
 
         if yco is None:
             yco = xco
 
-        yco = npy.clip(int(yco), 0, h / 2)
-        flt = npy.zeros((w, h))
+        yco = np.clip(int(yco), 0, h / 2)
+        flt = np.zeros((w, h))
         flt[0:xco, 0:yco] = 255
         flt[0:xco, h - yco:h] = 255
         flt[w - xco:w, 0:yco] = 255
@@ -368,7 +368,7 @@ class DFT(object):
         lowpassnumpy = lowpass._numpy_array
         highpassnumpy = highpass._numpy_array
         bandpassnumpy = lowpassnumpy + highpassnumpy
-        bandpassnumpy = npy.clip(bandpassnumpy, 0, 255)
+        bandpassnumpy = np.clip(bandpassnumpy, 0, 255)
         img = Image(bandpassnumpy)
         bandpass = DFT(size=size, image=img, narray=bandpassnumpy,
                        type="bandpass", xco_low=xco_low, yco_low=yco_low,
@@ -532,7 +532,7 @@ class DFT(object):
         numpy_filter = self._numpy_array
         numpy_filter1 = flt1._numpy_array
         numpy_filter2 = flt2._numpy_array
-        flt = npy.dstack((numpy_filter, numpy_filter1, numpy_filter2))
+        flt = np.dstack((numpy_filter, numpy_filter1, numpy_filter2))
         image = Image(flt)
         stacked_filter = DFT(size=self.size(), array=flt, image=image, channels=3)
 
@@ -556,7 +556,7 @@ class DFT(object):
 
         numpy_array = self._numpy_array
         numpy_array1 = flt1._numpy_array
-        flt = npy.dstack((numpy_array, numpy_array1))
+        flt = np.dstack((numpy_array, numpy_array1))
         stacked_filter = DFT(size=self.size(), array=numpy_array,
                               channels=self.channels+flt1.channels,
                               type=self._type, frequence=self._freq_pass)

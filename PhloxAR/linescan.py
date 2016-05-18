@@ -311,7 +311,7 @@ class LineScan(list):
         """
         Convolve the line scan with a one dimensional kernel stored as
         a list. Allows you to create an arbitrary filter for the signal.
-        :param kernel: an Nx1 list or npy.array that defines the kernel.
+        :param kernel: an Nx1 list or np.array that defines the kernel.
         :return: a LineScan feature with the kernel applied. We crop
                   the fiddly bits at the end and the begging of the kernel
                   so everything lines up nicely.
