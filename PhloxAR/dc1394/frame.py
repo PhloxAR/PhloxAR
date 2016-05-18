@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/dc1394/frame.py
+# phlox-libdc1394/phloxar-dc1394/frame.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -41,7 +41,7 @@ class Frame(ndarray):
 
     def __new__(cls, camera, frame):
         """
-        Convert a dc1394 frame into a Frame instance.
+        Convert a phloxar-dc1394 frame into a Frame instance.
         :param camera:
         :param frame:
         :return:

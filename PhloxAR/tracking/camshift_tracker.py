@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import npy
+from PhloxAR.base import np
 from PhloxAR.tracking.track import CAMShiftTrack
 
 try:
@@ -61,8 +61,8 @@ def camshift_tracker(img, bb, ts, **kwargs):
     are trying to track faces. It is optimized to track faces.
     """
 
-    lower = npy.array((0., 60., 32.))
-    upper = npy.array((180., 255., 255.))
+    lower = np.array((0., 60., 32.))
+    upper = np.array((180., 255., 255.))
     mask = None
     num_frames = 40
 
@@ -72,9 +72,9 @@ def camshift_tracker(img, bb, ts, **kwargs):
 
     for key in kwargs:
         if key == 'lower':
-            lower = npy.array(tuple(kwargs[key]))
+            lower = np.array(tuple(kwargs[key]))
         elif key == 'upper':
-            upper = npy.array(tuple(kwargs[key]))
+            upper = np.array(tuple(kwargs[key]))
         elif key == 'mask':
             mask = kwargs[key]
             mask = mask.cvnarray

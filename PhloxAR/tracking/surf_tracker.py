@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import npy
+from PhloxAR.base import np
 from PhloxAR.tracking.track import SURFTrack
 import itertools
 import cv2
@@ -133,9 +133,9 @@ def surf_tracker(img, bb, ts, **kwargs):
             data_cluster.append((skp[i].pt[0], skp[i].pt[1]))
 
     # Use Density based clustering to further filter out keypoints
-    n_data = npy.asarray(data_cluster)
+    n_data = np.asarray(data_cluster)
     D = Dis.squareform(Dis.pdist(n_data))
-    S = 1 - (D / npy.max(D))
+    S = 1 - (D / np.max(D))
 
     db = DBSCAN(eps=eps_val, min_samples=min_samples).fit(S)
     core_samples = db.core_sample_indices_

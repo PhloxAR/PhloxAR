@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import npy, itertools
+from PhloxAR.base import np, itertools
 from PhloxAR.tracking.track import LKTrack
 
 try:
@@ -107,7 +107,7 @@ def lk_tracker(img, bb, ts, oldimg, **kwargs):
         pt[i][0][0] = pt[i][0][0] + bb[0]
         pt[i][0][1] = pt[i][0][1] + bb[1]
 
-    p0 = npy.float32(pt).reshape(-1, 1, 2)
+    p0 = np.float32(pt).reshape(-1, 1, 2)
     oldg = oldimg.getGrayNumpyCv2()
     newg = img.getGrayNumpyCv2()
     p1, st, err = cv2.calcOpticalFlowPyrLK(oldg, newg, p0, None,

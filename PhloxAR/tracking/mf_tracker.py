@@ -2,7 +2,7 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import npy
+from PhloxAR.base import np
 from PhloxAR.tracking.track import MFTrack
 from copy import copy
 
@@ -197,9 +197,9 @@ def lktrack(img1, img2, ptsI, nPtsI, winsize_ncc=10, win_size_lk=4,
         target_pt.append((ptsI[2 * i], ptsI[2 * i + 1]))
         fb_pt.append((ptsI[2 * i], ptsI[2 * i + 1]))
 
-    template_pt = npy.asarray(template_pt, dtype="float32")
-    target_pt = npy.asarray(target_pt, dtype="float32")
-    fb_pt = npy.asarray(fb_pt, dtype="float32")
+    template_pt = np.asarray(template_pt, dtype="float32")
+    target_pt = np.asarray(target_pt, dtype="float32")
+    fb_pt = np.asarray(fb_pt, dtype="float32")
 
     target_pt, status, track_error = cv2.calcOpticalFlowPyrLK(
             img1, img2,
@@ -224,9 +224,9 @@ def lktrack(img1, img2, ptsI, nPtsI, winsize_ncc=10, win_size_lk=4,
                                  winsize_ncc, method)
     fb = euclidean_distance(template_pt, target_pt)
 
-    newfb = -1 * npy.ones(len(fb))
-    newncc = -1 * npy.ones(len(ncc))
-    for i in npy.argwhere(status):
+    newfb = -1 * np.ones(len(fb))
+    newncc = -1 * np.ones(len(ncc))
+    for i in np.argwhere(status):
         i = i[0]
         ptsJ[2 * i] = target_pt[i][0]
         ptsJ[2 * i + 1] = target_pt[i][1]
@@ -456,10 +456,10 @@ def predict_bbox(bbox0, pt0, pt1, nPts):
 
 
 def get_bbox(pt0, pt1):
-    xmax = npy.max((pt0[0], pt1[0]))
-    xmin = npy.min((pt0[0], pt1[0]))
-    ymax = npy.max((pt0[1], pt1[1]))
-    ymin = npy.min((pt0[1], pt1[1]))
+    xmax = np.max((pt0[0], pt1[0]))
+    xmin = np.min((pt0[0], pt1[0]))
+    ymax = np.max((pt0[1], pt1[1]))
+    ymin = np.min((pt0[1], pt1[1]))
     return xmin, ymin, xmax, ymax
 
 
@@ -515,8 +515,8 @@ def norm_cross_correlation(img1, img2, pt0, pt1, status, winsize,
 
     """
     pts = len(pt0)
-    match = npy.zeros(pts)
-    for i in npy.argwhere(status):
+    match = np.zeros(pts)
+    for i in np.argwhere(status):
         i = i[0]
         patch1 = cv2.getRectSubPix(img1, (winsize, winsize), tuple(pt0[i]))
         patch2 = cv2.getRectSubPix(img2, (winsize, winsize), tuple(pt1[i]))
