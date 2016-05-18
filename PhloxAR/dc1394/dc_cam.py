@@ -31,7 +31,7 @@ class DCCameraError(DCError, RuntimeError):
 
 class DCLibrary(object):
     """
-    This wraps the dc1394 library object which is a nuisance to have around.
+    This wraps the phloxar-dc1394 library object which is a nuisance to have around.
     This is bad design on behave of DC1394. Oh well... This object must stay
     valid until all cameras are closed. But then use it well: it not only
     opens the library, collects a reference to the library and the camera list.
@@ -107,7 +107,7 @@ class DCImage(ndarray):
     """
     This class is the image returned by the camera. It is basically a
     numpy array with some additional information (like timestamps).
-    It is not based on the video_frame structure of the dc1394, but
+    It is not based on the video_frame structure of the phloxar-dc1394, but
     rather augments the information from numpy through information
     of the acquisition of this image.
     """
@@ -393,7 +393,7 @@ class DCCameraProperty(object):
     @property
     def mode(self):
         """The current control mode this feature is running in.
-        For the trigger it shows the trigger modes (from the dc1394
+        For the trigger it shows the trigger modes (from the phloxar-dc1394
         website):
         mode 0:     Exposure starts with a falling edge and stops when
                     the the exposure specified by the SHUTTER feature
@@ -751,7 +751,7 @@ class DCCamera(object):
     def _get_supported_modes(self):
         """
         Get all the supported video modes of the camera.  This calls the
-        builtin dc1394 function and converts the returned codes to a
+        builtin phloxar-dc1394 function and converts the returned codes to a
         readable list. Any element of this list can be used to set a video
         mode of the camera.
         Parameters: None
@@ -767,7 +767,7 @@ class DCCamera(object):
 
     def _get_all_features(self):
         """
-        Use a built in dc1394 function to read out all available features
+        Use a built in phloxar-dc1394 function to read out all available features
         of the given camera.
         All features, which are capable of absolute values, are set to
         absolute value mode.
@@ -820,7 +820,7 @@ class DCCamera(object):
     @property
     def cam(self):
         """
-        Return dc1394 new camera
+        Return phloxar-dc1394 new camera
         """
         return self._cam
 
