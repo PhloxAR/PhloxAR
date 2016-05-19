@@ -81,7 +81,7 @@ class Color(object):
         Generate a random RGB color.
 
         Returns:
-            tuple: a color.
+            (tuple) a color.
 
         Examples:
             >>> color = Color.random()
@@ -95,61 +95,118 @@ class Color(object):
         Convert a RGB color to HSV color.
 
         Args:
-            color: (tuple) RGB color
+            color (tuple): RGB color
 
         Returns:
-            tuple: a color tuple in HSV
+            (tuple) a color in HSV
 
+        Examples:
+            >>> color = Color.random()
+            >>> print(color)
+            >>> color = Color.rgb2hsv(color)
+            >>> print(color)
         """
         hsv = colorsys.rgb_to_hsv(*color)
         return hsv[0] * 180, hsv[1] * 255, hsv[2]
 
     @classmethod
-    def hue_from_rgb(cls, t):
+    def hue(cls, color):
         """
         Get corresponding Hue value of the given RGB value.
-        :param t: an rgb tuple to convert to HSV.
-        :return: a color tuple in HSV format.
+
+        Args:
+            color (tuple): an RGB color to be converted
+
+        Returns:
+            (tuple) a color in HSV
+
+        Examples:
+            >>> color = Color.random()
+            >>> print(color)
+            >>> hue = Color.hue(color)
+            >>> print(hue)
         """
-        hue = colorsys.rgb_to_hsv(*t)[0]
+        hue = colorsys.rgb_to_hsv(*color)[0]
         return hue * 180
 
     @classmethod
-    def hue_to_rgb(cls, h):
+    def hue2rgb(cls, hue):
         """
-        Get corresponding RGB values of the given hue.
-        :param h: a hue int to convert to RGB.
-        :return: a color tuple in RGB format.
+        Get corresponding RGB value of the given hue.
+
+        Args:
+            hue (int, float): the hue to be convert
+
+        Returns:
+            (tuple) a color in RGB
+
+        Examples:
+            >>> color = Color.random()
+            >>> print(color)
+            >>> hue = Color.hue(color)
+            >>> color1 = Color.hue2rgb(hue)
+            >>> print(color1)
         """
-        h /= 180.0
-        r, g, b = colorsys.hsv_to_rgb(h, 1, 1)
+        hue /= 180.0
+        r, g, b = colorsys.hsv_to_rgb(hue, 1, 1)
 
         return round(255.0 * r), round(255.0 * g), round(255.0 * b)
 
     @classmethod
-    def hue_to_bgr(cls, h):
+    def hue2bgr(cls, hue):
         """
-        Get corresponding BGR values of the given hue.
-        :param h: a hue int to convert to BGR.
-        :return: a color tuple in BGR format.
+        Get corresponding BGR value of the given hue
+
+        Args:
+            hue (int, float): the hue to be convert
+
+        Returns:
+            (tuple) a color in BGR
+
+        Examples:
+            >>> color = Color.random()
+            >>> print(color)
+            >>> hue = Color.hue(color)
+            >>> print(hue)
+            >>> color_bgr = Color.hue2bgr(hue)
+            >>> print(color_bgr)
         """
-        return reversed(cls.hue_to_rgb(h))
+        return reversed(cls.hue2rgb(hue))
 
     @classmethod
-    def average_rgb(cls, rgb):
+    def average(cls, color):
         """
-        Get the average of the R, G, B values
-        :param rgb: a tuple of RGB values.
-        :return: average of RGB.
+        Averaging a color.
+
+        Args:
+            color (tuple): the color to be averaged.
+
+        Returns:
+            (tuple) averaged color.
+
+        Examples:
+            >>> color = Color.random()
+            >>> print(color)
+            >>> color_averaged = Color.average(color)
         """
-        return int((rgb[0] + rgb[1] + rgb[2]) / 3)
+        return int((color[0] + color[1] + color[2]) / 3)
 
     @classmethod
     def lightness(cls, rgb):
         """
         Calculate the grayscale value of R, G, B according to lightness method.
-        :param rgb: a tuple of RGB values.
-        :return: grayscale value.
+
+        Args:
+            rgb (tuple): RGB values
+
+        Returns:
+            (int) grayscale value
+
+        Examples:
+            >>> color = Color.random()
+            >>> print(color)
+            >>> lightness = Color.lightness(color)
+            >>> print(lightness)
         """
         return int((max(rgb) + min(rgb)) / 2)
 
@@ -157,8 +214,18 @@ class Color(object):
     def luminosity(cls, rgb):
         """
         Calculate the grayscale value of R, G, B according to luminosity method.
-        :param rgb: a tuple of RGB values.
-        :return: grayscale value.
+
+        Args:
+            rgb (tuple): RGB values
+
+        Returns:
+            (int) grayscale value
+
+        Examples:
+            >>> color = Color.random()
+            >>> print(color)
+            >>> luminosity = Color.luminosity(color)
+            >>> print(luminosity)
         """
         return int((0.21 * rgb[0] + 0.71 * rgb[1] + 0.07 * rgb[2]))
 
