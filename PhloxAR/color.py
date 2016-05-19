@@ -3,14 +3,17 @@
 from __future__ import division, print_function
 from __future__ import unicode_literals, absolute_import
 
-from PhloxAR.base import *
-from PhloxAR.image import *
+from scipy.interpolate import UnivariateSpline
+import numpy as np
+import colorsys
 import random
 
 
 class Color(object):
     """
     Color is a class which stores commonly used colors.
+
+    Default color space is RGB.
     """
     BLACK = (0, 0, 0)
     WHITE = (255, 255, 255)
@@ -64,60 +67,41 @@ class Color(object):
     WATERSHED_BG = (128, 128, 128)  # Watershed background
     WATERSHED_UNSURE = (0, 0, 0)
 
-    colors = [BLACK,
-              WHITE,
-              BLUE,
-              YELLOW,
-              RED,
-              VIOLET,
-              ORANGE,
-              GREEN,
-              GRAY,
-              IVORY,
-              BEIGE,
-              WHEAT,
-              TAN,
-              KHAKI,
-              SILVER,
-              CHARCOAL,
-              NAVYBLUE,
-              ROYALBLUE,
-              MEDIUMBLUE,
-              AZURE,
-              CYAN,
-              AQUAMARINE,
-              TEAL,
-              FORESTGREEN,
-              OLIVE,
-              LIME,
-              GOLD,
-              SALMON,
-              HOTPINK,
-              FUCHSIA,
-              PUCE,
-              PLUM,
-              INDIGO,
-              MAROON,
-              CRIMSON,
-              DEFAULT
-              ]
+    colors = [
+        BLACK, WHITE, BLUE, YELLOW, RED, VIOLET, ORANGE, GREEN, GRAY, IVORY,
+        BEIGE, WHEAT, TAN, KHAKI, SILVER, CHARCOAL, NAVYBLUE, ROYALBLUE,
+        MEDIUMBLUE, AZURE, CYAN, AQUAMARINE, TEAL, FORESTGREEN, OLIVE, LIME,
+        GOLD, SALMON, HOTPINK, FUCHSIA, PUCE, PLUM, INDIGO, MAROON, CRIMSON,
+        DEFAULT,
+    ]
 
     @classmethod
     def random(cls):
         """
-        :return: a random color tuple.
+        Generate a random RGB color.
+
+        Returns:
+            tuple: a color.
+
+        Examples:
+            >>> color = Color.random()
         """
         r = random.randint(1, len(cls.colors) - 1)
         return cls.colors[r]
 
     @classmethod
-    def rgb_to_hsv(cls, t):
+    def rgb2hsv(cls, color):
         """
-        Convert a rgb color to HSV, OpenCV style (0-180 for hue)
-        :param t: an rgb tuple to convert to HSV.
-        :return: a color tuple in HSV format.
+        Convert a RGB color to HSV color.
+
+        Args:
+            color: (tuple) RGB color
+
+        Returns:
+            tuple: a color tuple in HSV
+
         """
-        hsv = colorsys.rgb_to_hsv(*t)
+        hsv = colorsys.rgb_to_hsv(*color)
         return hsv[0] * 180, hsv[1] * 255, hsv[2]
 
     @classmethod
@@ -196,13 +180,13 @@ class ColorCurve(object):
     curve = ''
 
     def __init__(self, vals):
-        interval = linspace(0, 255, 256)
+        interval = np.linspace(0, 255, 256)
         if type(vals) == UnivariateSpline:
             self.curve = vals(interval)
         else:
-            vals = npy.array(vals)
+            vals = np.array(vals)
             spline = UnivariateSpline(vals[:, 0], vals[:, 1], s=1)
-            self.curve = npy.maximum(npy.minimum(spline(interval), 255), 0)
+            self.curve = np.maximum(np.minimum(spline(interval), 255), 0)
 
 
 class ColorMap(object):
@@ -225,10 +209,10 @@ class ColorMap(object):
         :param end_map: end of the range of the number with which we map
                         the colors.
         """
-        self.color = npy.array(color)
+        self.color = np.array(color)
         if self.color.ndim == 1:  # To check if only one color was passed.
             color = ((color[0], color[1], color[2]), Color.WHITE)
-            self.color = npy.array(color)
+            self.color = np.array(color)
         self.start_map = float(start_map)
         self.end_map = float(end_map)
         self.value_range = float(end_map - start_map)  # delta

@@ -86,6 +86,7 @@ class FrameSource(object):
                            'more images to perform camera calibration.')
 
         # creation of memory storages
+        image_points = np.zeros((n_boards * board_num, 2), np.float32 )
         image_points = cv.CreateMat(n_boards * board_num, 2, cv.CV_32FC1)
         object_points = cv.CreateMat(n_boards * board_num, 3, cv.CV_32FC1)
         point_counts = cv.CreateMat(n_boards, 1, cv.CV_32SC1)
@@ -325,17 +326,17 @@ class Camera(FrameSource):
     _sdl2_buf = None
 
     prop_map = {
-        "width": cv.CV_CAP_PROP_FRAME_WIDTH,
-        "height": cv.CV_CAP_PROP_FRAME_HEIGHT,
-        "brightness": cv.CV_CAP_PROP_BRIGHTNESS,
-        "contrast": cv.CV_CAP_PROP_CONTRAST,
-        "saturation": cv.CV_CAP_PROP_SATURATION,
-        "hue": cv.CV_CAP_PROP_HUE,
-        "gain": cv.CV_CAP_PROP_GAIN,
-        "exposure": cv.CV_CAP_PROP_EXPOSURE
+        "width": cv2.CAP_PROP_FRAME_WIDTH
+        "height": cv2.CAP_PROP_FRAME_HEIGHT,
+        "brightness": cv2.CAP_PROP_BRIGHTNESS,
+        "contrast": cv2.CAP_PROP_CONTRAST,
+        "saturation": cv2.CAP_PROP_SATURATION,
+        "hue": cv2.CAP_PROP_HUE,
+        "gain": cv2.CAP_PROP_GAIN,
+        "exposure": cv2.CAP_PROP_EXPOSURE
     }
 
-    def __init__(self, cam_idx=-1, prop_set={}, threaded=True, calib_file=''):
+    def __init__(self, cam_idx=-1, prop_set=None, threaded=True, calib_file=''):
         """
         In the camera constructor, cam_idx indicates which camera to connect to
         and prop_set is a dictionary which can be used to set any camera
@@ -360,6 +361,9 @@ class Camera(FrameSource):
                           the user must do this manually.
         :param calib_file: calibration file to load.
         """
+        if prop_set is None:
+            prop_set = {}
+
         global _gcameras
         global _gcamera_polling_thread
         global _gindex
