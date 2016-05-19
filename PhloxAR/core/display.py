@@ -3,10 +3,10 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
+from .image import Image
+import os
 import pygame
-
-import PhloxAR.core.image
-from PhloxAR.base import *
+import numpy as np
 
 PYGAME_INITIALIZED = False
 
@@ -136,7 +136,7 @@ class Display(object):
 
         # checks if phloxar.png exists
         if os.path.isfile(os.path.join(LAUNCH_PATH, 'sample_images', 'phloxar.png')):
-            plxlogo = PhloxAR.core.image.Image('phloxar').scale(32, 32)
+            plxlogo = Image('phloxar').scale(32, 32)
             pygame.display.set_icon(plxlogo.surface())
 
         if flags != pygame.FULLSCREEN and flags != pygame.NOFRAME:
@@ -194,10 +194,10 @@ class Display(object):
         :param pt1: second points
         :return: (x, y, w, h) tuple
         """
-        max_x = npy.max((pt0[0], pt1[0]))
-        max_y = npy.max((pt0[1], pt1[1]))
-        min_x = npy.min((pt0[0], pt1[0]))
-        min_y = npy.min((pt0[1], pt1[1]))
+        max_x = np.max((pt0[0], pt1[0]))
+        max_y = np.max((pt0[1], pt1[1]))
+        min_x = np.min((pt0[0], pt1[0]))
+        min_y = np.min((pt0[1], pt1[1]))
 
         return min_x, min_y, max_x-min_x, max_y-min_y
 
@@ -370,7 +370,7 @@ class Display(object):
                 s = img.getPGSurface()
             self.offset_x = corner_x
             self.offset_y = corner_y
-            black = pg.Surface((self.res[0], self.res[1]))
+            black = pygame.Surface((self.res[0], self.res[1]))
             black.fill((0, 0, 0))
             self.screen.blit(black, black.get_rect())
             self.screen.blit(s, (x, y))

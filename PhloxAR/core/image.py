@@ -6,7 +6,7 @@ from __future__ import unicode_literals, absolute_import
 
 from PhloxAR.base import *
 from PhloxAR.core.color import *
-from PhloxAR.dft import *
+from PhloxAR.core.dft import *
 from PhloxAR.drawing_layer import *
 from PhloxAR.features import *
 from PhloxAR.linescan import *
@@ -324,7 +324,7 @@ class Image(object):
         """
         start_time = time.time()
 
-        from PhloxAR.display import Display
+        from PhloxAR.core.display import Display
 
         i = self
         d = Display(i.size)

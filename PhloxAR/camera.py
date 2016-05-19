@@ -13,8 +13,8 @@ import six
 
 from PhloxAR.base import *
 from PhloxAR.core.color import Color
+from PhloxAR.core.display import Display
 from PhloxAR.core.image import Image, ImageSet, ColorSpace
-from PhloxAR.display import Display
 
 if sys.version[0] == 2:
     from urllib2 import urlopen, build_opener
