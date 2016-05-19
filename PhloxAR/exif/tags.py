@@ -360,9 +360,9 @@ EXIF_TAGS = {
     0xA215: ('ExposureIndex', ),             # 0x9215
     0xA217: ('SensingMethod', {              # 0x9217
         1: 'Not defined',
-        2: 'One-chip color area',
-        3: 'Two-chip color area',
-        4: 'Three-chip color area',
+        2: 'One-chip _color area',
+        3: 'Two-chip _color area',
+        4: 'Three-chip _color area',
         5: 'Color sequential area',
         7: 'Trilinear',
         8: 'Color sequential linear'

@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*_
 
-import sys
-import os
-import svgwrite
 from PhloxAR.color import *
-from PhloxAR.base import pg
+
 from PhloxAR.base import gfxdraw
-from PhloxAR.base import np
+from PhloxAR.base import pg
 from PhloxAR.base import warnings
-from PhloxAR.image import Image
+from PhloxAR.core.image import Image
 
 
 class DrawingLayer(object):
@@ -380,7 +377,7 @@ class DrawingLayer(object):
 
     def bezier(self, points, steps, color=Color.DEFAULT, alpha=-1):
         """
-        Draw a bezier curve based on a control point and a number of steps
+        Draw a bezier _curve based on a control point and a number of steps
         :param points:
         :param steps:
         :param color:

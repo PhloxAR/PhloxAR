@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
 '''
 Image features detection.
@@ -10,9 +10,8 @@ Therefore a rotation from the x-axis to to the y-axis is positive and follows
 the right hand rule.
 '''
 
-from PhloxAR.base import *
-from PhloxAR.image import *
-from PhloxAR.color import *
+from PhloxAR.core.image import *
+from PhloxAR.core.color import *
 from PhloxAR.features.feature import Feature, FeatureSet
 
 
@@ -39,7 +38,7 @@ class Corner(Feature):
         Draw a small circle around the corner. Color tuple is single parameter,
         default is Color.RED.
 
-        :param color: an RGB color triplet
+        :param color: an RGB _color triplet
         :param width: if width is less than zero the draw the feature filled in,
                        otherwise draw the contour using specified width.
         :return: None
@@ -86,8 +85,8 @@ class Line(Feature):
 
     def draw(self, color=Color.BLUE, width=1):
         """
-        Draw a the line, default color is Color.BLUE
-        :param color: a RGB color triplet
+        Draw a the line, default _color is Color.BLUE
+        :param color: a RGB _color triplet
         :param width: draw the line using specified width
         :return: None - modify the source image drawing layer
         """
@@ -126,11 +125,11 @@ class Line(Feature):
 
     def mean_color(self):
         """
-        Returns the mean color of pixels under the line.
-        Note that when the line falls "between" pixels, each pixels color
+        Returns the mean _color of pixels under the line.
+        Note that when the line falls "between" pixels, each pixels _color
         contributes to the weighted average.
 
-        :return: a RGB triplet corresponding to the mean color of the feature
+        :return: a RGB triplet corresponding to the mean _color of the feature
 
         :Example:
         >>> img = Image('lena')
@@ -138,14 +137,14 @@ class Line(Feature):
         >>> c = l[0].mean_color()
         """
         pt1, pt2 = self._end_pts
-        # we are going to walk the line, and take the mean color from all the px
+        # we are going to walk the line, and take the mean _color from all the px
         # points -- there's probably a much more optimal way to do this
         xmax, xmin, ymax, ymin = self.extents()
 
         dx = xmax - xmin
         dy = ymax - ymin
         # orient the line so it is going in the positive direction
-        # if it's a straight line, we can just get mean color on the slice
+        # if it's a straight line, we can just get mean _color on the slice
         if dx == 0.0:
             return self._image[pt1[0]:pt1[0] + 1, ymin:ymax].mean_color()
         if dy == 0.0:
@@ -159,7 +158,7 @@ class Line(Feature):
             y = ymin
             # iterate over x
             for x in range(xmin, xmax):
-                # this is the pixel we would draw on, check the color at that px
+                # this is the pixel we would draw on, check the _color at that px
                 # weight is reduced from 1.0 by the abs amount of error
                 px.append(self._image[x, y])
                 weights.append(1.0 - abs(error))
@@ -184,7 +183,7 @@ class Line(Feature):
             # copy and paste. ugh, sorry.
             x = xmin
             for y in range(ymin, ymax):
-                # this is the pixel we would draw on, check the color at that px
+                # this is the pixel we would draw on, check the _color at that px
                 # weight is reduced from 1.0 by the abs amount of error
                 px.append(self._image[x, y])
                 weights.append(1.0 - abs(error))
@@ -206,7 +205,7 @@ class Line(Feature):
         clr_arr = npy.array(px)
         weight_arr = npy.array(weights)
 
-        # multiply each color tuple by its weight
+        # multiply each _color tuple by its weight
         weighted_clrs = npy.transpose(npy.transpose(clr_arr) * weight_arr)
 
         tmp = sum(weighted_clrs / sum(weight_arr))
@@ -560,7 +559,7 @@ class Barcode(Feature):
         QR codes, these points are the reference boxes, and so may "stray" into
         the actual code.
         **PARAMETERS**
-        * *color* - An RGB color triplet.
+        * *_color* - An RGB _color triplet.
         * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
@@ -656,9 +655,9 @@ class HaarFeature(Feature):
 
     def draw(self, color=Color.GREEN, width=1):
         """
-        Draw the bounding rectangle, default color is Color.GREEN
+        Draw the bounding rectangle, default _color is Color.GREEN
 
-        :param color: a RGB color tuple
+        :param color: a RGB _color tuple
         :param width: if width is less than zero we draw the feature filled in, otherwise we draw the
                        contour using the specified width.
         :return: None, modify the source images drawing layer.
@@ -676,9 +675,9 @@ class HaarFeature(Feature):
 
     def mean_color(self):
         """
-        Find the mean color of the boundary rectangle
+        Find the mean _color of the boundary rectangle
 
-        :return: a RGB tuple that corresponds to the mean color of the feature.
+        :return: a RGB tuple that corresponds to the mean _color of the feature.
 
         :Example:
         >>> img = Image('lena')
@@ -846,9 +845,9 @@ class TemplateMatch(Feature):
     def draw(self, color=Color.GREEN, width=1):
         """
         **SUMMARY**
-        Draw the bounding rectangle, default color green.
+        Draw the bounding rectangle, default _color green.
         **PARAMETERS**
-        * *color* - An RGB color triplet.
+        * *_color* - An RGB _color triplet.
         * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
           contour using the specified width.
         **RETURNS**
@@ -886,9 +885,9 @@ class Circle(Feature):
     def draw(self, color=Color.GREEN, width=1):
         """
         **SUMMARY**
-        With no dimension information, color the x,y point for the feature.
+        With no dimension information, _color the x,y point for the feature.
         **PARAMETERS**
-        * *color* - An RGB color triplet.
+        * *_color* - An RGB _color triplet.
         * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
@@ -902,7 +901,7 @@ class Circle(Feature):
         This function will automatically draw the features on the image and show it.
         It is a basically a shortcut function for development and is the same as:
         **PARAMETERS**
-        * *color* - the color of the feature as an rgb triplet.
+        * *_color* - the _color of the feature as an rgb triplet.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
         **EXAMPLE**
@@ -933,9 +932,9 @@ class Circle(Feature):
     def mean_color(self):
         """
         **SUMMARY**
-        Returns the average color within the circle.
+        Returns the average _color within the circle.
         **RETURNS**
-        Returns an RGB triplet that corresponds to the mean color of the feature.
+        Returns an RGB triplet that corresponds to the mean _color of the feature.
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> c = img.find_circle()
@@ -1115,7 +1114,7 @@ class KeyPoint(Feature):
         **SUMMARY**
         Draw a circle around the feature.  Color tuple is single parameter, default is Green.
         **PARAMETERS**
-        * *color* - An RGB color triplet.
+        * *_color* - An RGB _color triplet.
         * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
@@ -1152,9 +1151,9 @@ class KeyPoint(Feature):
     def mean_color(self):
         """
         **SUMMARY**
-        Return the average color within the feature's radius
+        Return the average _color within the feature's radius
         **RETURNS**
-        Returns an  RGB triplet that corresponds to the mean color of the feature.
+        Returns an  RGB triplet that corresponds to the mean _color of the feature.
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> kp = img.findKeypoints()
@@ -1172,7 +1171,7 @@ class KeyPoint(Feature):
 
     def color_distance(self, color=(0, 0, 0)):
         """
-        Return the euclidean color distance of the color tuple at x,y from a given color (default black)
+        Return the euclidean _color distance of the _color tuple at x,y from a given _color (default black)
         """
         return spsd.euclidean(npy.array(color), npy.array(self.mean_color()))
 
@@ -1267,7 +1266,7 @@ class Motion(Feature):
         **SUMMARY**
         Draw the optical flow vector going from the sample point along the length of the motion vector.
         **PARAMETERS**
-        * *color* - An RGB color triplet.
+        * *_color* - An RGB _color triplet.
         * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
         contour using the specified width.
         * *normalize* - normalize the vector size to the size of the block (i.e. the biggest optical flow
@@ -1340,11 +1339,11 @@ class Motion(Feature):
 
     def mean_color(self):
         """
-        Return the color tuple from x,y
+        Return the _color tuple from x,y
         **SUMMARY**
-        Return a numpy array of the average color of the area covered by each Feature.
+        Return a numpy array of the average _color of the area covered by each Feature.
         **RETURNS**
-        Returns an array of RGB triplets the correspond to the mean color of the feature.
+        Returns an array of RGB triplets the correspond to the mean _color of the feature.
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> kp = img.findKeypoints()
@@ -1408,7 +1407,7 @@ class KeyPointMatch(Feature):
         **SUMMARY**
         Draw a small circle around the corner.  Color tuple is single parameter, default is Red.
         **PARAMETERS**
-        * *color* - An RGB color triplet.
+        * *_color* - An RGB _color triplet.
         * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
@@ -1444,11 +1443,11 @@ class KeyPointMatch(Feature):
 
     def mean_color(self):
         """
-        return the average color within the circle
+        return the average _color within the circle
         **SUMMARY**
-        Return a numpy array of the average color of the area covered by each Feature.
+        Return a numpy array of the average _color of the area covered by each Feature.
         **RETURNS**
-        Returns an array of RGB triplets the correspond to the mean color of the feature.
+        Returns an array of RGB triplets the correspond to the mean _color of the feature.
         **EXAMPLE**
         >>> img = Image("lena")
         >>> kp = img.find_keypoints()
@@ -1506,7 +1505,7 @@ class ShapeContextDescriptor(Feature):
         **SUMMARY**
         Draw a small circle around the corner.  Color tuple is single parameter, default is Red.
         **PARAMETERS**
-        * *color* - An RGB color triplet.
+        * *_color* - An RGB _color triplet.
         * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
           contour using the specified width.
         **RETURNS**
@@ -2107,7 +2106,7 @@ class ROI(Feature):
         **SUMMARY**
         This method will draw the feature on the source image.
         **PARAMETERS**
-        * *color* - The color as an RGB tuple to render the image.
+        * *_color* - The _color as an RGB tuple to render the image.
         **RETURNS**
         Nothing.
         **EXAMPLE**
@@ -2136,9 +2135,9 @@ class ROI(Feature):
     def mean_color(self):
         """
         **SUMMARY**
-        Return the average color within the feature as a tuple.
+        Return the average _color within the feature as a tuple.
         **RETURNS**
-        An RGB color tuple.
+        An RGB _color tuple.
         **EXAMPLE**
         >>> img = Image("OWS.jpg")
         >>> blobs = img.find_blobs(128)

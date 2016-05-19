@@ -925,11 +925,11 @@ class DCCamera(object):
     def mode(self):
         """
         The current video mode of the camera.
-        The video modes are what let you choose the image size and color
+        The video modes are what let you choose the image size and _color
         format. Two special format classes exist: the :class:`Exif`
         mode (which is actually not supported by any known camera)
         and :class:`Format7` which is the scalable image format.
-        Format7 allows you to change the image size, framerate, color
+        Format7 allows you to change the image size, framerate, _color
         coding and crop region.
         Important note: your camera will not support all the video modes
         but will only supports a more or less limited subset of them.

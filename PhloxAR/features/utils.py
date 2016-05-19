@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
-from PhloxAR.base import *
-from PhloxAR.image import *
-from PhloxAR.color import *
-from PhloxAR.features.feature import Feature, FeatureSet
-from PhloxAR.features.detection import *
+from PhloxAR.core.image import *
 
 """
 So this is a place holder for some routines that should live in

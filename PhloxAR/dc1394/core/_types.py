@@ -145,7 +145,7 @@ video_modes_detailed = {
     86: (1600, 1200, 'MONO16'),
 }
 
-# Enumeration of color codings.
+# Enumeration of _color codings.
 color_codings = {
     'COLOR_CODING_MONO8': 352,
     'COLOR_CODING_YUV411': 353,
@@ -203,7 +203,7 @@ BYTE_ORDER_MAX = byte_orders['BYTE_ORDER_YUYV']
 BYTE_ORDER_NUM = BYTE_ORDER_MAX - BYTE_ORDER_MIN + 1
 
 
-# A structure containing a list of color codings.
+# A structure containing a list of _color codings.
 class color_codings_t(Structure):
     _fields_ = [
         ('num', c_uint32),

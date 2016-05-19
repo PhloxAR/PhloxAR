@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
-from PhloxAR.base import *
-from PhloxAR.image import Image, ImageSet, ColorSpace
-from PhloxAR.display import Display
-from PhloxAR.color import Color
-from collections import deque
-import time
 import ctypes
 import subprocess
-import cv2
-import numpy as npy
 import traceback
-import sys
+from collections import deque
+
+import numpy as npy
 import six
+
+from PhloxAR.base import *
+from PhloxAR.core.color import Color
+from PhloxAR.core.image import Image, ImageSet, ColorSpace
+from PhloxAR.display import Display
 
 if sys.version[0] == 2:
     from urllib2 import urlopen, build_opener
@@ -64,7 +63,7 @@ class FrameSource(object):
         The easiest way to run calibration is to run the calibrate.py file
         under the tools directory.
 
-        :param image_list: a list of images of color calibration images
+        :param image_list: a list of images of _color calibration images
         :param grid_size: the actual grid size of the calibration grid,
                            the unit used will be the calibration unit
                            value (i.e. if in doubt use meters, or U.S. standard)
@@ -283,7 +282,7 @@ class FrameSource(object):
         :Example:
         >>> cam = Camera()
         >>> cam.live()
-        Left click will show mouse coordinates and color.
+        Left click will show mouse coordinates and _color.
         Right click will kill the live image.
         """
         start_time = time.time()
@@ -306,7 +305,7 @@ class FrameSource(object):
 
             if 0 < elapsed_time < 5:
                 img.dl().text('In live mode', (10, 10), color=col)
-                img.dl().text('Left click will show mouse coordinates and color',
+                img.dl().text('Left click will show mouse coordinates and _color',
                               (10, 20), color=col)
                 img.dl().text('Right click will kill the live image', (10, 30),
                               color=col)
@@ -1039,7 +1038,7 @@ class Scanner(FrameSource):
     This scanner object is heavily modified from
     https://bitbucket.org/DavidVilla/pysane
     Constructor takes an index (default 0) and a list of SANE options
-    (default is color mode).
+    (default is _color mode).
 
     :Example:
     >>> scan = Scanner(0, { "mode": "gray" })
@@ -1049,7 +1048,7 @@ class Scanner(FrameSource):
     >>> bottomright = (np.max(stuff.x()), np.max(stuff.y()))
     >>> scan.set_roi(topleft, bottomright)
     >>> scan.set_property("resolution", 1200) #set high resolution
-    >>> scan.set_property("mode", "color")
+    >>> scan.set_property("mode", "_color")
     >>> img = scan.get_image()
     >>> scan.set_roi() #reset region of interest
     >>> img.show()
@@ -1063,7 +1062,7 @@ class Scanner(FrameSource):
     max_y = None
     preview = None
 
-    def __init__(self, id=0, properties={'mode': 'color'}):
+    def __init__(self, id=0, properties={'mode': '_color'}):
         super(Scanner, self).__init__()
         global _SANE_INIT
         import sane
@@ -1166,7 +1165,7 @@ class Scanner(FrameSource):
         :Example:
         >>> scan = Scanner()
         >>> print(scan.get_property('mode'))
-        color
+        _color
         """
         if hasattr(self.device, p):
             return getattr(self.device, p)
@@ -1210,7 +1209,7 @@ class Scanner(FrameSource):
         :Example:
         >>> scan = Scanner()
         >>> print(scan.getProperty('mode'))
-        color
+        _color
         >>> scan.set_property('mode', 'gray')
         """
         setattr(self.device, prop, val)
@@ -1305,7 +1304,7 @@ class DigitalCamera(FrameSource):
 class ScreenCamera(object):
     """
     ScreenCapture is a camera class would allow you to capture all or part of
-    the screen and return it as a color image. Requires the pyscreenshot
+    the screen and return it as a _color image. Requires the pyscreenshot
     Library: https://github.com/vijaym123/pyscreenshot
 
     :Example:

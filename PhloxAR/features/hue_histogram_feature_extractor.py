@@ -27,7 +27,7 @@ class HueHistogramFeatureExtractor(FeatureExtractorBase):
 
     def extract(self, img):
         """
-        This feature extractor takes in a color image and returns a normalized color
+        This feature extractor takes in a _color image and returns a normalized _color
         histogram of the pixel counts of each hue.
         """
         img = img.toHLS()

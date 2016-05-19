@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
-from PhloxAR.base import *
+from PhloxAR.core.image import Image
 from PhloxAR.features.blob_maker import BlobMaker
-from PhloxAR.image import Image
 from PhloxAR.segmentation.segmentation_base import SegmentationBase
-
 
 __all__ = [
     'DiffSegmentation'
@@ -18,7 +16,7 @@ class DiffSegmentation(SegmentationBase):
     This method will do image segmentation by looking at the difference between
     two frames.
     grayOnly - use only gray images.
-    threshold - The value at which we consider the color difference to
+    threshold - The value at which we consider the _color difference to
     be significant enough to be foreground imagery.
     The general usage is
     >>> segmentor = DiffSegmentation()

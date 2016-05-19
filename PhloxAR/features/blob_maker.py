@@ -1,13 +1,13 @@
 # -*- coding:utf-8 -*-
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
-from PhloxAR.image import Image
-from PhloxAR.features.feature import FeatureSet
-from PhloxAR.features.blob import Blob
-from PhloxAR.base import *
 import cv2
 
+from PhloxAR.base import *
+from PhloxAR.core.image import Image
+from PhloxAR.features.blob import Blob
+from PhloxAR.features.feature import FeatureSet
 
 __all__ = [
     'BlobMaker'

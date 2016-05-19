@@ -59,7 +59,7 @@ class Mode(object):
         elif 'YUV' in self._color_coding:
             print("Warning: YUV image format!")
             # the data depth is 8 bit in the buffer,
-            # but 12 or 16 bit in a color pixel.
+            # but 12 or 16 bit in a _color pixel.
             self._dtype = ">u1"
         else:
             print("Nonstandard image format: %s" % mode[-1])
@@ -96,7 +96,7 @@ class Mode(object):
     @property
     def color_coding(self):
         """
-        The type of color coding of pixels.
+        The type of _color coding of pixels.
         """
         return self._color_coding
 
@@ -207,7 +207,7 @@ class Format7(Mode):
     @property
     def color_codings(self):
         """
-        Allowed color codings in this mode. Read-only.
+        Allowed _color codings in this mode. Read-only.
         """
         pos_codings = color_codings_t()
         dll.dc1394_format7_get_color_codings(self._cam, self._mode_id,
@@ -217,7 +217,7 @@ class Format7(Mode):
     @property
     def color_coding(self):
         """
-        The current color coding.
+        The current _color coding.
         """
         cc = color_coding_t()
         dll.dc1394_format7_get_color_coding(self._cam, self._mode_id, byref(cc))

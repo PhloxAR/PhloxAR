@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
-from PhloxAR.base import *
-import pygame
-import PhloxAR.image
-import Queue
+from __future__ import division, print_function
 
+import pygame
+
+import PhloxAR.core.image
+from PhloxAR.base import *
 
 PYGAME_INITIALIZED = False
 
@@ -136,7 +136,7 @@ class Display(object):
 
         # checks if phloxar.png exists
         if os.path.isfile(os.path.join(LAUNCH_PATH, 'sample_images', 'phloxar.png')):
-            plxlogo = PhloxAR.image.Image('phloxar').scale(32, 32)
+            plxlogo = PhloxAR.core.image.Image('phloxar').scale(32, 32)
             pygame.display.set_icon(plxlogo.surface())
 
         if flags != pygame.FULLSCREEN and flags != pygame.NOFRAME:
