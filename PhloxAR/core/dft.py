@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
 from PhloxAR.base import np, warnings
-from PhloxAR.image import Image
+from PhloxAR.core.image import Image
 
 
 class DFT(object):
@@ -19,7 +19,7 @@ class DFT(object):
     height       - height of the filter
     channels     - number of channels of the filter
     size         - size of the filter (width, height)
-    _numpy_array       - numpy array of the filter
+    _narray       - numpy array of the filter
     _image       - SimpleCV.Image of the filter
     _dia         - diameter of the filter
                       (applicable for gaussian, butterworth, notch)
@@ -31,13 +31,13 @@ class DFT(object):
     _x_cutoff_high - Upper horizontal cut off frequency for highpassfilter
     _y_cutoff_high - Upper vertical cut off frequency for highassfilter
 
-    Example:
+    Examples:
     >>> gauss = DFT.create_filter('gaussian', dia=40, size=(64, 64))
     """
     width = 0
     height = 0
     channels = 1
-    _numpy_array = None
+    _narray = None
     _image = None
     _dia = 0
     _type = ''
@@ -60,7 +60,7 @@ class DFT(object):
                 self.width, self.height = kwargs[key]
             # numpy array
             elif key == 'narray':
-                self._numpy_array = kwargs[key]
+                self._narray = kwargs[key]
             elif key == 'image':
                 self._image = kwargs[key]
             elif key == 'dia':
@@ -95,7 +95,7 @@ class DFT(object):
             warnings.warn("Both PhloxAR.DFT object mush have the same size.")
             return None
 
-        numpy_array = self._numpy_array + other._numpy_array
+        numpy_array = self._narray + other._narray
         image = Image(numpy_array)
         ret = DFT(array=numpy_array, image=image, size=image.size())
 
@@ -111,9 +111,9 @@ class DFT(object):
         :return: None
         """
         self.channels = flt.channels
-        self._dia = flt._dia
-        self._type = flt._type
-        self._order = flt._order
+        self._dia = flt.dia
+        self._type = flt.type
+        self._order = flt.order
         self._freq_pass = flt._fpass
         self._x_cutoff_high = flt._x_cutoff_high
         self._x_cutoff_low = flt._x_cutoff_low
@@ -174,11 +174,11 @@ class DFT(object):
             for d in dia:
                 stacked_filter = stacked_filter._stack_filters(cls.gaussian(d, size, fpass))
 
-            image = Image(stacked_filter._numpy_array)
-            ret_val = DFT(narray=stacked_filter._numpy_array, image=image,
-                      dia=dia, channels=len(dia), size=size, type='gaussian',
-                      fpass=stacked_filter._freq_pass)
-            return ret_val
+            image = Image(stacked_filter._narray)
+            ret = DFT(narray=stacked_filter._narray, image=image,
+                          dia=dia, channels=len(dia), size=size, type='gaussian',
+                          fpass=stacked_filter._freq_pass)
+            return ret
         else:
             cls._fpass = fpass
             sx, sy = size
@@ -192,7 +192,7 @@ class DFT(object):
                 flt = 255 - flt
 
             image = Image(flt)
-            ret_val = DFT(size=size, narray=flt, image=image, dia=dia,
+            ret = DFT(size=size, narray=flt, image=image, dia=dia,
                           type='gaussian', fpass=fpass)
 
     @classmethod
@@ -213,11 +213,11 @@ class DFT(object):
                 stacked_filter = stacked_filter._stack_filters(
                         cls.butterworth(d, size, fpass))
 
-            image = Image(stacked_filter._numpy_array)
-            ret_val = DFT(narray=stacked_filter._numpy_array, image=image,
+            image = Image(stacked_filter.narray)
+            ret = DFT(narray=stacked_filter.narray, image=image,
                           dia=dia, channels=len(dia), size=size,
                           type='butterworth', fpass=stacked_filter._freq_pass)
-            return ret_val
+            return ret
         else:
             cls._fpass = fpass
             sx, sy = size
@@ -231,10 +231,10 @@ class DFT(object):
                 flt = 255 - flt
 
             image = Image(flt)
-            ret_val = DFT(size=size, narray=flt, image=image, dia=dia,
+            ret = DFT(size=size, narray=flt, image=image, dia=dia,
                           type='butterworth', fpass=fpass)
 
-            return ret_val
+            return ret
 
     @classmethod
     def low_pass(cls, xco, yco=None, size=(64, 64)):
@@ -270,12 +270,12 @@ class DFT(object):
                 stacked_filter = stacked_filter._stack_filters(cls.low_pass(
                         xfreq, yfreq, size))
 
-            image = Image(stacked_filter._numpy_array)
-            retVal = DFT(narray=stacked_filter._numpy_array, image=image,
+            image = Image(stacked_filter._narray)
+            ret = DFT(narray=stacked_filter._narray, image=image,
                          xco_low=xco, yco_low=yco, channels=len(xco), size=size,
                          type=stacked_filter._type, order=cls._order,
                          fpass=stacked_filter._fpass)
-            return retVal
+            return ret
 
         w, h = size
         xco = np.clip(int(xco), 0, w / 2)
@@ -293,7 +293,6 @@ class DFT(object):
         lowpass_filter = DFT(size=size, narray=flt, image=img, type="lowpass",
                       xco_low=xco, yco_low=yco, fpass="lowpass")
         return lowpass_filter
-
 
     @classmethod
     def high_pass(cls, xco, yco=None, size=(64, 64)):
@@ -330,16 +329,16 @@ class DFT(object):
                 stacked_filter = stacked_filter._stack_filters(cls.high_pass(
                         xfreq, yfreq, size))
 
-            image = Image(stacked_filter._numpy_array)
-            retVal = DFT(narray=stacked_filter._numpy_array, image=image,
+            image = Image(stacked_filter._narray)
+            ret = DFT(narray=stacked_filter._narray, image=image,
                          xco_low=xco, yco_low=yco, channels=len(xco), size=size,
                          type=stacked_filter._type, order=cls._order,
                          fpass=stacked_filter._fpass)
-            return retVal
+            return ret
 
         lowpass = cls.low_pass(xco, yco, size)
         w, h = lowpass.size()
-        flt = lowpass._numpy_array
+        flt = lowpass._narray
         flt = 255 - flt
         img = Image(flt)
         highpass_filter = DFT(size=size, narray=flt, image=img,
@@ -365,15 +364,17 @@ class DFT(object):
 
         lowpass = cls.low_pass(xco_low, yco_low, size)
         highpass = cls.high_pass(xco_high, yco_high, size)
-        lowpassnumpy = lowpass._numpy_array
-        highpassnumpy = highpass._numpy_array
+        lowpassnumpy = lowpass.narray
+        highpassnumpy = highpass.narray
         bandpassnumpy = lowpassnumpy + highpassnumpy
         bandpassnumpy = np.clip(bandpassnumpy, 0, 255)
+
         img = Image(bandpassnumpy)
         bandpass = DFT(size=size, image=img, narray=bandpassnumpy,
                        type="bandpass", xco_low=xco_low, yco_low=yco_low,
                        xco_high=xco_high, yco_high=yco_high, fpass="bandpass",
                        channels=lowpass.channels)
+
         return bandpass
 
     @classmethod
@@ -418,15 +419,13 @@ class DFT(object):
         stacked_filter = DFT()
 
         for d1, d2, c in zip(dia1, dia2, cen):
-            stacked_filter = stacked_filter._stack_filters(cls.notch(d1, d2,
-                                                                     c, size,
-                                                                     ftype))
+            stacked_filter = stacked_filter._stack_filters(cls.notch(d1, d2, c, size, ftype))
         image = Image(stacked_filter._numpy)
-        ret_val = DFT(narray=stacked_filter._numpy_array, image=image,
-                     dia=dia1 + dia2, channels=len(dia1), size=size,
-                     type=stacked_filter._type, fpass=stacked_filter._fpass)
+        ret = DFT(narray=stacked_filter._narray, image=image,
+                      dia=dia1 + dia2, channels=len(dia1), size=size,
+                      type=stacked_filter._type, fpass=stacked_filter._fpass)
 
-        return ret_val
+        return ret
 
     def apply_filter(self, image, grayscale=False):
         """
@@ -461,10 +460,10 @@ class DFT(object):
         Invert the filter. All values will be subtracted from 255.
         :return: inverted filter
         """
-        flt = self._numpy_array
+        flt = self._narray
         flt = 255 - flt
-        image = Image(flt)
-        inverted = DFT(array=flt, image=image, size=self.size(), type=self._type)
+        img = Image(flt)
+        inverted = DFT(array=flt, image=img, size=self.size(), type=self._type)
         inverted._update(self)
 
         return inverted
@@ -472,9 +471,9 @@ class DFT(object):
     @property
     def image(self):
         if self._image is None:
-            if self._numpy_array is None:
+            if self._narray is None:
                 warnings.warn("Filter doesn't contain any image.")
-            self._image = Image(self._numpy_array)
+            self._image = Image(self._narray)
         return self._image
 
     @property
@@ -483,11 +482,11 @@ class DFT(object):
         Get the numpy array of the filter
         :return: numpy array of the filter
         """
-        if self._numpy_array is None:
+        if self._narray is None:
             if self._image is None:
                 warnings.warn("Filter doesn't contain any image. ")
-            self._numpy_array = self._image.narray()
-        return self._numpy_array
+            self._narray = self._image.narray()
+        return self._narray
 
     @property
     def order(self):
@@ -513,6 +512,10 @@ class DFT(object):
         """
         return self._type
 
+    @property
+    def narray(self):
+        return self._narray
+
     def stack_filters(self, flt1, flt2):
         """
         Stack three single channel filters of the same size to create
@@ -529,9 +532,9 @@ class DFT(object):
             warnings.warn("All the filters must be of the same size.")
             return None
 
-        numpy_filter = self._numpy_array
-        numpy_filter1 = flt1._numpy_array
-        numpy_filter2 = flt2._numpy_array
+        numpy_filter = self._narray
+        numpy_filter1 = flt1.narray
+        numpy_filter2 = flt2.narray
         flt = np.dstack((numpy_filter, numpy_filter1, numpy_filter2))
         image = Image(flt)
         stacked_filter = DFT(size=self.size(), array=flt, image=image, channels=3)
@@ -539,7 +542,7 @@ class DFT(object):
         return stacked_filter
 
     def size(self):
-        pass
+        return self.width, self.height
 
     def _stack_filters(self, flt1):
         """
@@ -547,18 +550,18 @@ class DFT(object):
         :param flt1: second filter to be stacked.
         :return: DFT filter
         """
-        if isinstance(self._numpy_array, type(None)):
+        if isinstance(self._narray, type(None)):
             return flt1
 
         if not self.size() == flt1.size():
             warnings.warn("All the filters must be of same size.")
             return None
 
-        numpy_array = self._numpy_array
-        numpy_array1 = flt1._numpy_array
+        numpy_array = self._narray
+        numpy_array1 = flt1.narray
         flt = np.dstack((numpy_array, numpy_array1))
         stacked_filter = DFT(size=self.size(), array=numpy_array,
-                              channels=self.channels+flt1.channels,
-                              type=self._type, frequence=self._freq_pass)
+                             channels=self.channels+flt1.channels,
+                             type=self._type, frequence=self._freq_pass)
 
         return stacked_filter

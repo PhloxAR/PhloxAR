@@ -158,7 +158,7 @@ class LineScan(list):
     def scale(self, val_range=(0, 1)):
         """
         Scale the signal  so the max and min values are all scaled to the values
-        in val_range. This is handy if you want to compare the shape of tow
+        in _val_range. This is handy if you want to compare the shape of tow
         signals that are scaled to different ranges.
         :param val_range: a tuple that provides the range of output signal.
         :return: a scaled LineScan object.
@@ -697,7 +697,7 @@ class LineScan(list):
 
     def fit_spline(self, degree=2):
         """
-        Generates a spline curve fitting over the points in LineScan with
+        Generates a spline _curve fitting over the points in LineScan with
         order of precision given by the parameter degree.
         :param degree: the precision of the generated spline.
         :return: the spline as a LineScan fitting over the initial values of

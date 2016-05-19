@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
-from PhloxAR.color import Color
-from PhloxAR.base import time, np, warnings, cv
-from PhloxAR.features.feature import Feature, FeatureSet
-from PhloxAR.image import Image
 import cv2
 
+from PhloxAR.base import time, np, warnings, cv
+from PhloxAR.core.color import Color
+from PhloxAR.core.image import Image
+from PhloxAR.features.feature import Feature, FeatureSet
 
 __all__ = [
     'Track', 'TrackSet', 'CAMShiftTrack', 'LKTrack', 'MFTrack', 'SURFTrack'
@@ -103,7 +103,7 @@ class Track(Feature):
         
         Draw the center of the object on the image.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
         member of the :py:class:`Color` class.
         * *rad* - Radius of the circle to be plotted on the center of the object.
         * *thickness* - Thickness of the boundary of the center circle.
@@ -122,7 +122,7 @@ class Track(Feature):
         
         Draw the bounding box over the object on the image.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
         member of the :py:class:`Color` class.
         * *thickness* - Thickness of the boundary of the bounding box.
         **RETURNS**
@@ -141,7 +141,7 @@ class Track(Feature):
         Show the co-ordinates of the object in text on the Image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
         member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
@@ -167,7 +167,7 @@ class Track(Feature):
         Show the sizeRatio of the object in text on the image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
         member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
@@ -195,7 +195,7 @@ class Track(Feature):
         Show the Pixel Velocity (pixel/frame) of the object in text on the image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
         member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
@@ -226,7 +226,7 @@ class Track(Feature):
         image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
         member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
@@ -285,7 +285,7 @@ class Track(Feature):
         
         Draw the center of the object on the image.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
                     member of the :py:class:`Color` class.
         * *rad* - Radius of the circle to be plotted on the center of the object.
         * *thickness* - Thickness of the boundary of the center circle.
@@ -306,7 +306,7 @@ class Track(Feature):
         Show the co-ordinates of the object in text on the Image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
                     member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
@@ -349,7 +349,7 @@ class Track(Feature):
         Show the co-ordinates of the object in text on the Image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
                     member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
@@ -374,7 +374,7 @@ class Track(Feature):
         
         Draw the center of the object on the image.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a
+        * *_color* - The _color to draw the object. Either an BGR tuple or a
                     member of the :py:class:`Color` class.
         * *rad* - Radius of the circle to be plotted on the center of the object.
         * *thickness* - Thickness of the boundary of the center circle.
@@ -472,7 +472,7 @@ class LKTrack(Track):
         
         Draw all the points which are being tracked.
         **PARAMETERS**
-        * *color* - Color of the point
+        * *_color* - Color of the point
         * *radius* - Radius of the point
         *thickness* - thickness of the circle point
         **RETURNS**
@@ -591,7 +591,7 @@ class SURFTrack(Track):
         
         Draw all the points which are being tracked.
         **PARAMETERS**
-        * *color* - Color of the point
+        * *_color* - Color of the point
         * *radius* - Radius of the point
         *thickness* - thickness of the circle point
         **RETURNS**
@@ -745,7 +745,7 @@ class MFTrack(Track):
         Show the Pixel Velocity (pixels/second) of the object in text on the image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -870,7 +870,7 @@ class TrackSet(FeatureSet):
         **SUMMARY**
         Draw the complete path traced by the center of the object on current frame
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *thickness* - Thickness of the tracing path.
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -894,7 +894,7 @@ class TrackSet(FeatureSet):
         **SUMMARY**
         Draw the center of the object on the current frame.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *rad* - Radius of the circle to be plotted on the center of the object.
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
@@ -914,7 +914,7 @@ class TrackSet(FeatureSet):
         **SUMMARY**
         Draw the bounding box over the object on the current frame.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *thickness* - Thickness of the boundary of the bounding box.
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1052,7 +1052,7 @@ class TrackSet(FeatureSet):
         Show the co-ordinates of the object in text on the current frame.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1080,7 +1080,7 @@ class TrackSet(FeatureSet):
         Show the sizeRatio of the object in text on the current frame.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1108,7 +1108,7 @@ class TrackSet(FeatureSet):
         show the Pixel Velocity (pixel/frame) of the object in text on the current frame.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1139,7 +1139,7 @@ class TrackSet(FeatureSet):
         show the Pixel Velocity (pixels/second) of the object in text on the current frame.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1312,7 +1312,7 @@ class TrackSet(FeatureSet):
         **SUMMARY**
         Draw the predcited center of the object on the current frame.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *rad* - Radius of the circle to be plotted on the center of the object.
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
@@ -1332,7 +1332,7 @@ class TrackSet(FeatureSet):
         **SUMMARY**
         Draw the predcited center of the object on the current frame.
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *rad* - Radius of the circle to be plotted on the center of the object.
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
@@ -1352,7 +1352,7 @@ class TrackSet(FeatureSet):
         **SUMMARY**
         Draw the complete predicted path of the center of the object on current frame
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *thickness* - Thickness of the tracing path.
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1377,7 +1377,7 @@ class TrackSet(FeatureSet):
         Show the co-ordinates of the object in text on the current frame.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1405,7 +1405,7 @@ class TrackSet(FeatureSet):
         Show the co-ordinates of the object in text on the current frame.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
@@ -1477,7 +1477,7 @@ class TrackSet(FeatureSet):
         **SUMMARY**
         Draw the complete corrected path of the center of the object on current frame
         **PARAMETERS**
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *thickness* - Thickness of the tracing path.
         **RETURNS**
         Nada. Nothing. Zilch.

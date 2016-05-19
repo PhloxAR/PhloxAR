@@ -3,15 +3,15 @@
 
 from __future__ import division, print_function
 from __future__ import unicode_literals, absolute_import
+
 from PhloxAR.base import *
-from PhloxAR.color import *
-from PhloxAR.linescan import *
-from PhloxAR.features import *
-from PhloxAR.tracking import *
-from PhloxAR.segmentation import *
+from PhloxAR.core.color import *
+from PhloxAR.core.dft import *
 from PhloxAR.drawing_layer import *
+from PhloxAR.features import *
+from PhloxAR.linescan import *
 from PhloxAR.stream import *
-from PhloxAR.dft import *
+from PhloxAR.tracking import *
 
 try:
     import urllib2
@@ -28,10 +28,6 @@ if not init_options_handler.headless:
     import pygame as sdl2
 
 import scipy.ndimage as ndimage
-import scipy.stats.stats as sci_stats
-import scipy.cluster.vq as sci_cvq
-import scipy.linalg as linalg
-import copy
 import multipledispatch
 
 
@@ -54,7 +50,7 @@ class Image(object):
     copies of the Image required for algorithms such as edge detection, etc can
     be cached an reused when appropriate.
 
-    Image are converted into 8-bit, 3-channel images in RGB color space. It
+    Image are converted into 8-bit, 3-channel images in RGB _color space. It
     will automatically handle conversion from other representations into this
     standard format. If dimensions are passed, an empty image is created.
     """
@@ -137,7 +133,7 @@ class Image(object):
                         a width and height tuple, a url. Certain strings such as
                         'lena', or 'logo' are loaded automatically for quick test.
         :param camera: a camera to pull a live image
-        :param color_space: default camera color space
+        :param color_space: default camera _color space
         :param verbose:
         :param sample: set True, if you want to load som of the included sample
                         images without having to specify complete path
@@ -317,7 +313,7 @@ class Image(object):
     def live(self):
         """
         A live view of the camera.
-        Left click will show mouse coordinates and color.
+        Left click will show mouse coordinates and _color.
         Right click will kill the live image.
 
         :return: None.
@@ -328,7 +324,7 @@ class Image(object):
         """
         start_time = time.time()
 
-        from PhloxAR.display import Display
+        from PhloxAR.core.display import Display
 
         i = self
         d = Display(i.size)
@@ -349,7 +345,7 @@ class Image(object):
 
             if 0 < elapsed_time < 5:
                 i.dl().text('In live mode', (10, 10), color=col)
-                i.dl().text("Left click will show mouse coordinates and color",
+                i.dl().text("Left click will show mouse coordinates and _color",
                             (10, 20), color=col)
                 i.dl().text("Right click will kill the live image", (10, 30),
                             color=col)
@@ -362,8 +358,8 @@ class Image(object):
     @property
     def color_space(self):
         """
-        Returns Image's color space.
-        :return: integer corresponding to the color space.
+        Returns Image's _color space.
+        :return: integer corresponding to the _color space.
         """
         return self._color_space
 
@@ -371,56 +367,56 @@ class Image(object):
 
     def is_rgb(self):
         """
-        Returns true if the image uses the RGB color space.
+        Returns true if the image uses the RGB _color space.
         :return: Bool
         """
         return self._color_space == ColorSpace.RGB
 
     def is_bgr(self):
         """
-        Returns true if the image uses the BGR color space.
+        Returns true if the image uses the BGR _color space.
         :return: Bool
         """
         return self._color_space == ColorSpace.BGR
 
     def is_hsv(self):
         """
-        Returns true if the image uses the HSV color space.
+        Returns true if the image uses the HSV _color space.
         :return: Bool
         """
         return self._color_space == ColorSpace.HSV
 
     def is_hls(self):
         """
-        Returns true if the image uses the HLS color space.
+        Returns true if the image uses the HLS _color space.
         :return: Bool
         """
         return self._color_space == ColorSpace.HLS
 
     def is_xyz(self):
         """
-        Returns true if the image uses the XYZ color space.
+        Returns true if the image uses the XYZ _color space.
         :return: Bool
         """
         return self._color_space == ColorSpace.XYZ
 
     def is_gray(self):
         """
-        Returns true if the image uses the grayscale color space.
+        Returns true if the image uses the grayscale _color space.
         :return: Bool
         """
         return self._color_space == ColorSpace.GRAY
 
     def is_ycrcb(self):
         """
-        Returns true if the image uses the YCrCb color space.
+        Returns true if the image uses the YCrCb _color space.
         :return: Bool
         """
         return self._color_space == ColorSpace.YCrCb
 
     def to_rgb(self):
         """
-        Convert the image to RGB color space.
+        Convert the image to RGB _color space.
         :return: image in RGB
         """
         img = self.zeros()
@@ -444,7 +440,7 @@ class Image(object):
 
     def to_bgr(self):
         """
-        Convert the image to BGR color space.
+        Convert the image to BGR _color space.
         :return: image in BGR
         """
         img = self.zeros()
@@ -468,7 +464,7 @@ class Image(object):
 
     def to_hls(self):
         """
-            Convert the image to HLS color space.
+            Convert the image to HLS _color space.
             :return: image in HLS
             """
         img = img_tmp = self.zeros()
@@ -495,7 +491,7 @@ class Image(object):
 
     def to_hsv(self):
         """
-            Convert the image to HSV color space.
+            Convert the image to HSV _color space.
             :return: image in HSV
             """
         img = img_tmp = self.zeros()
@@ -522,7 +518,7 @@ class Image(object):
 
     def to_xyz(self):
         """
-            Convert the image to XYZ color space.
+            Convert the image to XYZ _color space.
             :return: image in XYZ
             """
         img = img_tmp = self.zeros()
@@ -549,7 +545,7 @@ class Image(object):
 
     def to_gray(self):
         """
-        Convert the image to GRAY color space.
+        Convert the image to GRAY _color space.
         :return: image in GRAY
         """
         img = img_tmp = self.zeros(1)
@@ -579,7 +575,7 @@ class Image(object):
 
     def to_ycrcb(self):
         """
-        Convert the image to RGB color space.
+        Convert the image to RGB _color space.
         :return: image in RGB
         """
         img = img_tmp = self.zeros()
@@ -629,7 +625,7 @@ class Image(object):
         interfacing with OpenCV functions directly.
         :param channels: the number of channels in the returned OpenCV image.
         :return: a numpy array that matches the width, height, and
-                  color depth of the source image.
+                  _color depth of the source image.
         """
         img = np.zeros((self.width, self.height, channels), np.uint8)
 
@@ -760,7 +756,7 @@ class Image(object):
                      self._gray_bitmap, None)
         else:
             logger.warning("Image._gray_bitmap: There is no supported "
-                           "conversion to gray color space.")
+                           "conversion to gray _color space.")
 
         return self._gray_bitmap
 
@@ -1206,11 +1202,11 @@ class Image(object):
         :param diameter: a tuple for the window of the form (diameter,diameter).
                          By default window = (3, 3). Diameter of each pixel
                          neighborhood that is used during filtering.
-        :param sigma_color: filter the specified value in the color space.
+        :param sigma_color: filter the specified value in the _color space.
                             A larger value of the parameter means that farther
                             colors within the pixel neighborhood will be mixed
                             together, resulting in larger areas of semi-equal
-                            color.
+                            _color.
         :param sigma_space: filter the specified value in the coordinate space.
                             A larger value of the parameter means that farther
                             pixels will influence each other as long as their
@@ -1367,7 +1363,7 @@ class Image(object):
     def stretch(self, thresh_low=0, thresh_high=255):
         """
         The stretch filter works on a greyscale image, if the image
-        is color, it returns a greyscale image.  The filter works by
+        is _color, it returns a greyscale image.  The filter works by
         taking in a lower and upper threshold.  Anything below the lower
         threshold is pushed to black (0) and anything above the upper
         threshold is pushed to white (255)
@@ -1423,7 +1419,7 @@ class Image(object):
     def binarize(self, thresh=-1, maxv=255, blocksize=0, p=5):
         """
         Do a binary threshold the image, changing all values below thresh to
-        maxv and all above to black.  If a color tuple is provided, each color
+        maxv and all above to black.  If a _color tuple is provided, each _color
         channel is thresholded separately. If threshold is -1 (default), an
         adaptive method (OTSU's method) is used. If then a blocksize is
         specified, a moving average over each region of block*block pixels a
@@ -1490,9 +1486,9 @@ class Image(object):
 
     def mean_color(self, color_space=None):
         """
-        This method finds the average color of all the pixels in the image and
-        displays tuple in the color space specfied by the user.
-        If no color space is specified , (B,G,R) color space is taken as default.
+        This method finds the average _color of all the pixels in the image and
+        displays tuple in the _color space specfied by the user.
+        If no _color space is specified , (B,G,R) _color space is taken as default.
 
         :return: a tuple of the average image values. Tuples are in the
                  channel order. For most images this means the results
@@ -1637,7 +1633,7 @@ class Image(object):
     def find_skintone_blobs(self, minsize=10, maxsize=0, dilate_iter=1):
         """
         Find Skintone blobs will look for continuous regions of Skintone in a
-        color image and return them as Blob features in a FeatureSet. Parameters
+        _color image and return them as Blob features in a FeatureSet. Parameters
         specify the binarize filter threshold value, and minimum and maximum
         size for blobs. If a threshold value is -1, it will use an adaptive
         threshold.  See binarize() for more information about thresholding.
@@ -1676,7 +1672,7 @@ class Image(object):
     def get_skintone_mask(self, dilate_iter=0):
         """
         Find Skintone mask will look for continuous regions of Skintone in a
-        color image and return a binary mask where the white pixels denote
+        _color image and return a binary mask where the white pixels denote
         Skintone region.
 
         :param dilate_iter: the number of times to run the dilation operation.
@@ -1808,12 +1804,12 @@ class Image(object):
 
         :param ctr: the center of the circle as an (x,y) tuple.
         :param rad: the radius of the circle in pixels
-        :param color: a color tuple (default black)
+        :param color: a _color tuple (default black)
         :param thickness: the thickness of the circle, -1 means filled in.
 
         :Example:
         >>> img = Image("lena")
-        >>> img.draw_circle((img.width/2,img.height/2),r=50,color=Color.RED,width=3)
+        >>> img.draw_circle((img.width/2,img.height/2),r=50,_color=Color.RED,width=3)
         >>> img.show()
 
         :Note:
@@ -1833,7 +1829,7 @@ class Image(object):
 
         :param pt1: the first point for the line (tuple).
         :param pt2: the second point on the line (tuple).
-        :param color: a color tuple (default black).
+        :param color: a _color tuple (default black).
         :param thickness: the thickness of the line in pixels.
 
         :return: None
@@ -1841,7 +1837,7 @@ class Image(object):
 
         :Example:
         >>> img = Image("lena")
-        >>> img.draw_line((0,0),(img.width,img.height),color=Color.RED,thickness=3)
+        >>> img.draw_line((0,0),(img.width,img.height),_color=Color.RED,thickness=3)
         >>> img.show()
 
         :Note:
@@ -1894,7 +1890,7 @@ class Image(object):
         """
         Split the channels of an image into RGB (not the default BGR)
         single parameter is whether to return the channels as grey images (default)
-        or to return them as tinted color image
+        or to return them as tinted _color image
         :param: grayscale: if this is true we return three grayscale images,
         one per channel. if it is False return tinted images.
 
@@ -1979,7 +1975,7 @@ class Image(object):
 
     def apply_hls_curve(self, hcurve, lcurve, scurve):
         """
-        Apply a color correction curve in HSL space. This method can be used
+        Apply a _color correction _curve in HSL space. This method can be used
         to change values for each channel. The curves are :py:class:`ColorCurve`
         class objects.
 
@@ -2004,7 +2000,7 @@ class Image(object):
         # Move to HLS spacecol
         cv2.cvtColor(self._bitmap, temp, cv2.CV_RGB2HLS)
         tmp_mat = cv2.GetMat(temp)  # convert the bitmap to a matrix
-        # now apply the color curve correction
+        # now apply the _color _curve correction
         tmp_mat = np.array(self.matrix).copy()
         tmp_mat[:, :, 0] = np.take(hcurve.curve, tmp_mat[:, :, 0])
         tmp_mat[:, :, 1] = np.take(scurve.curve, tmp_mat[:, :, 1])
@@ -2019,7 +2015,7 @@ class Image(object):
 
     def apply_rgb_curve(self, rcurve, gcurve, bcurve):
         """
-        Apply a color correction curve in RGB space. This method can be used
+        Apply a _color correction _curve in RGB space. This method can be used
         to change values for each channel. The curves are :py:class:`ColorCurve`
         class objects.
 
@@ -2044,9 +2040,9 @@ class Image(object):
             rcurve = ColorCurve(rcurve)
 
         tmp_mat = np.array(self.matrix).copy()
-        tmp_mat[:, :, 0] = np.take(bcurve.curve, tmp_mat[:, :, 0])
-        tmp_mat[:, :, 1] = np.take(gcurve.curve, tmp_mat[:, :, 1])
-        tmp_mat[:, :, 2] = np.take(rcurve.curve, tmp_mat[:, :, 2])
+        tmp_mat[:, :, 0] = np.take(bcurve._curve, tmp_mat[:, :, 0])
+        tmp_mat[:, :, 1] = np.take(gcurve._curve, tmp_mat[:, :, 1])
+        tmp_mat[:, :, 2] = np.take(rcurve._curve, tmp_mat[:, :, 2])
         # Now we jimmy the np array into a cvMat
         image = cv2.CreateImageHeader((tmp_mat.shape[1], tmp_mat.shape[0]),
                                      cv2.IPL_DEPTH_8U, 3)
@@ -2056,7 +2052,7 @@ class Image(object):
 
     def apply_intensity_curve(self, curve):
         """
-        Intensity applied to all three color channels
+        Intensity applied to all three _color channels
 
         :param curve: a ColorCurve object, or 2d list that can be conditioned
                       into one
@@ -3520,7 +3516,7 @@ class Image(object):
         if (color1[0] - color2[0] == 0 or
                         color1[1] - color2[1] == 0 or
                         color1[2] - color2[2] == 0):
-            logger.warning("No color range selected, the result will be black, "
+            logger.warning("No _color range selected, the result will be black, "
                            "returning None instead.")
             return None
         if (color1[0] > 255 or color1[0] < 0 or
@@ -3610,7 +3606,7 @@ class Image(object):
 
     def create_alpha_mask(self, hue=60, hue_lb=None, hue_ub=None):
         if hue < 0 or hue > 180:
-            logger.warning("Invalid hue color, valid hue range is 0 to 180.")
+            logger.warning("Invalid hue _color, valid hue range is 0 to 180.")
 
         if self._color_space != ColorSpace.HSV:
             hsv = self.to_hsv()
@@ -3922,7 +3918,7 @@ class Image(object):
             sz = img.width * img.height
             tmp_mat = img.narray
             bcf = sss.cumfreq(tmp_mat[:, :, 0], numbins=256)
-            # get our cumulative histogram of values for this color
+            # get our cumulative histogram of values for this _color
             bcf = bcf[0]
 
             blb = -1  # our upper bound
@@ -4658,7 +4654,7 @@ class Image(object):
                                           cv2.IPL_DEPTH_8U, 1)
             cv2.SetData(output, mask_in.tostring(),
                        mask_in.dtype.itemsize * mask_in.shape[1])
-            # remap the color space
+            # remap the _color space
             LUT = np.zeros((256, 1), dtype=uint8)
             LUT[1] = 255
             LUT[2] = 64
@@ -7044,7 +7040,7 @@ class Image(object):
                 # The distance of the new point is compared with the least
                 # distance computed till now, the point is rejected if it's
                 # comparitively more. This is done so that edge points don't
-                # wrap around a curve instead of heading towards the end point
+                # wrap around a _curve instead of heading towards the end point
                 if overallMinDist is not None and minDist > overallMinDist * 1.1:
                     i += step
                     continue

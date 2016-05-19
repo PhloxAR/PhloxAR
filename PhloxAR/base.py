@@ -55,7 +55,6 @@ import zipfile
 import pickle
 import glob  # for directory scanning
 import abc  # abstract base class
-import colorsys
 import logging
 # import pygame as sdl2
 import scipy.ndimage as ndimage
@@ -68,9 +67,6 @@ import numpy as np
 import scipy.spatial.distance as spsd
 import platform
 import itertools
-
-from numpy import linspace
-from scipy.interpolate import UnivariateSpline
 from warnings import warn
 from copy import copy
 from math import *

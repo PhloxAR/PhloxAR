@@ -16,7 +16,7 @@ class FeatureExtractorBase(object):
     """
     The featureExtractorBase class is a way of abstracting the process of collecting
     descriptive features within an image. A feature is some description of the image
-    like the mean color, or the width of a center image, or a histogram of edge
+    like the mean _color, or the width of a center image, or a histogram of edge
     lengths. This feature vectors can then be composed together and used within
     a machine learning algorithm to descriminate between different classes of objects.
     """

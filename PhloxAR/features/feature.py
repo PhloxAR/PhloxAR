@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
-from PhloxAR.base import *
-from PhloxAR.color import Color
+from __future__ import division, print_function
 
+from PhloxAR.base import *
+from PhloxAR.core.color import Color
 
 __all__ = [
     'Feature', 'FeatureSet'
@@ -18,7 +18,7 @@ class Feature(object):
     a draw() method,
     an image property, referencing the originating Image object,
     x and y coordinates
-    default functions for determining angle, area, mean color, etc.
+    default functions for determining angle, area, mean _color, etc.
     these functions assume the feature is 1px
     """
     _x = 0.00  # center x coordinate
@@ -127,18 +127,18 @@ class Feature(object):
 
     def mean_color(self):
         """
-        Return the average color within the feature as a tuple.
-        :return: an RGB color tuple
+        Return the average _color within the feature as a tuple.
+        :return: an RGB _color tuple
         """
         return self._image[self._x, self._y]
 
     def color_distance(self, color=(0, 0, 0)):
         """
-        Return the euclidean color distance of the color tuple at x, y from
-        a given color (default black).
+        Return the euclidean _color distance of the _color tuple at x, y from
+        a given _color (default black).
         :param color: a RGB tuple to calculate from which to calculate the
-                       color distance.
-        :return: a floating point color distance value.
+                       _color distance.
+        :return: a floating point _color distance value.
         """
         return spsd.euclidean(npy.array(color), npy.array(self.mean_color()))
 
@@ -696,16 +696,16 @@ class FeatureSet(list):
         Call the draw() method on each feature in the FeatureSet.
 
 
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *width* - The width to draw the feature in pixels. A value of -1 usually indicates a filled region.
-        * *autocolor* - If true a color is randomly selected for each feature.
+        * *autocolor* - If true a _color is randomly selected for each feature.
 
 
         Nada. Nothing. Zilch.
 
         >>> img = Image("lenna")
         >>> feats = img.find_blobs()
-        >>> feats.draw(color=Color.PUCE, width=3)
+        >>> feats.draw(_color=Color.PUCE, width=3)
         >>> img.show()
         """
         for f in self:
@@ -722,9 +722,9 @@ class FeatureSet(list):
         This function will automatically draw the features on the image and show it.
         It is a basically a shortcut function for development and is the same as:
 
-        * *color* - The color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
+        * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *width* - The width to draw the feature in pixels. A value of -1 usually indicates a filled region.
-        * *autocolor* - If true a color is randomly selected for each feature.
+        * *autocolor* - If true a _color is randomly selected for each feature.
 
         Nada. Nothing. Zilch.
 
@@ -977,9 +977,9 @@ class FeatureSet(list):
     def mean_color(self):
         """
 
-        Return a numpy array of the average color of the area covered by each Feature.
+        Return a numpy array of the average _color of the area covered by each Feature.
 
-        Returns an array of RGB triplets the correspond to the mean color of the feature.
+        Returns an array of RGB triplets the correspond to the mean _color of the feature.
 
         >>> img = Image("lenna")
         >>> kp = img.find_keypoints()
@@ -990,23 +990,23 @@ class FeatureSet(list):
     def color_distance(self, color=(0, 0, 0)):
         """
 
-        Return a numpy array of the distance each features average color is from
-        a given color tuple (default black, so color_distance() returns intensity)
+        Return a numpy array of the distance each features average _color is from
+        a given _color tuple (default black, so _delta() returns intensity)
 
-        * *color* - The color to calculate the distance from.
+        * *_color* - The _color to calculate the distance from.
 
-        The distance of the average color for the feature from given color as a numpy array.
+        The distance of the average _color for the feature from given _color as a numpy array.
 
         >>> img = Image("lenna")
         >>> circs = img.find_circle()
-        >>> d = circs.color_distance(color=Color.BLUE)
+        >>> d = circs._delta(_color=Color.BLUE)
         >>> print d
         """
         return spsd.cdist(self.mean_color(), [color])[:, 0]
 
     def sort_color_distance(self, color=(0, 0, 0)):
         """
-        Return a sorted FeatureSet with features closest to a given color first.
+        Return a sorted FeatureSet with features closest to a given _color first.
         Default is black, so sort_color_distance() will return darkest to brightest
         """
         return FeatureSet(sorted(self, key=lambda f: f.color_distance(color)))
@@ -1287,7 +1287,7 @@ class FeatureSet(list):
         >>> img = Image("./sampleimages/EdgeTest1.png")
         >>> blobs = img.find_blobs()
         >>> es = blobs.on_image_edge()
-        >>> es.draw(color=Color.RED)
+        >>> es.draw(_color=Color.RED)
         >>> img.show()
         """
         fs = FeatureSet()
@@ -1382,11 +1382,11 @@ class FeatureSet(list):
     def cluster(self, method="kmeans", properties=None, k=3):
         """
         This function clusters the blobs in the featureSet based on the properties.
-        Properties can be "color", "shape" or "position" of blobs.
+        Properties can be "_color", "shape" or "position" of blobs.
         Clustering is done using K-Means or Hierarchical clustering(Ward) algorithm.
         
 
-        * *properties* - It should be a list with any combination of "color", "shape", "position". properties = ["color","position"]. properties = ["position","shape"]. properties = ["shape"]
+        * *properties* - It should be a list with any combination of "_color", "shape", "position". properties = ["_color","position"]. properties = ["position","shape"]. properties = ["shape"]
         * *method* - if method is "kmeans", it will cluster using K-Means algorithm, if the method is "hierarchical", no need to spicify the number of clusters
         * *k* - The number of clusters(kmeans).
 
@@ -1395,9 +1395,9 @@ class FeatureSet(list):
         
           >>> img = Image("lenna")
           >>> blobs = img.find_blobs()
-          >>> clusters = blobs.cluster(method="kmeans",properties=["color"],k=5)
+          >>> clusters = blobs.cluster(method="kmeans",properties=[__color],k=5)
           >>> for i in clusters:
-          >>>     i.draw(color=Color.random(),width=5)
+          >>>     i.draw(c_colorColor.random(),width=5)
           >>> img.show()
 
         """
@@ -1409,14 +1409,14 @@ class FeatureSet(list):
             return
         X = []  # List of feature vector of each blob
         if not properties:
-            properties = ['color', 'shape', 'position']
+            properties = ['c_color, 'shape', 'position']
         if k > len(self):
             logger.warning(
                 "Number of clusters cannot be greater then the number of blobs in the featureset")
             return
         for i in self:
             featureVector = []
-            if 'color' in properties:
+            if 'c_color in properties:
                 featureVector.extend(i.mAvgColor)
             if 'shape' in properties:
                 featureVector.extend(i.mHu)

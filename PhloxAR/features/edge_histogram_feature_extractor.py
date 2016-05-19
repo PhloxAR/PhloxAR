@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
-from PhloxAR.base import *
-from PhloxAR.image import Image
 from PhloxAR.features.feature_extractor_base import FeatureExtractorBase
 
 __all__ = [

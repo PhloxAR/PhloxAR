@@ -49,7 +49,7 @@ class MorphologyFeatureExtractor(FeatureExtractorBase):
         """
         This method takes in a image and returns some basic morphology
         characteristics about the largest blob in the image. The
-        if a color image is provided the threshold operation is applied.
+        if a _color image is provided the threshold operation is applied.
         """
         ret = None
         if self._threshold_operation is not None:

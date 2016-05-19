@@ -1,16 +1,14 @@
 # -*- coding:utf-8 -*-
-from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
+from __future__ import division, print_function
 
-from PhloxAR.base import math
-from PhloxAR.base import sss
-from PhloxAR.base import *
-from PhloxAR.features.feature import Feature, FeatureSet
-from PhloxAR.features.detection import Corner, Line, ShapeContextDescriptor
-from PhloxAR.color import Color
-from PhloxAR.image import Image
 import scipy.stats as sps
 
+from PhloxAR.base import *
+from PhloxAR.core.color import Color
+from PhloxAR.core.image import Image
+from PhloxAR.features.detection import Corner, Line, ShapeContextDescriptor
+from PhloxAR.features.feature import Feature, FeatureSet
 
 __all__ = [
     'Blob'
