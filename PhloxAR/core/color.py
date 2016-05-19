@@ -11,6 +11,17 @@ import random
 import pickle
 
 
+class ColorSpace(object):
+    UNKNOWN = 0
+    RGB = 1
+    BGR = 2
+    GRAY = 3
+    HLS = 4
+    HSV = 5
+    XYZ = 6
+    YCrCb = 7
+
+
 class Color(object):
     """
     Color is a class which stores commonly used colors.

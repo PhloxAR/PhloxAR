@@ -31,18 +31,6 @@ import scipy.ndimage as ndimage
 import multipledispatch
 
 
-# used for ENUMs
-class ColorSpace(object):
-    UNKNOWN = 0
-    RGB = 1
-    BGR = 2
-    GRAY = 3
-    HLS = 4
-    HSV = 5
-    XYZ = 6
-    YCrCb = 7
-
-
 class Image(object):
     """
     The Image class allows you to convert to and from a number of source types
