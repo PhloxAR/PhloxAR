@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from .blob import *
-from .blob_maker import *
 from .bof_feature_extractor import *
 from .detection import *
 from .edge_histogram_feature_extractor import *
