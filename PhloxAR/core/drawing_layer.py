@@ -1,12 +1,20 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*_
 
-from PhloxAR.color import *
+from __future__ import division, print_function
+from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import gfxdraw
-from PhloxAR.base import pg
-from PhloxAR.base import warnings
-from PhloxAR.core.image import Image
+import warnings
+import numpy as np
+import pygame as sdl
+import pygame.gfxdraw as gfxdraw
+from .image import Image
+from .color import Color
+
+# TODO: DOCUMENT
+
+__all__ = [
+    'DrawingLayer'
+]
 
 
 class DrawingLayer(object):
@@ -30,14 +38,14 @@ class DrawingLayer(object):
     height = 0
 
     def __init__(self, (width, height)):
-        if not pg.font.get_init():
-            pg.font.init()
+        if not sdl.font.get_init():
+            sdl.font.init()
 
         self.width = width
         self.height = height
-        self._surface = pg.Surface((width, height), flags=pg.SRCALPHA)
+        self._surface = sdl.Surface((width, height), flags=sdl.SRCALPHA)
         self._default_alpha = 255
-        self._clear_color = pg.Color(0, 0, 0, 0)
+        self._clear_color = sdl.Color((0, 0, 0, 0))
 
         self._surface.fill(self._clear_color)
         self._default_color = Color.BLACK
@@ -47,7 +55,7 @@ class DrawingLayer(object):
         self._font_bold = False
         self._font_italic = False
         self._font_underline = False
-        self._font = pg.font.Font(self._font_name, self._font_size)
+        self._font = sdl.font.Font(self._font_name, self._font_size)
 
     def __repr__(self):
         return '<PhloxAR.DrawingLayer object size ({}, {})>'.format(
@@ -115,7 +123,7 @@ class DrawingLayer(object):
     @font_size.setter
     def font_size(self, size):
         self._font_size = size
-        self._font = pg.font.Font(self._font_name, self._font_size)
+        self._font = sdl.font.Font(self._font_name, self._font_size)
 
     @property
     def font(self):
@@ -123,16 +131,16 @@ class DrawingLayer(object):
 
     @font.setter
     def font(self, fontface):
-        full = pg.font.match_font(fontface)
+        full = sdl.font.match_font(fontface)
         self._font_name = full
-        self._font = pg.font.Font(self._font_name, self._font_size)
+        self._font = sdl.font.Font(self._font_name, self._font_size)
 
     def list_fonts(self):
         """
         Return a list of strings corresponding to the fonts available
         on the current system.
         """
-        return pg.font.get_fonts()
+        return sdl.font.get_fonts()
 
     def set_layer_alpha(self, alpha):
         """
@@ -141,11 +149,11 @@ class DrawingLayer(object):
         """
         self._surface.set_alpha(alpha)
         # get access to the alpha band of the image
-        pixels_alpha = pg.surfarray.pixels_alpha(self._surface)
+        pixels_alpha = sdl.surfarray.pixels_alpha(self._surface)
         # do a floating point multiply, by alpha 100, on each alpha value
         # the truncate the values (convert to integer) and copy back
         # into the surface
-        pixels_alpha[...] = (npy.ones(pixels_alpha.shape) * alpha).astype(npy.uint8)
+        pixels_alpha[...] = (np.ones(pixels_alpha.shape) * alpha).astype(np.uint8)
 
         # unlock the surface
         self._alpha_delta = alpha / 255.0
@@ -153,14 +161,14 @@ class DrawingLayer(object):
         del pixels_alpha
         return None
 
-    def _csv_rgb2_pygame_color(self, color, alpha=-1):
+    def _csv_rgb2sdl_color(self, color, alpha=-1):
         if alpha == -1:
             alpha = self._default_alpha
 
         if color == Color.DEFAULT:
             color = self._default_color
 
-        ret_val = pg.Color(color[0], color[1], color[2], alpha)
+        ret_val = sdl.Color((color[0], color[1], color[2], alpha))
 
         return ret_val
 
@@ -182,11 +190,12 @@ class DrawingLayer(object):
         :return: None
         """
         if aalias and width == 1:
-            pg.draw.aaline(self._surface, self._csv_rgb2_pygame_color(color, alpha),
-                           start, stop, width)
+            sdl.draw.aaline(self._surface,
+                            self._csv_rgb2sdl_color(color, alpha),
+                            start, stop, width)
         else:
-            pg.draw.line(self._surface, self._csv_rgb2_pygame_color(color, alpha),
-                         start, stop, width)
+            sdl.draw.line(self._surface, self._csv_rgb2sdl_color(color, alpha),
+                          start, stop, width)
 
         start_int = tuple(int(x) for x in start)
         stop_int = tuple(int(x) for x in stop)
@@ -211,10 +220,10 @@ class DrawingLayer(object):
         :return: None
         """
         if aalias and width == 1:
-            pg.draw.aalines(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+            sdl.draw.aalines(self._surface, self._csv_rgb2sdl_color(color, alpha),
                             0, points, width)
         else:
-            pg.draw_lines(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+            sdl.draw_lines(self._surface, self._csv_rgb2sdl_color(color, alpha),
                           0, points, width)
 
         last_point = points[0]
@@ -224,8 +233,6 @@ class DrawingLayer(object):
             pint = tuple(int(x) for x in point)
             self._svg.add(self._svg.line(start=last_point, end=point))
             last_point = point
-
-        return None
 
     def rectangle(self, pt1=None, pt2=None, color=Color.DEFAULT, width=1,
                   filled=False, alpha=-1, **kwargs):
@@ -256,8 +263,8 @@ class DrawingLayer(object):
             else:
                 x = kwargs['center'][0] - kwargs['size'][0] / 2
                 y = kwargs['center'][1] - kwargs['size'][1] / 2
-                r = pg.Rect(x, y, kwargs['size'][0], kwargs['size'][1])
-                pg.draw.rect(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+                r = sdl.Rect(x, y, kwargs['size'][0], kwargs['size'][1])
+                sdl.draw.rect(self._surface, self._csv_rgb2sdl_color(color, alpha),
                              r, width)
                 s = tuple(int(x) for x in kwargs['size'])
                 self._svg.add(self._svg.rect(insert=(int(x), int(y)), size=s))
@@ -283,8 +290,8 @@ class DrawingLayer(object):
                 w = pt2[1] - pt1[1]
                 x = pt1[1]
 
-            r = pg.Rect((x, y), (w, h))
-            pg.draw.rect(self._surface, self._csv_rgb2_pygame_color(color, alpha),
+            r = sdl.Rect((x, y), (w, h))
+            sdl.draw.rect(self._surface, self._csv_rgb2sdl_color(color, alpha),
                          r, width)
             self._svg.add(self._svg.rect(insert=(int(x), int(y)), size=(int(w), int(h))))
 
@@ -312,14 +319,17 @@ class DrawingLayer(object):
 
         if not filled:
             if aalias and width == 1:
-                pg.draw.aalines(self._surface, self._csv_rgb2_pygame_color(color, alpha),
-                                True, points, width)
+                sdl.draw.aalines(self._surface,
+                                 self._csv_rgb2sdl_color(color, alpha),
+                                 True, points, width)
             else:
-                pg.draw.lines(self._surface, self._csv_rgb2_pygame_color(color, alpha),
-                              True, points, width)
+                sdl.draw.lines(self._surface,
+                               self._csv_rgb2sdl_color(color, alpha),
+                               True, points, width)
         else:
-            pg.draw.polygon(self._surface, self._csv_rgb2_pygame_color(color, alpha),
-                            points, width)
+            sdl.draw.polygon(self._surface,
+                             self._csv_rgb2sdl_color(color, alpha),
+                             points, width)
         return None
 
     def circle(self, center, radius, color=Color.DEFAULT, width=1, filled=False,
@@ -338,11 +348,12 @@ class DrawingLayer(object):
         if filled:
             width = 0
         if aalias == False or width > 1 or filled:
-            pg.draw.circle(self._surface, self._csv_rgb2_pygame_color(color, alpha),
-                           center, int(radius), int(width))
+            sdl.draw.circle(self._surface,
+                            self._csv_rgb2sdl_color(color, alpha),
+                            center, int(radius), int(width))
         else:
             gfxdraw.aacircle(self._surface, int(center[0]), int(center[1]),
-                            int(radius), self._csv_rgb2_pygame_color(color, alpha))
+                             int(radius), self._csv_rgb2sdl_color(color, alpha))
 
         cen = tuple(int(x) for x in center)
         self._svg.add(self._svg.circle(center=cen, r=radius))
@@ -364,16 +375,14 @@ class DrawingLayer(object):
         if filled:
             width = 0
 
-        r = pg.Rect(center[0] - (size[0] / 2), center[1] - (size[1] / 2),
-                    size[0], size[1])
-        pg.draw.ellipse(self._surface, self._csv_rgb2_pygame_color(color, alpha),
-                        r, width)
+        r = sdl.Rect(center[0] - (size[0] / 2), center[1] - (size[1] / 2),
+                     size[0], size[1])
+        sdl.draw.ellipse(self._surface, self._csv_rgb2sdl_color(color, alpha),
+                         r, width)
 
         cen = tuple(int(x) for x in center)
         sz = tuple(int(x) for x in size)
         self._svg.add(self._svg.ellipse(center=cen, r=sz))
-
-        return None
 
     def bezier(self, points, steps, color=Color.DEFAULT, alpha=-1):
         """
@@ -384,10 +393,8 @@ class DrawingLayer(object):
         :param alpha:
         :return:
         """
-        gfxdraw.bezier(self._surface, points, steps, self._csv_rgb2_pygame_color(
-            color, alpha))
-
-        return None
+        gfxdraw.bezier(self._surface, points, steps,
+                       self._csv_rgb2sdl_color(color, alpha))
 
     def text_size(self, text):
         """
@@ -395,9 +402,10 @@ class DrawingLayer(object):
         :param text:
         :return:
         """
-        text_surface = self._font.render(text, True, self._csv_rgb2_pygame_color(
-            Color.WHITE, 255
-        ))
+        text_surface = self._font.render(
+                text, True,
+                self._csv_rgb2sdl_color(Color.WHITE, 255)
+        )
 
         return text_surface.get_width(), text_surface.get_height()
 
@@ -413,7 +421,7 @@ class DrawingLayer(object):
         if len(text) < 0:
             return None
 
-        text_surface = self._font.render(text, True, self._csv_rgb2_pygame_color(
+        text_surface = self._font.render(text, True, self._csv_rgb2sdl_color(
             color, alpha
         ))
 
@@ -421,11 +429,11 @@ class DrawingLayer(object):
             alpha = self._default_alpha
         # this is going to be slow, dumb no active support.
         # get access to the alpha band of the image.
-        pixels_alpha = pg.surfarray.pixels_alpha(text_surface)
+        pixels_alpha = sdl.surfarray.pixels_alpha(text_surface)
         # do a floating point multiply, by alpha 100, on each alpha value.
         # the truncate the values (convert to integer) and copy back
         # into the surface
-        pixels_alpha[...] = (pixels_alpha * (alpha / 255.0)).astype(npy.uint8)
+        pixels_alpha[...] = (pixels_alpha * (alpha / 255.0)).astype(np.uint8)
         # unlock the surface
         del pixels_alpha
         self._surface.blit(text_surface, location)
@@ -458,8 +466,8 @@ class DrawingLayer(object):
             return None
 
         alpha = 255
-        text_surface = self._font.render(text, True, self._csv_rgb2_pygame_color(
-            fgc, alpha), self._csv_rgb2_pygame_color(bgc, alpha))
+        text_surface = self._font.render(text, True, self._csv_rgb2sdl_color(
+            fgc, alpha), self._csv_rgb2sdl_color(bgc, alpha))
         self._surface.blit(text_surface, location)
         return None
 
@@ -467,7 +475,7 @@ class DrawingLayer(object):
         """
         sprite draws a sprite (a second small image) onto the current layer.
         The sprite can be loaded directly from a supported image file like a
-        gif, jpg, bmp, or png, or loaded as a surface or SCV image.
+        gif, jsdl, bmp, or png, or loaded as a surface or SCV image.
 
         :param img:
         :param pos:
@@ -476,26 +484,27 @@ class DrawingLayer(object):
         :param alpha:
         :return:
         """
-        if not pg.display.get_init():
-            pg.display.init()
+        if not sdl.display.get_init():
+            sdl.display.init()
 
         if isinstance(img, str):
-            image = pg.image.load(img, "RGB")
+            image = sdl.image.load(img, "RGB")
         elif isinstance(img, Image):
-            image = img.get_surface()
+            image = img.surface
         else:
             image = img  # we assume we have a surface
 
         image = image.convert(self._surface)
 
         if rot != 0.00:
-            image = pg.transform.rotate(image, rot)
+            image = sdl.transform.rotate(image, rot)
 
         if scale != 1.0:
-            image = pg.transform.scale(image, (int(image.get_width() * scale),
-                                               int(image.get_height() * scale)))
-        pixels_alpha = pg.surfarray.pixels_alpha(image)
-        pixels_alpha[...] = (pixels_alpha * (alpha / 255.0)).astype(npy.uint8)
+            scaled_size = (int(image.width * scale), int(image.height * scale))
+            image = sdl.transform.scale(image, scaled_size)
+
+        pixels_alpha = sdl.surfarray.pixels_alpha(image)
+        pixels_alpha[...] = (pixels_alpha * (alpha / 255.0)).astype(np.uint8)
         del pixels_alpha
 
         self._surface.blit(image, pos)
@@ -511,21 +520,19 @@ class DrawingLayer(object):
 
     def replace_overlay(self, overlay):
         """
-        Allow user to set the surface manully.
+        Allow user to set the surface manually.
         :param overlay:
         :return:
         """
         self._surface = overlay
-        return None
 
     def clear(self):
         """
         Remove all of the drawing on this layer.
         :return:
         """
-        self._surface = pg.Surface((int(self.width), int(self.height)),
-                                   flags=pg.SRCALPHA)
-        return None
+        self._surface = sdl.Surface((int(self.width), int(self.height)),
+                                    flags=sdl.SRCALPHA)
 
     def render_to_surface(self, surface):
         """
@@ -542,4 +549,8 @@ class DrawingLayer(object):
         :param other:
         :return:
         """
-        other._surface.blit(self._surface, (0, 0))
+        other.surface.blit(self._surface, (0, 0))
+
+    @property
+    def surface(self):
+        return self._surface
