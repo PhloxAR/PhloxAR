@@ -25,68 +25,37 @@
 from __future__ import division, print_function
 from __future__ import unicode_literals, absolute_import
 
-try:
-    # Python 2
-    from UserDict import UserDict
-    from UserDict import DictMixin as MutableMapping
-except ImportError:
-    # Python 3
-    from collections import UserDict
-    from collections import MutableMapping
-
-# using urllib & urllib2
-try:
-    from urllib2 import urlopen
-except ImportError:
-    from urllib.request import urlopen
-
 import os
 import sys
-import warnings
-import time
-import socket
-import re
-# import urlib2
-import types
-import SocketServer
-import threading
-import tempfile
-import zipfile
-import pickle
-import glob  # for directory scanning
-import abc  # abstract base class
-import logging
-# import pygame as sdl2
-import scipy.ndimage as ndimage
-import scipy.stats.stats as sss  # for auto white balance
-import scipy.cluster.vq as scv
-import scipy.linalg as nla  # for linear algebra/least squares
-import math
-import copy  # for deep copy
-import numpy as np
-import scipy.spatial.distance as spsd
-import platform
-import itertools
-from warnings import warn
-from copy import copy
-from math import *
-from pkg_resources import load_entry_point
-from SimpleHTTPServer import SimpleHTTPRequestHandler
-from types import IntType, LongType, FloatType, InstanceType
-from cStringIO import StringIO
-from numpy import int32
-from numpy import uint8
-from PhloxAR.exif import *
-from pygame import gfxdraw
-from pickle import *
+
+if sys.version > '3':
+    PY3 = True
+else:
+    PY3 = False
+
+
+if PY3:
+    from collections import UserDict, MutableMapping
+    from urllib.request import  urlopen
+    import socketserver as SocketServer
+    import http.server as SimpleHTTPServer
+    import io.StringIO as StringIO
+
+else:
+    from UserDict import UserDict, MutableMapping
+    from urllib2 import urlopen
+    import SocketServer
+    import SimpleHTTPServer
+    from cStringIO import StringIO
 
 try:
     import cv2
 except ImportError:
     raise ImportError("Cannot load OpenCV library which is required.")
+else:
+    if cv2.__version__ < '3':
+        raise ImportError("Your OpenCV library version is lower than 3.")
 
-# optional libraries
-PIL_ENABLED = True
 try:
     from PIL import Image as PILImage
     from PIL import ImageFont as PILImageFont
@@ -94,14 +63,9 @@ try:
     getheader = PILGifImagePlugin.getheader
     getdata = PILGifImagePlugin.getdata
 except ImportError:
-    PIL_ENABLED = False
+    raise ImportError("Cannot load PIL.")
 
-# kinect
-FREENECT_ENABLED = True
-try:
-    import freenect
-except ImportError:
-    FREENECT_ENABLED = False
+# optional libraries
 
 # binary code
 ZXING_ENABLED = True
