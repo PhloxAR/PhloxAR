@@ -27,6 +27,7 @@ from __future__ import unicode_literals, absolute_import
 
 import os
 import sys
+import logging
 
 try:
     import cv2
@@ -44,6 +45,8 @@ try:
     getdata = PILGifImagePlugin.getdata
 except ImportError:
     raise ImportError("Cannot load PIL.")
+
+import numpy as np
 
 # optional libraries
 
