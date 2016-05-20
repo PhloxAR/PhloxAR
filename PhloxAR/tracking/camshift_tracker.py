@@ -2,13 +2,9 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import np
-from PhloxAR.tracking.track import CAMShiftTrack
-
-try:
-    import cv2
-except ImportError:
-    pass
+import numpy as np
+from ..base import cv2
+from .track import CAMShiftTrack
 
 
 __all__ = [
@@ -77,11 +73,11 @@ def camshift_tracker(img, bb, ts, **kwargs):
             upper = np.array(tuple(kwargs[key]))
         elif key == 'mask':
             mask = kwargs[key]
-            mask = mask.cvnarray
+            mask = mask.narray
         elif key == 'num_frames':
             num_frames = kwargs[key]
 
-    hsv = cv2.cvtColor(img.cvnarray, cv2.cv.CV_BGR2HSV)
+    hsv = cv2.cvtColor(img.narray, cv2.COLOR_BGR2HSV)
     if mask is None:
         mask = cv2.inRange(hsv, lower, upper)
 
@@ -92,15 +88,15 @@ def camshift_tracker(img, bb, ts, **kwargs):
     mask_roi = mask[y0:y1, x0:x1]
 
     hist = cv2.calcHist([hsv_roi], [0], mask_roi, [16], [0, 180])
-    cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX);
+    cv2.normalize(hist, hist, 0, 255, cv2.NORM_MINMAX)
     hist_flat = hist.reshape(-1)
     imgs = [hsv]
     if len(ts) > num_frames > 1:
         for feat in ts[-num_frames:]:
-            imgs.append(feat.image.to_hsv().cvnarray)
+            imgs.append(feat.image.to_hsv().narray)
     elif len(ts) < num_frames and num_frames > 1:
         for feat in ts:
-            imgs.append(feat.image.to_hsv().cvnarray)
+            imgs.append(feat.image.to_hsv().narray)
 
     prob = cv2.calcBackProject(imgs, [0], hist_flat, [0, 180], 1)
     prob &= mask
