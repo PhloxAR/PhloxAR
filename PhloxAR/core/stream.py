@@ -2,19 +2,20 @@
 
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
-# TODO: more detailed
-from PhloxAR.base import SocketServer
-from PhloxAR.base import SimpleHTTPRequestHandler
-from PhloxAR.base import time
-from PhloxAR.base import socket
-from PhloxAR.base import re
-from PhloxAR.base import warnings
-from PhloxAR.base import threading
-from PhloxAR.base import cv
+
+from ..base import SocketServer
+from ..base import SimpleHTTPServer
+from ..base import cv2
+import time
+import socket
+import re
+import threading
 
 
 _jpeg_streamers = {}
-class JpegStreamHandler(SimpleHTTPRequestHandler):
+
+
+class JpegStreamHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     """
     Handles requests to the threaded HTTP server.
     Once initialized, any request to this port will receive
@@ -62,8 +63,8 @@ class JpegStreamHandler(SimpleHTTPRequestHandler):
             last_time_served = 0
 
             while True:
-                if (_jpeg_streamers[port].refreshtime > last_time_served
-                    or time.time() - timeout > last_time_served):
+                if (_jpeg_streamers[port].refreshtime > last_time_served or
+                        time.time() - timeout > last_time_served):
                     try:
                         self.wfile.write('--BOUNDARYSTRING\r\n')
                         self.send_header('Content-type', 'image/jpeg')
@@ -73,9 +74,9 @@ class JpegStreamHandler(SimpleHTTPRequestHandler):
                         self.end_headers()
                         self.wfile.write(_jpeg_streamers[port].jpgdata.getvalue() + '\r\n')
                         last_time_served = time.time()
-                    except socket.error as e:
+                    except socket.error:
                         return
-                    except IOError as e:
+                    except IOError:
                         return
                     count += 1
                 time.sleep(_jpeg_streamers[port].sleeptime)
@@ -83,7 +84,8 @@ class JpegStreamHandler(SimpleHTTPRequestHandler):
 
 class JpegTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     allow_reuse_address = True
-    daemon_threads =  True
+    daemon_threads = True
+
 
 # factory class for jpeg tcp server.
 class JpegStreamer(object):
@@ -158,13 +160,13 @@ class JpegStreamer(object):
 
 class VideoStream(object):
     """
-    Allow user save video files in different formats.
+    Allows user save video files in different formats.
 
     You can initialize it by specifying the file you want to output::
         vs = VideoStream("hello.avi")
 
     You can also specify a framerate, and if you want to "fill" in
-    missed frames. So if you want to record a realtime video you may
+    missed frames. So if you want to record a real time video you may
     want to do this::
         # note these are default values
         vs = VideoStream("myvideo.avi", 25, True)
@@ -188,6 +190,7 @@ class VideoStream(object):
     video_time = 0.0
     start_time = 0.0
     frame_count = 0
+    last_frame = None
 
     def __init__(self, filename, fps=25, frame_fill=True):
         """
@@ -196,11 +199,10 @@ class VideoStream(object):
         :param fps:
         :param frame_fill:
         """
-        rev_ext, rev_name = filename[::-1].split('.')
         self.filename = filename
         self.fps = fps
         self.frame_fill = frame_fill
-        self.fourcc = cv.CV_FOURCC('I', 'Y', 'U', 'V')
+        self.fourcc = cv2.VideoWriter_fourcc('I', 'Y', 'U', 'V')
 
     def init_writer(self, size):
         """
@@ -208,8 +210,8 @@ class VideoStream(object):
         :param size:
         :return:
         """
-        self.writer = cv.CreateVideoWriter(self.filename, self.fourcc, self.fps,
-                                           size, 1)
+        self.writer = cv2.VideoWriter(self.filename, self.fourcc, self.fps,
+                                      size, 1)
         self.video_time = 0.0
         self.start_time = time.time()
 
@@ -219,11 +221,15 @@ class VideoStream(object):
         by image.save() but you can use this function to save just the
         bitmap as well so image markup is not implicit,typically you use
         image.save() but this allows for more finer control
-        :param img:
-        :return: None
+
+        Args:
+            img (Image, array like): the image to be write
+
+        Returns:
+            None
         """
         if not self.writer:
-            self.init_writer(img.size())
+            self.init_writer(img.size)
             self.last_frame = img
 
         frame_time = 1.0 / float(self.fps)
@@ -245,18 +251,18 @@ class VideoStream(object):
                 last_frames = frames_behind / 2
                 for i in range(0, last_frames):
                     self.frame_count += 1
-                    cv.WriteFrame(self.writer, self.last_frame.get_bitmap())
+                    self.writer.write(self.last_frame.narray)
 
                 frames = frames_behind - last_frames
 
                 for i in range(0, frames):
                     self.frame_count += 1
-                    cv.WriteFrame(self.writer, img.get_bitmap())
+                    self.writer.write(img.narray)
             else:
                 self.frame_count += 1
-                cv.WriteFrame(self.writer, img.get_bitmap())
+                self.writer.write(img.narray)
         else:
             self.frame_count += 1
-            cv.WriteFrame(self.writer, img.get_bitmap())
+            self.writer.write(img.narray)
 
         self.last_frame = img

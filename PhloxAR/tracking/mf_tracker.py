@@ -2,15 +2,9 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import np
-from PhloxAR.tracking.track import MFTrack
+from ..base import np, cv2
+from .track import MFTrack
 from copy import copy
-
-try:
-    import cv2
-except ImportError:
-    pass
-
 
 __all__ = [
     'mf_tracker', 'fbtrack', 'get_bbox', 'get_bbox_height', 'get_bbox_width',
@@ -162,7 +156,7 @@ def fbtrack(imgI, imgJ, bbox, numM=10, numN=10, margin=5, winsize_ncc=10,
 
 
 def lktrack(img1, img2, ptsI, nPtsI, winsize_ncc=10, win_size_lk=4,
-            method=cv2.cv.CV_TM_CCOEFF_NORMED):
+            method=cv2.TM_CCOEFF_NORMED):
     """
     **SUMMARY**
     (Dev Zone)
@@ -472,7 +466,7 @@ def euclidean_distance(point1, point2):
     (Dev Zone)
     **SUMMARY**
 
-    Calculates eculidean distance between two points
+    Calculates euclidean distance between two points
 
     **PARAMETERS**
 
@@ -489,7 +483,7 @@ def euclidean_distance(point1, point2):
 
 
 def norm_cross_correlation(img1, img2, pt0, pt1, status, winsize,
-                           method=cv2.cv.CV_TM_CCOEFF_NORMED):
+                           method=cv2.TM_CCOEFF_NORMED):
     """
     **SUMMARY**
     (Dev Zone)

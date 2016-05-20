@@ -2,11 +2,9 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import np
-from PhloxAR.tracking.track import SURFTrack
 import itertools
-import cv2
-
+from ..base import np, cv2
+from .track import SURFTrack
 
 __all__ = [
     'surf_tracker'
@@ -79,47 +77,44 @@ def surf_tracker(img, bb, ts, **kwargs):
     if len(ts) == 0:
         # Get template keypoints
         bb = (int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]))
-        templateImg = img
-        detector = cv2.FeatureDetector_create("SURF")
-        descriptor = cv2.DescriptorExtractor_create("SURF")
+        template = img
 
-        templateImg_cv2 = templateImg.narray[bb[1]:bb[1] + bb[3],
+        surf = cv2.xfeatures2d.SURF_create()
+
+        template_region = template.gray_narray[bb[1]:bb[1] + bb[3],
                           bb[0]:bb[0] + bb[2]]
-        tkp = detector.detect(templateImg_cv2)
-        tkp, td = descriptor.compute(templateImg_cv2, tkp)
+
+        tkps, tdescs = surf.detectAndCompute(template_region, None)
 
     else:
-        templateImg = ts[-1].templateImg
-        tkp = ts[-1].tkp
-        td = ts[-1].td
-        detector = ts[-1].detector
-        descriptor = ts[-1].descriptor
+        template = ts[-1].template
+        tkps = ts[-1].kps
+        tdescs = ts[-1].descs
+        surf = ts[-1].sift
 
     newimg = img.narray
 
     # Get image keypoints
-    skp = detector.detect(newimg)
-    skp, sd = descriptor.compute(newimg, skp)
+    skps, sdescs = surf.detectAndCompute(newimg, None)
 
-    if td is None:
+    if tdescs is None:
         print("Descriptors are Empty")
         return None
 
-    if sd is None:
-        track = SURFTrack(img, skp, detector, descriptor, templateImg, skp,
-                            sd, tkp, td)
+    if sdescs is None:
+        track = SURFTrack(img, skps, surf, template, skps, sdescs, tkps, tdescs)
         return track
 
     # flann based matcher
     flann_params = dict(algorithm=1, trees=4)
-    flann = cv2.flann_Index(sd, flann_params)
-    idx, dist = flann.knnSearch(td, 1, params={})
+    flann = cv2.flann.Index(sdescs, flann_params)
+    idx, dist = flann.knnSearch(tdescs, 1, params={})
     del flann
 
     # filter points using distance criteria
     dist = (dist[:, 0] / 2500.0).reshape(-1, ).tolist()
     idx = idx.reshape(-1).tolist()
-    indices = sorted(range(len(dist)), key=lambda i: dist[i])
+    indices = sorted(range(len(dist)), key=lambda x: dist[x])
 
     dist = [dist[i] for i in indices]
     idx = [idx[i] for i in indices]
@@ -129,8 +124,8 @@ def surf_tracker(img, bb, ts, **kwargs):
 
     for i, dis in itertools.izip(idx, dist):
         if dis < distance:
-            skp_final.append(skp[i])
-            data_cluster.append((skp[i].pt[0], skp[i].pt[1]))
+            skp_final.append(skps[i])
+            data_cluster.append((skps[i].pt[0], skps[i].pt[1]))
 
     # Use Density based clustering to further filter out keypoints
     n_data = np.asarray(data_cluster)
@@ -144,7 +139,7 @@ def surf_tracker(img, bb, ts, **kwargs):
         if label == 0:
             skp_final_labelled.append(skp_final[i])
 
-    track = SURFTrack(img, skp_final_labelled, detector, descriptor,
-                      templateImg, skp, sd, tkp, td)
+    track = SURFTrack(img, skp_final_labelled, surf, template, skps, sdescs,
+                      tkps, tdescs)
 
     return track

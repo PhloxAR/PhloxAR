@@ -2,12 +2,11 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
-import cv2
-
-from PhloxAR.base import time, np, warnings, cv
-from PhloxAR.core.color import Color
-from PhloxAR.core.image import Image
-from PhloxAR.features.feature import Feature, FeatureSet
+import time
+from ..base import cv2, np
+from ..core.color import Color
+from ..core.image import Image
+from ..features import Feature, FeatureSet
 
 __all__ = [
     'Track', 'TrackSet', 'CAMShiftTrack', 'LKTrack', 'MFTrack', 'SURFTrack'
@@ -30,14 +29,12 @@ class Track(Feature):
         * *bbox* - A tuple consisting of (x, y, w, h) of the bounding box
         **RETURNS**
         Tracking.TrackClass.Track object
-        :Example:
-        >>> tracking = Track(image, bbox)
         """
         self._bbox = bbox
         self._image = img
         self.bb_x, self.bb_y, self.w, self.h = self._bbox
         self._x, self._y = self._center = self.center
-        self.sizeRatio = 1
+        self.size_ratio = 1
         self.vel = (0, 0)
         self.rt_vel = (0, 0)
         self._area = self.area
@@ -53,48 +50,36 @@ class Track(Feature):
         Get the center of the bounding box
         **RETURNS**
         * *tuple* - center of the bounding box (x, y)
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> cen = tracking.center
+        
+        
+        
         """
         return self.bb_x + self.w / 2, self.bb_y + self.h / 2
 
     @property
     def area(self):
         """
-        
         Get the area of the bounding box
         **RETURNS**
         Area of the bounding box
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> area = tracking.area
         """
         return self.w * self.h
 
     @property
     def image(self):
         """
-        
         Get the Image
         **RETURNS**
         Image
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> i = tracking.image
         """
         return self._image
 
     @property
     def bbox(self):
         """
-        
         Get the bounding box
         **RETURNS**
         A tuple  - (x, y, w, h)
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> print(tracking.bbox)
         """
         return self._bbox
 
@@ -109,10 +94,6 @@ class Track(Feature):
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.draw()
-        >>> img.show()
         """
         f = self
         f.image.drawCircle(f.center, rad, color, thickness)
@@ -127,10 +108,6 @@ class Track(Feature):
         * *thickness* - Thickness of the boundary of the bounding box.
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.draw_bbox()
-        >>> img.show()
         """
         f = self
         f.image.draw_rect(f.bb_x, f.bb_y, f.w, f.h, color, thickness)
@@ -146,10 +123,6 @@ class Track(Feature):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.show_coordinates()
-        >>> img.show()
         """
         f = self
         img = f.image
@@ -164,7 +137,7 @@ class Track(Feature):
     def show_size_ratio(self, pos=None, color=Color.GREEN, size=None):
         """
         
-        Show the sizeRatio of the object in text on the image.
+        Show the size_ratio of the object in text on the image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
         * *_color* - The _color to draw the object. Either an BGR tuple or a
@@ -172,12 +145,6 @@ class Track(Feature):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> while True:
-            ... img1 = cam.image
-            ... ts = img1.tracking("camshift", ts1, img, bb)
-            ... ts[-1].show_size_ratio() # For continuous bounding box
-            ... img = img1
         """
         f = self
         img = f.image
@@ -186,7 +153,7 @@ class Track(Feature):
             pos = (img_size[0] - 120, 30)
         if not size:
             size = 16
-        text = "size = %f" % f.sizeRatio
+        text = "size = %f" % f.size_ratio
         img.draw_text(text, pos[0], pos[1], color, size)
 
     def show_pixel_velocity(self, pos=None, color=Color.GREEN, size=None):
@@ -200,12 +167,6 @@ class Track(Feature):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> while True:
-            ... img1 = cam.image
-            ... ts = img1.tracking("camshift", ts1, img, bb)
-            ... ts[-1].show_pixel_velocity() # For continuous bounding box
-            ... img = img1
         """
         f = self
         img = f.image
@@ -231,12 +192,6 @@ class Track(Feature):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> while True:
-            ... img1 = cam.image
-            ... ts = img1.tracking("camshift", ts1, img, bb)
-            ... ts[-1].show_pixel_velocity_rt() # For continuous bounding box
-            ... img = img1
         """
         f = self
         img = f.image
@@ -258,10 +213,6 @@ class Track(Feature):
         * *func* - some user defined function for Image object
         **RETURNS**
         the value returned by the user defined function
-        :Example:
-        >>> def foo(img):
-            ... return img.mean_color()
-        >>> mean_color = ts[-1].process_track(foo)
         """
         return func(self._image)
 
@@ -274,9 +225,6 @@ class Track(Feature):
         None
         **RETURNS**
         * *tuple*
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.prediction_points()
         """
         return self._predict_pts
 
@@ -291,10 +239,6 @@ class Track(Feature):
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.draw_predicted()
-        >>> img.show()
         """
         f = self
         f.image.draw_circle(f.prediction_points, rad, color, thickness)
@@ -302,7 +246,6 @@ class Track(Feature):
     def show_predicted_coordinates(self, pos=None, color=Color.GREEN,
                                    size=None):
         """
-        
         Show the co-ordinates of the object in text on the Image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
@@ -311,15 +254,11 @@ class Track(Feature):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.show_predicted_coordinates()
-        >>> img.show()
         """
         f = self
         img = f.image
         if not pos:
-            img_size = img.size()
+            img_size = img.size
             pos = (5, 10)
         if not size:
             size = 16
@@ -330,22 +269,17 @@ class Track(Feature):
     @property
     def corrected_points(self):
         """
-        
         Corrected Co-ordinates of the center of the object
         **PARAMETERS**
         None
         **RETURNS**
         * *tuple*
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.corrected_points
         """
         return self.state_pt
 
     def show_corrected_coordinates(self, pos=None, color=Color.GREEN,
                                    size=None):
         """
-        
         Show the co-ordinates of the object in text on the Image.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
@@ -354,10 +288,6 @@ class Track(Feature):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.show_corrected_coordinates()
-        >>> img.show()
         """
         f = self
         img = f.image
@@ -380,10 +310,6 @@ class Track(Feature):
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> tracking = Track(img, bb)
-        >>> tracking.draw_corrected()
-        >>> img.show()
         """
         f = self
         f.image.drawCircle(f.state_pt, rad, color, thickness)
@@ -409,8 +335,8 @@ class CAMShiftTrack(Track):
         * ellipse* - A tuple
         **RETURNS**
         Tracking.TrackClass.CAMShiftTrack object
-        :Example:
-        >>> tracking = CAMShiftTrack(image, bbox, ellipse)
+        
+        
         """
         self._ellipse = ellipse
         super(CAMShiftTrack, self).__init__(img, bbox)
@@ -422,9 +348,9 @@ class CAMShiftTrack(Track):
         Returns the ellipse.
         **RETURNS**
         A tuple
-        :Example:
-        >>> tracking = CAMShiftTrack(image, bb, ellipse)
-        >>> e = tracking.ellipse
+        
+        
+        
         """
         return self._ellipse
 
@@ -448,8 +374,8 @@ class LKTrack(Track):
         * *pts* - List of all the tracking points
         **RETURNS**
         Tracking.TrackClass.LKTrack object
-        :Example:
-        >>> tracking = LKTrack(image, bbox, pts)
+        
+        
         """
         self._track_pts = pts
         super(LKTrack, self).__init__(img, bbox)
@@ -461,9 +387,9 @@ class LKTrack(Track):
         Returns all the points which are being tracked.
         **RETURNS**
         A list
-        :Example:
-        >>> tracking = LKTrack(image, bb, pts)
-        >>> pts = tracking.tracked_points
+        
+        
+        
         """
         return self._track_pts
 
@@ -477,9 +403,9 @@ class LKTrack(Track):
         *thickness* - thickness of the circle point
         **RETURNS**
         Nothing
-        :Example:
-        >>> tracking = LKTrack(image, bb, pts)
-        >>> tracking.draw_tracked_points()
+        
+        
+        
         """
         if self._track_pts is not None:
             for pt in self._track_pts:
@@ -500,8 +426,7 @@ class SURFTrack(Track):
     predicted using k-means.
     """
 
-    def __init__(self, img, new_pts, detector, descriptor, template_img, skp,
-                 sd, tkp, td):
+    def __init__(self, img, new_pts, detector, template_img, skp, sd, tkp, td):
         """
         
         Initializes all the required parameters and attributes of the class.
@@ -517,8 +442,8 @@ class SURFTrack(Track):
         * *td* - Template image descriptor - numpy.ndarray
         **RETURNS**
         Tracking.TrackClass.SURFTrack object
-        :Example:
-        >>> tracking = SURFTracker(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
+        
+        
         """
         if td is None:
             bb = (1, 1, 1, 1)
@@ -554,7 +479,9 @@ class SURFTrack(Track):
                                     bestLabels=None,
                                     criteria=(
                                         cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_MAX_ITER,
-                                        1, 10), attempts=1,
+                                        1, 10
+                                    ),
+                                    attempts=1,
                                     flags=cv2.KMEANS_RANDOM_CENTERS)
         max_x = int(max(np_pts[:, 0]))
         min_x = int(min(np_pts[:, 0]))
@@ -576,19 +503,14 @@ class SURFTrack(Track):
     @property
     def tracked_points(self):
         """
-        
         Returns all the points which are being tracked.
         **RETURNS**
         A list of points.
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> pts = tracking.tracked_points
         """
         return self._track_pts
 
     def draw_tracked_points(self, color=Color.GREEN, radius=1, thickness=1):
         """
-        
         Draw all the points which are being tracked.
         **PARAMETERS**
         * *_color* - Color of the point
@@ -596,9 +518,6 @@ class SURFTrack(Track):
         *thickness* - thickness of the circle point
         **RETURNS**
         Nothing
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> tracking.draw_tracked_points()
         """
         if self._track_pts is not None:
             for pt in self._track_pts:
@@ -608,26 +527,18 @@ class SURFTrack(Track):
     @property
     def detector(self):
         """
-        
         Returns SURF detector which is being used.
         **RETURNS**
         detector - cv2.Detctor
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> detector = tracking.detector
         """
         return self._detector
 
     @property
     def descriptor(self):
         """
-        
         Returns SURF descriptor extractor which is being used.
         **RETURNS**
         detector - cv2.DescriptorExtractor
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> descriptor= tracking.descriptor
         """
         return self._descriptor
 
@@ -638,61 +549,45 @@ class SURFTrack(Track):
         Returns all the keypoints which are found on the image.
         **RETURNS**
         A list of points.
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> skp = tracking.image_keypoints
+        
+        
+        
         """
         return self.skp
 
     @property
     def image_descriptor(self):
         """
-        
         Returns the image descriptor.
         **RETURNS**
         Image descriptor - numpy.ndarray
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> sd = tracking.image_descriptor
         """
         return self.sd
 
     @property
     def template_keypoints(self):
         """
-        
         Returns all the keypoints which are found on the template Image.
         **RETURNS**
         A list of points.
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> tkp = tracking.template_keypoints
         """
         return self.tkp
 
     @property
     def template_descriptor(self):
         """
-        
         Returns the template image descriptor.
         **RETURNS**
         Image descriptor - numpy.ndarray
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> td = tracking.template_descriptor()
         """
         return self.td
 
     @property
     def template_image(self):
         """
-        
         Returns Template Image.
         **RETURNS**
         Template Image - Image
-        :Example:
-        >>> tracking = SURFTrack(image, pts, detector, descriptor, temp, skp, sd, tkp, td)
-        >>> templateImg = tracking.template_image
         """
         return self.templateImg
 
@@ -712,16 +607,13 @@ class MFTrack(Track):
 
     def __init__(self, img, bbox, shift):
         """
-        
         Initializes all the required parameters and attributes of the class.
         **PARAMETERS**
         * *img* - Image
         * *bbox* - A tuple consisting of (x, y, w, h) of the bounding box
-        * *shift* - Object Shift calcluated in Median Flow
+        * *shift* - Object Shift calculated in Median Flow
         **RETURNS**
         Tracking.TrackClass.MFTrack object
-        :Example:
-        >>> tracking = MFTrack(image, bbox, shift)
         """
         super(MFTrack, self).__init__(img, bbox)
         self._shift = shift
@@ -729,13 +621,9 @@ class MFTrack(Track):
     @property
     def shift(self):
         """
-        
-        Returns object shift that was calcluated in Median Flow.
+        Returns object shift that was calcualted in Median Flow.
         **RETURNS**
         float
-        :Example:
-        >>> tracking = MFTrack(image, bb, pts)
-        >>> pts = tracking.shift
         """
         return self._shift
 
@@ -749,9 +637,9 @@ class MFTrack(Track):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        :Example:
-        >>> ts = []
-        >>> while True:
+        
+        
+        
             ... img1 = cam.image
             ... ts = img1.tracking("mftrack", ts, img, bb)
             ... ts[-1].show_shift()
@@ -779,16 +667,7 @@ class TrackSet(FeatureSet):
     In general, functions dealing with attributes will return
     numpy arrays.
     This class is specifically made for Tracking.
-    **EXAMPLE**
-    >>> image = Image("/path/to/image.png")
-    >>> ts = image.track("camshift", img1=image, bb)  #ts is the track set
-    >>> ts.draw()
-    >>> ts.x()
     """
-    try:
-        import cv2
-    except ImportError:
-        warnings.warn("OpenCV >= 2.3.1 required.")
 
     def __init__(self):
         self._kalman = None
@@ -806,18 +685,12 @@ class TrackSet(FeatureSet):
         Users are discouraged to use this function.
         **RETURNS**
             Nothing.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> ts.append(CAMShift(img,bb,ellipse))
         """
         list.append(self, f)
         ts = self
         if ts[0].area <= 0:
             return
-        f.sizeRatio = float(ts[-1].area) / float(ts[0].area)
+        f.size_ratio = float(ts[-1].area) / float(ts[0].area)
         f.vel = self._pixel_velocity()
         f.rt_vel = self._pixel_velocity_real_time()
         self._set_kalman()
@@ -835,13 +708,6 @@ class TrackSet(FeatureSet):
         Image.track() by default, but if you want to trim the list manually, use this.
         **RETURNS**
         Nothing.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... if len(ts) > 30:
-                ... ts.trim_list(10)
-            ... img = img1
         """
         ts = self
         for i in range(num):
@@ -856,12 +722,6 @@ class TrackSet(FeatureSet):
         the size of the initial bounding box
         **RETURNS**
         A numpy array.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.area_ratio)
         """
         return np.array([f.area_ratio for f in self])
 
@@ -874,19 +734,12 @@ class TrackSet(FeatureSet):
         * *thickness* - Thickness of the tracing path.
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.draw_path() # For continuous tracing
-            ... img = img1
-        >>> ts.draw_path() # draw the path at the end of tracking
         """
 
         ts = self
         img = self[-1].image
         for i in range(len(ts) - 1):
-            img.drawLine((ts[i].center), (ts[i + 1].center), color=color,
+            img.drawLine(ts[i].center, ts[i + 1].center, color=color,
                          thickness=thickness)
 
     def draw(self, color=Color.GREEN, rad=1, thickness=1):
@@ -899,12 +752,6 @@ class TrackSet(FeatureSet):
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.draw() # For continuous tracking of the center
-            ... img = img1
         """
         f = self[-1]
         f.image.draw_circle(f.center, rad, color, thickness)
@@ -918,12 +765,6 @@ class TrackSet(FeatureSet):
         * *thickness* - Thickness of the boundary of the bounding box.
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.draw_bbox() # For continuous bounding box
-            ... img = img1
         """
         f = self[-1]
         f.image.draw_rect(f.bb_x, f.bb_y, f.w, f.h, color, thickness)
@@ -936,12 +777,6 @@ class TrackSet(FeatureSet):
         No Parameters required.
         **RETURNS**
         * *int* * -Number of tracked image frames
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.track_length())
         """
         return len(self)
 
@@ -953,12 +788,6 @@ class TrackSet(FeatureSet):
         No Parameters required.
         **RETURNS**
         * *list* * - A list of all the tracked Image
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> imgset = ts.track_images()
         """
         if cv2_numpy:
             return [f.cv2numpy for f in self]
@@ -972,12 +801,6 @@ class TrackSet(FeatureSet):
         No Parameters required.
         **RETURNS**
         * *list* * - All the bounding box co-ordinates in a list
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.bbox_track())
         """
         return [f.bb for f in self]
 
@@ -1005,11 +828,6 @@ class TrackSet(FeatureSet):
         No Parameters required.
         **RETURNS**
         * *numpy array* * - array of pixel velocity tuple.
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.pixel_velocity())
         """
         return np.array([f.vel for f in self])
 
@@ -1024,7 +842,7 @@ class TrackSet(FeatureSet):
         """
         ts = self
         if len(ts) < 2:
-            return (0, 0)
+            return 0, 0
         dx = ts[-1].x - ts[-2].x
         dy = ts[-1].y - ts[-2].y
         dt = ts[-1].time - ts[-2].time
@@ -1038,11 +856,6 @@ class TrackSet(FeatureSet):
         No Parameters required.
         **RETURNS**
         * *numpy array* * - array of pixel velocity tuple.
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.pixel_velocity_real_time())
         """
         return np.array([f.rt_vel for f in self])
 
@@ -1056,12 +869,6 @@ class TrackSet(FeatureSet):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.show_coordinates() # For continuous bounding box
-            ... img = img1
         """
         ts = self
         f = ts[-1]
@@ -1077,19 +884,13 @@ class TrackSet(FeatureSet):
     def show_size_ratio(self, pos=None, color=Color.GREEN, size=None):
         """
         **SUMMARY**
-        Show the sizeRatio of the object in text on the current frame.
+        Show the size_ratio of the object in text on the current frame.
         **PARAMETERS**
         * *pos* - A tuple consisting of x, y values. where to put to the text
         * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.showZ() # For continuous bounding box
-            ... img = img1
         """
         ts = self
         f = ts[-1]
@@ -1099,7 +900,7 @@ class TrackSet(FeatureSet):
             pos = (img_size[0] - 120, 30)
         if not size:
             size = 16
-        text = "size = %f" % (f.sizeRatio)
+        text = "size = %f" % (f.size_ratio)
         img.draw_text(text, pos[0], pos[1], color, size)
 
     def show_pixel_velocity(self, pos=None, color=Color.GREEN, size=None):
@@ -1113,7 +914,7 @@ class TrackSet(FeatureSet):
         **RETURNS**
         Nada. Nothing. Zilch.
         **EXAMPLE**
-        >>> while True:
+        
             ... img1 = cam.getImage()
             ... ts = img1.track("camshift", ts1, img, bb)
             ... ts.show_pixel_velocity() # For continuous bounding box
@@ -1144,7 +945,7 @@ class TrackSet(FeatureSet):
         **RETURNS**
         Nada. Nothing. Zilch.
         **EXAMPLE**
-        >>> while True:
+        
             ... img1 = cam.getImage()
             ... ts = img1.track("camshift", ts1, img, bb)
             ... ts.show_pixel_velocity_real_time() # For continuous bounding box
@@ -1172,9 +973,9 @@ class TrackSet(FeatureSet):
         **RETURNS**
         * *list* - list of the values returned by the function when applied on all the images
         **EXAMPLE**
-        >>> def foo(img):
+        
             ... return img.meanColor()
-        >>> mean_color_list = ts.process_track(foo)
+        
         """
         return [func(f.image) for f in self]
 
@@ -1189,11 +990,11 @@ class TrackSet(FeatureSet):
         **RETURNS**
         Image - Image
         **EXAMPLE**
-        >>> while some_condition:
+        
             ... img1 = cam.getImage()
             ... ts = img1.track("camshift", ts1, img, bb)
             ... img = img1
-        >>> ts.background.show()
+        
         """
         imgs = self.track_images(cv2_numpy=True)
         f = imgs[0]
@@ -1205,10 +1006,11 @@ class TrackSet(FeatureSet):
         return Image(res, cv2image=True)
 
     def _kalman(self):
-        self._kalman = cv.CreateKalman(4, 2, 0)
-        self.kalman_state = cv.CreateMat(4, 1, cv.CV_32FC1)  # (phi, delta_phi)
-        self.kalman_process_noise = cv.CreateMat(4, 1, cv.CV_32FC1)
-        self.kalman_measurement = cv.CreateMat(2, 1, cv.CV_32FC1)
+
+        self._kalman = cv2.KalmanFilter(4, 2, 0)
+        self.kalman_state = np.zeros((4, 1), np.float32)  # (phi, delta_phi)
+        self.kalman_process_noise = np.zeros((4, 1), np.float32)
+        self.kalman_measurement = np.zeros((4, 1), np.float32)
 
     def _set_kalman(self):
         ts = self
@@ -1241,19 +1043,18 @@ class TrackSet(FeatureSet):
         self._kalman.transition_matrix[3, 2] = 0
         self._kalman.transition_matrix[3, 3] = 1
 
-        cv.SetIdentity(self._kalman.measurement_matrix, cv.RealScalar(1))
-        cv.SetIdentity(self._kalman.process_noise_cov, cv.RealScalar(1e-5))
-        cv.SetIdentity(self._kalman.measurement_noise_cov, cv.RealScalar(1e-1))
-        cv.SetIdentity(self._kalman.error_cov_post, cv.RealScalar(1))
+        cv2.setIdentity(self._kalman.measurement_matrix, 1)
+        cv2.setIdentity(self._kalman.process_noise_cov, 1e-5)
+        cv2.setIdentity(self._kalman.measurement_noise_cov, 1e-1)
+        cv2.setIdentity(self._kalman.error_cov_post, 1)
 
     def _predict_kalman(self):
-        self.kalman_prediction = cv.KalmanPredict(self._kalman)
+        self.kalman_prediction = self._kalman.predict()
         self.predict_pt = (
             self.kalman_prediction[0, 0], self.kalman_prediction[1, 0])
 
     def _correct_kalman(self):
-        self.kalman_estimated = cv.KalmanCorrect(self._kalman,
-                                                 self.kalman_measurement)
+        self.kalman_estimated = self._kalman.correct(self.kalman_measurement)
         self.state_pt = (
             self.kalman_estimated[0, 0], self.kalman_estimated[1, 0])
 
@@ -1269,11 +1070,11 @@ class TrackSet(FeatureSet):
         **RETURNS**
         A numpy array.
         **EXAMPLE**
-        >>> while True:
+        
             ... img1 = cam.getImage()
             ... ts = img1.track("camshift", ts1, img, bb)
             ... img = img1
-        >>> print ts.predicted_coordinates()
+        
         """
         return np.array([f.predict_pt for f in self])
 
@@ -1283,12 +1084,6 @@ class TrackSet(FeatureSet):
         Returns a numpy array of the predicted x (vertical) coordinate of each feature.
         **RETURNS**
         A numpy array.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.predict_x())
         """
         return np.array([f.predict_pt[0] for f in self])
 
@@ -1298,12 +1093,6 @@ class TrackSet(FeatureSet):
         Returns a numpy array of the predicted y (vertical) coordinate of each feature.
         **RETURNS**
         A numpy array.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.predict_y())
         """
         return np.array([f.predict_pt[1] for f in self])
 
@@ -1317,15 +1106,9 @@ class TrackSet(FeatureSet):
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.draw_predicted() # For continuous tracking of the center
-            ... img = img1
         """
         f = self[-1]
-        f.image.drawCircle(f.predict_pt, rad, color, thickness)
+        f.image.draw_circle(f.predict_pt, rad, color, thickness)
 
     def draw_corrected(self, color=Color.GREEN, rad=1, thickness=1):
         """
@@ -1337,15 +1120,9 @@ class TrackSet(FeatureSet):
         * *thickness* - Thickness of the boundary of the center circle.
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.draw_predicted() # For continuous tracking of the center
-            ... img = img1
         """
         f = self[-1]
-        f.image.drawCircle(f.state_pt, rad, color, thickness)
+        f.image.draw_circle(f.state_pt, rad, color, thickness)
 
     def draw_predicted_path(self, color=Color.GREEN, thickness=2):
         """
@@ -1356,20 +1133,12 @@ class TrackSet(FeatureSet):
         * *thickness* - Thickness of the tracing path.
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.draw_predicted_path() # For continuous tracing
-            ... img = img1
-        >>> ts.draw_predicted_path() # draw the path at the end of tracking
         """
-
         ts = self
         img = self[-1].image
         for i in range(1, len(ts) - 1):
-            img.drawLine((ts[i].predict_pt), (ts[i + 1].predict_pt),
-                         color=color, thickness=thickness)
+            img.draw_line(ts[i].predict_pt, ts[i + 1].predict_pt,
+                          color=color, thickness=thickness)
 
     def show_predicted_coordinates(self, pos=None, color=Color.GREEN, size=None):
         """
@@ -1381,18 +1150,12 @@ class TrackSet(FeatureSet):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.show_predicted_coordinates() # For continuous bounding box
-            ... img = img1
         """
         ts = self
         f = ts[-1]
         img = f.image
         if not pos:
-            img_size = img.size()
+            img_size = img.size
             pos = (5, 10)
         if not size:
             size = 16
@@ -1409,12 +1172,6 @@ class TrackSet(FeatureSet):
         * *size* - Fontsize of the text
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.show_corrected_coordinates() # For continuous bounding box
-            ... img = img1
         """
         ts = self
         f = ts[-1]
@@ -1433,12 +1190,6 @@ class TrackSet(FeatureSet):
         Returns a numpy array of the corrected x coordinate of each feature.
         **RETURNS**
         A numpy array.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.correct_x())
         """
         return np.array([f.state_pt[0] for f in self])
 
@@ -1448,12 +1199,6 @@ class TrackSet(FeatureSet):
         Returns a numpy array of the corrected y coordinate of each feature.
         **RETURNS**
         A numpy array.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print(ts.correct_y())
         """
         return np.array([f.state_pt[1] for f in self])
 
@@ -1463,12 +1208,6 @@ class TrackSet(FeatureSet):
         Returns a numpy array of the corrected coordinates of each feature.
         **RETURNS**
         A numpy array.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... img = img1
-        >>> print ts.predicted_coordinates()
         """
         return np.array([f.state_pt for f in self])
 
@@ -1481,15 +1220,7 @@ class TrackSet(FeatureSet):
         * *thickness* - Thickness of the tracing path.
         **RETURNS**
         Nada. Nothing. Zilch.
-        **EXAMPLE**
-        >>> while True:
-            ... img1 = cam.getImage()
-            ... ts = img1.track("camshift", ts1, img, bb)
-            ... ts.draw_corrected_path() # For continuous tracing
-            ... img = img1
-        >>> ts.draw_predicted_path() # draw the path at the end of tracking
         """
-
         ts = self
         img = self[-1].image
         for i in range(len(ts) - 1):

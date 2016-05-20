@@ -2,14 +2,9 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from PhloxAR.base import np, itertools
-from PhloxAR.tracking.track import LKTrack
-
-try:
-    import cv2
-except ImportError:
-    pass
-
+import itertools
+from ..base import np, cv2
+from .track import LKTrack
 
 __all__ = [
     'lk_tracker'

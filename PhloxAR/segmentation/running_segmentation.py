@@ -2,9 +2,11 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
-from PhloxAR.core.image import Image
-from PhloxAR.features.blob_maker import BlobMaker
-from PhloxAR.segmentation.segmentation_base import SegmentationBase
+import numpy as np
+from ..base import cv2
+from ..core.image import Image
+from ..features import BlobMaker
+from .segmentation_base import SegmentationBase
 
 __all__ = [
     'RunningSegmentation'
@@ -55,17 +57,16 @@ class RunningSegmentation(SegmentationBase):
         self._color_img = img
 
         if self._model_img is None:
-            self._model_img = Image(
-                cv.CreateImage((img.width, img.height), cv.IPL_DEPTH_32F, 3))
-            self._diff_img = Image(
-                cv.CreateImage((img.width, img.height), cv.IPL_DEPTH_32F, 3))
+            empty = np.zeros((img.width, img.height, 3), np.float32)
+            self._model_img = Image(empty)
+            self._diff_img = Image(empty)
         else:
             # do the difference
-            cv.AbsDiff(self._model_img.bitmap, img.float_matrix,
-                       self._diff_img.bitmap)
+            cv2.absdiff(self._model_img.narray, img.narray,
+                        self._diff_img.narray)
             # update the model
-            cv.RunningAvg(img.float_matrix, self._model_img.bitmap,
-                          self._alpha)
+            cv2.accumulateWeighted(img.narray, self._model_img.narray,
+                                   self._alpha)
             self._ready = True
         return
 
@@ -135,8 +136,8 @@ class RunningSegmentation(SegmentationBase):
         """
         convert a 32bit floating point cv array to an int array
         """
-        temp = cv.CreateImage((img.width, img.height), cv.IPL_DEPTH_8U, 3)
-        cv.Convert(img.bitmap, temp)
+        temp = np.zeros((img.width, img.height, 3), np.uint8)
+        temp = img.narray
 
         return Image(temp)
 
