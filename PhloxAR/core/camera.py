@@ -3,21 +3,27 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
+import os
 import re
 import six
 import abc
-import ctypes
 import time
+import ctypes
+import platform
+import warnings
+import threading
 import traceback
 import subprocess
 import numpy as np
+import pygame as sdl
 from collections import deque
 from .color import Color
 from .display import Display
 from .image import Image, ImageSet, ColorSpace
 from ..compat import build_opener, HTTPBasicAuthHandler
 from ..compat import urlopen, HTTPPasswordMgrWithDefaultRealm
-from ..base import logger, cv2
+from ..base import logger, cv2, PILImage
+from ..compat import StringIO
 
 # globals
 _gcameras = []
@@ -49,7 +55,7 @@ class FrameSource(object):
     def get_image(self):
         return None
 
-    def calibrate(self, imgs, grid_size=0.03, dims=(7, 6)):
+    def calibrate(self, imgs, dims=(7, 6)):
         """
         Camera calibration will help remove distortion and fish eye effects
         It is agnostic of the imagery source, and can be used with any camera
@@ -59,10 +65,6 @@ class FrameSource(object):
 
         Args:
             imgs (list): a list of images of color calibration images
-            grid_size (float): the actual grid size of the calibration grid,
-                               the unit used will be the calibration unit
-                               value (i.e. if in doubt use meters, or U.S.
-                               standard)
             dims (tuple): the count of the 'interior' corners in the calibration
                           grid. So far a grid where there are 4x4 black squares
                           has seven interior corners.
@@ -129,9 +131,6 @@ class FrameSource(object):
                 None
         )
 
-        np.savez('camera_calibration', mat=cam_mat, dist=dist_coeff,
-                 rvecs=rvecs, tvecs=tvecs)
-
         self._calib_mat = cam_mat
         self._dist_coeff = dist_coeff
 
@@ -156,20 +155,20 @@ class FrameSource(object):
         >>> img = cam.get_image()
         >>> result = cam.undistort(img)
         """
-        if not (isinstance(self._calib_mat, cv.cvmat) and
-                isinstance(self._dist_coeff, cv.cvmat)):
+        if not (isinstance(self._calib_mat, np.ndarray) and
+                isinstance(self._dist_coeff, np.ndarray)):
             logger.warning('FrameSource.undistort: This operation requires '
                            'calibration, please load the calibration matrix')
             return None
 
-        if isinstance(img, InstanceType) and isinstance(img, Image):
+        if isinstance(img, Image):
             inimg = img
             ret = inimg.zeros()
             cv.Undistort2(inimg.bitmap, ret, self._calib_mat, self._dist_coeff)
             return Image(ret)
         else:
             mat = None
-            if isinstance(img, cv.cvmat):
+            if isinstance(img, np.ndarray):
                 mat = img
             else:
                 arr = cv.fromarray(np.array(img))
@@ -202,45 +201,44 @@ class FrameSource(object):
         """
         Save the calibration matrices to file.
 
-        :param filename: file name, without extension
-        :return: True, if the file was saved, False otherwise
+        Args:
+            filename: to which to save the calibration matrix
+
+        Returns:
+            (bool)
         """
-        ret1 = ret2 = False
-        if not isinstance(self._calib_mat, cv.cvmat):
+        if (not isinstance(self._calib_mat, np.ndarray) or
+                not isinstance(self._dist_coeff, np.ndarray)):
             logger.warning("FrameSource.save_calibration: No calibration matrix"
                            "present, can't save")
         else:
-            intr_file = filename + 'Intrinsic.xml'
-            cv.Save(intr_file, self._calib_mat)
-            ret1 = True
+            np.savez(filename, mat=self._calib_mat, dist=self._dist_coeff)
+            return True
 
-        if not isinstance(self._dist_coeff, cv.cvmat):
-            logger.warning("FrameSource.save_calibration: No calibration matrix"
-                           "present, can't save")
-        else:
-            dist_file = filename + 'Distortion.xml'
-            cv.Save(dist_file, self._dist_coeff)
-            ret2 = True
-
-        return ret1 and ret2
+        return False
 
     def load_calibration(self, filename):
         """
         Load a calibration matrix from file.
-        The filename should be the stem of the calibration files names.
-        e.g. if the calibration files are MyWebcamIntrinsic.xml and
-        MyWebcamDistortion.xml then load the calibration file 'MyWebCam'
 
-        :param filename: without extension, which saves the calibration data
-        :return: Bool. True - file was loaded, False otherwise.
+        Args:
+            filename: from which to load the camera matrix
+
+        Returns:
+            (bool)
         """
-        intr_file = filename + 'Intrinsic.xml'
-        self._calib_mat = cv.Load(intr_file)
-        dist_file = filename + 'Distortion.xml'
-        self._dist_coeff = cv.Load(dist_file)
+        try:
+            npzfile = np.load(filename)
+        except (IOError, ValueError):
+            logger.warning("Could not load the file, make sure the file is "
+                           "exist and is a readable .npz file!")
+            return
 
-        if (isinstance(self._dist_coeff, cv.cvmat) and
-                isinstance(self._calib_mat, cv.cvmat)):
+        self._calib_mat = npzfile['mat']
+        self._dist_coeff = npzfile['dist']
+
+        if (isinstance(self._dist_coeff, np.ndarray) and
+                isinstance(self._calib_mat, np.ndarray)):
             return True
 
         return False
@@ -285,17 +283,17 @@ class FrameSource(object):
                 print("Closing window!")
                 dsp.done = True
 
-        sdl2.quit()
+        sdl.quit()
 
 
 class Camera(FrameSource):
-    _cv2_capture = None  # cvCapture object
+    _capture = None  # cvCapture object
     _thread = None
-    _sdl2_cam = False
-    _sdl2_buf = None
+    _sdl_cam = False
+    _sdl_buf = None
 
     prop_map = {
-        "width": cv2.CAP_PROP_FRAME_WIDTH
+        "width": cv2.CAP_PROP_FRAME_WIDTH,
         "height": cv2.CAP_PROP_FRAME_HEIGHT,
         "brightness": cv2.CAP_PROP_BRIGHTNESS,
         "contrast": cv2.CAP_PROP_CONTRAST,
@@ -339,7 +337,7 @@ class Camera(FrameSource):
 
         self._index = None
         self._threaded = False
-        self._cv2_capture = None
+        self._capture = None
 
         if platform.system() == 'Linux':
             if -1 in _gindex and cam_idx != -1 and cam_idx not in _gindex:
@@ -358,7 +356,7 @@ class Camera(FrameSource):
         for cam in _gcameras:
             if cam_idx == cam.index:
                 self._threaded = cam.threaded
-                self._cv2_capture = cam.cv2_capture
+                self._capture = cam.capture
                 self._index = cam.index
                 _gcameras.append(self)
                 return
@@ -369,17 +367,16 @@ class Camera(FrameSource):
                 cam_idx = 1100
                 _gindex.append(cam_idx)
 
-        self._cv2_capture = cv.CaptureFromCAM(cam_idx)
+        self._capture = cv2.VideoCapture(cam_idx)
         self._index = cam_idx
 
         if 'delay' in prop_set:
             time.sleep(prop_set['delay'])
 
         if (platform.system() == 'Linux' and
-                ('height' in prop_set or
-                         cv.GrabFrame(self._cv2_capture) == False)):
-            import pygame.camera as sdl2_cam
-            sdl2_cam.init()
+                ('height' in prop_set or self._capture.grab() == False)):
+            import pygame.camera as sdl_cam
+            sdl_cam.init()
             threaded = True  # pygame must be threaded
 
             if cam_idx == -1:
@@ -389,22 +386,22 @@ class Camera(FrameSource):
                 print(_gindex)
 
             if 'height' in prop_set and 'width' in prop_set:
-                self._cv2_capture = sdl2_cam.Camera('/dev/video' + str(cam_idx),
-                                                    prop_set['width'],
-                                                    prop_set['height'])
+                self._capture = sdl_cam.Camera('/dev/video' + str(cam_idx),
+                                               prop_set['width'],
+                                               prop_set['height'])
             else:
-                self._cv2_capture = sdl2_cam.Camera('/dev/video' + str(cam_idx))
+                self._capture = sdl_cam.Camera('/dev/video' + str(cam_idx))
 
             try:
-                self._cv2_capture.start()
+                self._capture.start()
             except Exception as e:
                 msg = "Caught exception: {}".format(e)
                 logger.warning(msg)
                 logger.warning('PhloxAR cannot find camera on your computer!')
                 return
             time.sleep(0)
-            self._sdl2_buf = self._cv2_capture.get_image()
-            self._sdl2_cam = True
+            self._sdl_buf = self._capture.get_image()
+            self._sdl_cam = True
         else:
             _gindex.append(cam_idx)
             self._threaded = False
@@ -412,13 +409,12 @@ class Camera(FrameSource):
             if platform.system() == 'Windows':
                 threaded = False
 
-            if not self._cv2_capture:
+            if not self._capture:
                 return
 
             for p in prop_set.keys():
                 if p in self.prop_map:
-                    cv.SetCaptureProperty(self._cv2_capture, self.prop_map[p],
-                                          prop_set[p])
+                    self._capture.set(self.prop_map[p], prop_set[p])
 
         if threaded:
             self._threaded = True
@@ -446,16 +442,16 @@ class Camera(FrameSource):
         >>> cam = Camera()
         >>> p = cam.get_property('width')
         """
-        if self._sdl2_cam:
+        if self._sdl_cam:
             if p.lower() == 'width':
-                return self._cv2_capture.get_size()[0]
+                return self._capture.get_size()[0]
             elif p.lower() == 'height':
-                return self._cv2_capture.get_size()[1]
+                return self._capture.get_size()[1]
             else:
                 return False
 
         if p in self.prop_map:
-            return cv.GetCaptureProperty(self._cv2_capture, self.prop_map[p])
+            return self._capture.get(self.prop_map[p])
 
         return False
 
@@ -465,7 +461,7 @@ class Camera(FrameSource):
 
         :return: a dict of all the camera properties.
         """
-        if self._sdl2_cam:
+        if self._sdl_cam:
             return False
 
         props = {}
@@ -489,20 +485,18 @@ class Camera(FrameSource):
         >>> while True:
         >>>     cam.get_image().show()
         """
-        if self._sdl2_cam:
-            return Image(self._sdl2_buf.copy())
+        if self._sdl_cam:
+            return Image(self._sdl_buf.copy())
 
         if not self._threaded:
-            cv.GrabFrame(self._cv2_capture)
+            self._capture.grab()
             self._cap_time = time.time()
         else:
             self._cap_time = self._thread_cap_time
 
-        frame = cv.RetrieveFrame(self._cv2_capture)
-        newing = cv.CreateImage(cv.GetSize(frame), cv.IPL_DEPTH_8U, 3)
-        cv.Copy(frame, newing)
+        _, frame = self._cap_time.retrieve()
 
-        return Image(newing, self)
+        return Image(frame)
 
     @property
     def index(self):
@@ -513,28 +507,28 @@ class Camera(FrameSource):
         return self._threaded
 
     @property
-    def sdl2_cam(self):
-        return self._sdl2_cam
+    def sdl_cam(self):
+        return self._sdl_cam
 
-    @sdl2_cam.setter
-    def sdl2_cam(self, value):
-        self._sdl2_cam = value
-
-    @property
-    def sdl2_buf(self):
-        return self._sdl2_buf
-
-    @sdl2_buf.setter
-    def sdl2_buf(self, value):
-        self._sdl2_buf = value
+    @sdl_cam.setter
+    def sdl_cam(self, value):
+        self._sdl_cam = value
 
     @property
-    def cv2_capture(self):
-        return self._cv2_capture
+    def sdl_buf(self):
+        return self._sdl_buf
 
-    @cv2_capture.setter
-    def cv2_capture(self, value):
-        self._cv2_capture = value
+    @sdl_buf.setter
+    def sdl_buf(self, value):
+        self._sdl_buf = value
+
+    @property
+    def capture(self):
+        return self._capture
+
+    @capture.setter
+    def capture(self, value):
+        self._capture = value
 
 
 class FrameBufferThread(threading.Thread):
@@ -548,10 +542,10 @@ class FrameBufferThread(threading.Thread):
         global _gcameras
         while True:
             for cam in _gcameras:
-                if cam.sdl2_cam:
-                    cam.sdl2_buf = cam.cv2_capture.get_image(cam.sdl2_buf)
+                if cam.sdl_cam:
+                    cam.sdl_buf = cam.capture.get_image(cam.sdl_buf)
                 else:
-                    cv.GrabFrame(cam.cv2_capture)
+                    cam.capture.grab()
                 cam._thread_capture_time = time.time()
             time.sleep(0.04)  # max 25 fps, if you're lucky
 
@@ -633,9 +627,8 @@ class VirtualCamera(FrameSource):
                               'directory, list of directories, or an '
                               'ImageSet object')
         elif self._src_type == 'video':
-            self._cv2_capture = cv.CaptureFromFile(self._src)
-            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
-                                  self._start - 1)
+            self._capture = cv2.VideoCapture(self._src)
+            self._capture.set(cv2.CAP_PROP_POS_FRAMES, self._start - 1)
         elif self._src_type == 'directory':
             pass
 
@@ -643,16 +636,17 @@ class VirtualCamera(FrameSource):
         """
         Retrieve an Image-object from the virtual camera.
 
-        :return: an Image
+        Returns
+            (PhloxAR.Image)
 
-        :Example:
-        >>> cam = VirtualCamera()
-        >>> while True:
-            ... cam.get_image().show()
+        Examples:
+            >>> cam = VirtualCamera()
+            >>> while True:
+                ... cam.get_image().show()
         """
         if self._src_type == 'image':
             self.counter += 1
-            return Image(self._src, self)
+            return Image(self._src)
         elif self._src_type == 'imageset':
             print(len(self._src))
             img = self._src[self.counter % len(self._src)]
@@ -660,48 +654,46 @@ class VirtualCamera(FrameSource):
             return img
         elif self._src_type == 'video':
             # cv.QueryFrame returns None if the video is finished
-            frame = cv.QueryFrame(self._cv2_capture)
+            _, frame = self._capture.read()
             if frame:
-                img = cv.CreateImage(cv.GetSize(frame), cv.IPL_DEPTH_8U, 3)
-                cv.Copy(frame, img)
-                return Image(img, self)
+                return Image(frame)
             else:
                 return None
         elif self._src_type == 'directory':
             img = self.find_latest_image(self._src, 'bmp')
             self.counter += 1
-            return Image(img, self)
+            return Image(img)
 
     def rewind(self, start=None):
         """
         Rewind the video source back to the given frame.
         Available for only video sources.
 
-        :param start: the number of the frame you want to rwind to,
-                       if not provided, the video source would be rewound
-                       to the starting frame number you provided or rewound
-                       to the beginning.
-        :return: None
+        Args:
+            start: the number of the frame you want to rewind to,
+                   if not provided, the video source would be rewound
+                   to the starting frame number you provided or rewound
+                   to the beginning.
 
-        :Example:
-        >>> cam = VirtualCamera('file.avi', 'video', 120)
-        >>> i = 0
-        >>> while i < 60:
-            ... cam.get_image().show()
-            ... i += 1
-        >>> cam.rewind()
+        Returns:
+            None
+
+        Examples:
+            >>> cam = VirtualCamera('file.avi', 'video', 120)
+            >>> i = 0
+            >>> while i < 60:
+                ... cam.get_image().show()
+                ... i += 1
+            >>> cam.rewind()
         """
         if self._src_type == 'video':
             if not start:
-                cv.SetCaptureProperty(self._cv2_capture,
-                                      cv.CV_CAP_PROP_POS_FRAMES,
-                                      self._start - 1)
+                self._capture.set(cv2.CAP_PROP_POS_FRAMES, self._start - 1)
             else:
                 if start == 0:
                     start = 1
-                cv.SetCaptureProperty(self._cv2_capture,
-                                      cv.CV_CAP_PROP_POS_FRAMES,
-                                      self._start - 1)
+
+                self._capture.set(cv2.CAP_PROP_POS_FRAMES, start - 1)
         else:
             self.counter = 0
 
@@ -717,13 +709,10 @@ class VirtualCamera(FrameSource):
         >>> cam.get_frame(400).show()
         """
         if self._src_type == 'video':
-            num_frame = int(cv.GetCaptureProperty(self._cv2_capture,
-                                                  cv.CV_CAP_PROP_POS_FRAMES))
-            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
-                                  frame - 1)
+            num_frame = self._capture.get(cv2.CAP_PROP_POS_FRAMES)
+            self._capture.set(cv2.CAP_PROP_POS_FRAMES, frame - 1)
             img = self.get_image()
-            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
-                                  num_frame)
+            self._capture.set(cv2.CAP_PROP_POS_FRAMES, num_frame)
             return img
         elif self._src_type == 'imageset':
             img = None
@@ -750,10 +739,8 @@ class VirtualCamera(FrameSource):
         >>> cam.get_image().show()
         """
         if self._src_type == 'video':
-            num_frame = int(cv.GetCaptureProperty(self._cv2_capture,
-                                                  cv.CV_CAP_PROP_POS_FRAMES))
-            cv.SetCaptureProperty(self._cv2_capture, cv.CV_CAP_PROP_POS_FRAMES,
-                                  num_frame + num - 1)
+            num_frame = self._capture.get(cv2.CAP_PROP_POS_FRAMES)
+            self._capture.set(cv2.CAP_PROP_POS_FRAMES, num_frame + num - 1)
         elif self._src_type == 'imageset':
             self.counter = (self.counter + num) % len(self._src)
         else:
@@ -776,8 +763,7 @@ class VirtualCamera(FrameSource):
         >>> cam.get_frame_number()
         """
         if self._src_type == 'video':
-            num_frame = int(cv.GetCaptureProperty(self._cv2_capture,
-                                                  cv.CV_CAP_PROP_POS_FRAMES))
+            num_frame = self._capture.get(cv2.CAP_PROP_POS_FRAMES)
             return num_frame
         else:
             return self.counter
@@ -799,8 +785,7 @@ class VirtualCamera(FrameSource):
         >>> cam.getCurrentPlayTime()
             """
         if self._src_type == 'video':
-            milliseconds = int(cv.GetCaptureProperty(self.capture,
-                                                     cv.CV_CAP_PROP_POS_MSEC))
+            milliseconds = self._capture.get(cv2.CAP_PROP_POS_MSEC)
             return milliseconds
         else:
             raise ValueError('sources other than video do not have play '
@@ -822,8 +807,6 @@ class VirtualCamera(FrameSource):
         >>> cam.get_image() # Grab the latest image from that directory
         """
         max_mtime = 0
-        max_dir = None
-        max_file = None
         max_full_path = None
         for dirname, subdirs, files in os.walk(directory):
             for f in files:
@@ -851,13 +834,12 @@ class JpegStreamReader(threading.Thread):
      A Threaded class for pulling down JPEG streams and breaking up the images.
      This is handy for reading the stream of images from a IP Camera.
      """
+
     url = ""
     currentframe = ""
     _thread_cap_time = ""
 
     def run(self):
-        f = ''
-
         if re.search('@', self.url):
             authstuff = re.findall('//(\S+)@', self.url)[0]
             self.url = re.sub("//\S+@", "//", self.url)
@@ -877,7 +859,7 @@ class JpegStreamReader(threading.Thread):
 
         headers = f.info()
         if "content-type" in headers:
-            # force upcase first char
+            # force upper case first char
             headers['Content-type'] = headers['content-type']
 
         if "Content-type" not in headers:
@@ -967,10 +949,6 @@ class JpegStreamCamera(FrameSource):
 
     def __init__(self, url):
         super(JpegStreamCamera, self).__init__()
-        if not PIL_ENABLED:
-            logger.warning("You need the Python Image Library (PIL) to use"
-                           " the JpegStreamCamera")
-            return
         if not url.startswith('http://'):
             url = "http://" + url
         self.url = url
@@ -993,7 +971,7 @@ class JpegStreamCamera(FrameSource):
                 time.sleep(0.1)
 
         self.capturetime = self.camthread.thread_capture_time
-        return Image(pil.open(StringIO(self.camthread.currentframe)), self)
+        return Image(PILImage.open(StringIO(self.camthread.currentframe)), self)
 
 
 _SANE_INIT = False
@@ -2504,7 +2482,7 @@ class VimbaCameraThread(threading.Thread):
         self._stop = threading.Event()
         self.vimba_cam = camera
         self.lock = threading.Lock()
-        self.name = 'Thread-Camera-ID-' + str(self.camera.uniqueid)
+        self.name = 'Thread-Camera-ID-' + str(self.vimba_cam.uniqueid)
 
     def run(self):
         counter = 0
