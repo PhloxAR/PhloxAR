@@ -3,27 +3,21 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
-import ctypes
-import subprocess
-import traceback
-from collections import deque
-
-import numpy as npy
+import re
 import six
-
-from PhloxAR.base import *
-from PhloxAR.core.color import Color
-from PhloxAR.core.display import Display
-from PhloxAR.core.image import Image, ImageSet, ColorSpace
-
-if sys.version[0] == 2:
-    from urllib2 import urlopen, build_opener
-    from urllib2 import HTTPBasicAuthHandler, HTTPPasswordMgrWithDefaultRealm
-elif sys.version[0] == 3:
-    from urllib import urlopen
-    from urllib.request import build_opener, HTTPBasicAuthHandler
-    from urllib.request import HTTPPasswordMgrWithDefaultRealm
-
+import abc
+import ctypes
+import time
+import traceback
+import subprocess
+import numpy as np
+from collections import deque
+from .color import Color
+from .display import Display
+from .image import Image, ImageSet, ColorSpace
+from ..compat import build_opener, HTTPBasicAuthHandler
+from ..compat import urlopen, HTTPPasswordMgrWithDefaultRealm
+from ..base import logger, cv2
 
 # globals
 _gcameras = []
@@ -55,7 +49,7 @@ class FrameSource(object):
     def get_image(self):
         return None
 
-    def calibrate(self, image_list, grid_size=0.03, dims=(8, 5)):
+    def calibrate(self, imgs, grid_size=0.03, dims=(7, 6)):
         """
         Camera calibration will help remove distortion and fish eye effects
         It is agnostic of the imagery source, and can be used with any camera
@@ -63,109 +57,85 @@ class FrameSource(object):
         The easiest way to run calibration is to run the calibrate.py file
         under the tools directory.
 
-        :param image_list: a list of images of _color calibration images
-        :param grid_size: the actual grid size of the calibration grid,
-                           the unit used will be the calibration unit
-                           value (i.e. if in doubt use meters, or U.S. standard)
-        :param dims: the count of the 'interior' corners in the calibration
-                      grid. So far a grid where there are 4x4 black squares
-                      has seven interior corners.
-        :return: camera's intrinsic matrix.
-        """
-        warn_thresh = 1
-        n_boards = 0  # number of boards
-        board_w = int(dims[1])  # number of horizontal corners
-        board_h = int(dims[0])  # number of vertical corners
-        n_boards = int(len(image_list))
-        board_num= board_w * board_h  # number of total corners
-        board_size = (board_w, board_h)  # size of board
+        Args:
+            imgs (list): a list of images of color calibration images
+            grid_size (float): the actual grid size of the calibration grid,
+                               the unit used will be the calibration unit
+                               value (i.e. if in doubt use meters, or U.S.
+                               standard)
+            dims (tuple): the count of the 'interior' corners in the calibration
+                          grid. So far a grid where there are 4x4 black squares
+                          has seven interior corners.
 
-        if n_boards < warn_thresh:
+        Returns:
+            (numpy.array) camera's intrinsic matrix.
+        """
+        # number of images used in calibration process
+        img_num = int(len(imgs))
+
+        # number of corners horizontally and vertically
+        w, h = int(dims)
+        corner_num= w * h  # number of total corners
+        pattern_size = (w, h)  # size of board
+
+        if img_num < 20:
             logger.warning('FrameSource.calibrate: We suggest suing 20 or'
                            'more images to perform camera calibration.')
 
-        # creation of memory storages
-        image_points = np.zeros((n_boards * board_num, 2), np.float32 )
-        image_points = cv.CreateMat(n_boards * board_num, 2, cv.CV_32FC1)
-        object_points = cv.CreateMat(n_boards * board_num, 3, cv.CV_32FC1)
-        point_counts = cv.CreateMat(n_boards, 1, cv.CV_32SC1)
-        intrinsic_mat = cv.CreateMat(3, 3, cv.CV_32FC1)
-        dist_coeff = cv.CreateMat(5, 1, cv.CV_32FC1)
+        # prepare object points
+        objp = np.zeros((corner_num, 3), np.float32)
+        objp[:, :, 2] = np.mgrid[0:w, 0:h].T.reshape(-1, 2)
 
-        # capture frames of specified properties and modification
-        # of matrix values
-        i = 0
-        z = 0  # to print number of frames
-        successes = 0
-        img_idx = 0
+        # creation of memory storage
+        # 2d points in image plane
+        # imgpts = np.zeros((img_num * corner_num, 2), np.float32 )
+        imgpts = []
+        # 3d points in real world space
+        # objpts = np.zeros((img_num * corner_num, 3), np.float32)
+        objpts = []
+
+        shape = imgs[0].gray_narray.shape[::-1]
+
+        # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
         # capturing required number of views
-        while successes < n_boards:
-            found = 0
-            img = image_list[img_idx]
+        for img in imgs:
             found, corners = cv2.findChessboardCorners(
-                img.gray_matrix, board_size,
-                cv.CV_CALIB_CB_ADAPTIVE_THRESH | cv.CV_CALIB_CB_FILTER_QUADS
-            )
-
-            corners = cv.FindCornerSubPix(
-                    img.gray_matrix, corners,
-                    (11, 11), (-1, -1),
-                    (cv.CV_TERMCRIT_EPS + cv.CV_TERMCRIT_ITER, 30, 0.1)
+                img.gray_narray, pattern_size,
+                cv2.CALIB_CB_ADAPTIVE_THRESH | cv2.CALIB_CB_FILTER_QUADS
             )
 
             # if got a good image, draw chess board
-            if found == 1:
-                corner_count = len(corners)
-                z += 1
+            if found is True:
+                objpts.append(objp)
 
-            # if got a good image, add to matrix
-                if len(corners) == board_num:
-                    step = successes * board_num
-                    k = step
-                    for j in range(board_num):
-                        cv.Set2D(image_points, k, 0, corners[j][0])
-                        cv.Set2D(image_points, k, 1, corners[j][1])
-                        cv.Set2D(object_points, k, 0,
-                                 grid_size * (float(j) / float(board_w)))
-                        cv.Set2D(object_points, k, 1,
-                                 grid_size * (float(j) % float(board_w)))
-                        cv.Set2D(object_points, k, 2, 0.0)
-                    cv.Set2D(point_counts, successes, 0, board_num)
-                    successes += 1
+                corners2 = cv2.cornerSubPix(
+                        img.gray_narray, corners,
+                        (11, 11), (-1, -1),
+                        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
+                )
 
-        # now assigning new matrices according to view_count
-        if successes < warn_thresh:
-            logger.warning('FrameSource.calibrate: You have {} good '
-                           'images for calibration, but we recommend '
-                           'at least {}'.format(successes, warn_thresh))
+                imgpts.append(corners2)
 
-        object_points2 = cv.CreateMat(successes * board_num, 3, cv.CV_32FC1)
-        image_points2 = cv.CreateMat(successes * board_num, 2, cv.CV_32FC1)
-        point_counts2 = cv.CreateMat(successes, 1, cv.CV_32FC1)
+                img = cv2.drawChessboardCorners(img, pattern_size,
+                                                corners2, found)
 
-        for i in range(successes * board_num):
-            cv.Set2D(image_points2, i, 0, cv.Get2D(image_points, i, 0))
-            cv.Set2D(image_points2, i, 1, cv.Get2D(image_points, i, 1))
-            cv.Set2D(object_points2, i, 0, cv.Get2D(object_points, i, 0))
-            cv.Set2D(object_points2, i, 1, cv.Get2D(object_points, i, 1))
-            cv.Set2D(object_points2, i, 2, cv.Get2D(object_points, i, 2))
-
-        for i in range(successes):
-            cv.Set2D(point_counts2, i, 0, cv.Get2D(point_counts, i, 0))
-
-        cv.Set2D(intrinsic_mat, 0, 0, 1.0)
-        cv.Set2D(intrinsic_mat, 1, 1, 1.0)
-        rcv = cv.CreateMat(n_boards, 3, cv.CV_64FC1)
-        tcv = cv.CreateMat(n_boards, 3, cv.CV_64FC1)
         # camera calibration
-        cv.CalibrateCamera2(object_points2, image_points2, point_counts2,
-                            (img.width, img.height), intrinsic_mat,
-                            dist_coeff, rcv, tcv, 0)
+        ret, cam_mat, dist_coeff, rvecs, tvecs = cv2.calibrateCamera(
+                objpts,
+                imgpts,
+                shape,
+                None,
+                None
+        )
 
-        self._calib_mat = intrinsic_mat
+        np.savez('camera_calibration', mat=cam_mat, dist=dist_coeff,
+                 rvecs=rvecs, tvecs=tvecs)
+
+        self._calib_mat = cam_mat
         self._dist_coeff = dist_coeff
-        return intrinsic_mat
+
+        return cam_mat
 
     def camera_matrix(self):
         """
@@ -202,14 +172,14 @@ class FrameSource(object):
             if isinstance(img, cv.cvmat):
                 mat = img
             else:
-                arr = cv.fromarray(npy.array(img))
+                arr = cv.fromarray(np.array(img))
                 mat = cv.CreateMat(cv.GetSize(arr)[1], 1, cv.CV_64FC2)
                 cv.Merge(arr[:, 0], arr[:, 1], None, None, mat)
 
             upoints = cv.CreateMat(cv.GetSize(mat)[1], 1, cv.CV_64FC2)
             cv.UndistortPoints(mat, upoints, self._calib_mat, self._dist_coeff)
 
-            return (npy.array(upoints[:, 0]) * [
+            return (np.array(upoints[:, 0]) * [
                 self.camera_matrix[0, 0],
                 self.camera_matrix[1, 1] + self.camera_matrix[0, 2],
                 self.camera_matrix[1, 2]
@@ -2100,8 +2070,8 @@ class GigECamera(Camera):
         camera.start_acquisition()
         buff = self._stream.pop_buffer()
         self._cap_time = buff.timestamp_ns / 1000000.0
-        img = npy.fromstring(ctypes.string_at(buff.data_address(), buff.size),
-                             dtype=npy.uint8).reshape(self._height, self._width)
+        img = np.fromstring(ctypes.string_at(buff.data_address(), buff.size),
+                            dtype=np.uint8).reshape(self._height, self._width)
         rgb = cv2.cvtColor(img, cv2.COLOR_BAYER_BG2BGR)
         self._stream.push_buffer(buff)
         camera.stop_acquisition()
@@ -2506,9 +2476,9 @@ class VimbaCamera(FrameSource):
                 raise e
 
             imgData = f.getBufferByteData()
-            moreUsefulImgData = npy.ndarray(buffer=imgData,
-                                            dtype=npy.uint8,
-                                            shape=(f.height, f.width, 1))
+            moreUsefulImgData = np.ndarray(buffer=imgData,
+                                           dtype=np.uint8,
+                                           shape=(f.height, f.width, 1))
 
             rgb = cv2.cvtColor(moreUsefulImgData, cv2.COLOR_BAYER_RG2RGB)
             c.endCapture()
