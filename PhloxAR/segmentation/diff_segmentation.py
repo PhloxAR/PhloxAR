@@ -5,6 +5,7 @@ from __future__ import division, print_function
 from PhloxAR.core.image import Image
 from PhloxAR.features.blob_maker import BlobMaker
 from PhloxAR.segmentation.segmentation_base import SegmentationBase
+from ..base import cv2
 
 __all__ = [
     'DiffSegmentation'
@@ -71,8 +72,8 @@ class DiffSegmentation(SegmentationBase):
                 self._color_img = img
                 self._curr_img = img
 
-            cv.AbsDiff(self._curr_img.bitmap, self._last_img.bitmap,
-                       self._diff_img.bitmap)
+            cv2.absdiff(self._curr_img.narray, self._last_img.narray,
+                        self._diff_img.narray)
 
         return
 
