@@ -4,13 +4,12 @@
 from __future__ import division, print_function
 from __future__ import unicode_literals, absolute_import
 
-from PhloxAR.base import *
 from PhloxAR.core.color import *
 from PhloxAR.core.dft import *
-from PhloxAR.drawing_layer import *
+from PhloxAR.core.drawing_layer import *
+from PhloxAR.core.linescan import *
+from PhloxAR.core.stream import *
 from PhloxAR.features import *
-from PhloxAR.linescan import *
-from PhloxAR.stream import *
 from PhloxAR.tracking import *
 
 try:
