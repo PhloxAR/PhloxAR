@@ -2,10 +2,10 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
-from PhloxAR.core.color import ColorModel
-from PhloxAR.core.image import Image
-from PhloxAR.features.blob_maker import BlobMaker
-from PhloxAR.segmentation.segmentation_base import SegmentationBase
+from ..core.color import ColorModel
+from ..core.image import Image
+from ..features import BlobMaker
+from .segmentation_base import SegmentationBase
 
 __all__ = [
     'ColorSegmentation'
