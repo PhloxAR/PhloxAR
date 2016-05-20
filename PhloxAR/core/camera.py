@@ -5,10 +5,12 @@ from __future__ import division, print_function
 
 import os
 import re
+import sys
 import six
 import abc
 import time
 import ctypes
+import tempfile
 import platform
 import warnings
 import threading
@@ -21,8 +23,8 @@ from .color import Color
 from .display import Display
 from .image import Image, ImageSet, ColorSpace
 from ..compat import build_opener, HTTPBasicAuthHandler
-from ..compat import urlopen, HTTPPasswordMgrWithDefaultRealm
-from ..base import logger, cv2, PILImage
+from ..compat import urlopen, HTTPPasswordMgrWithDefaultRealm, long
+from ..base import logger, cv2, PILImage, PYSCREENSHOT_ENABLED, pyscreenshot
 from ..compat import StringIO
 
 # globals
@@ -162,27 +164,16 @@ class FrameSource(object):
             return None
 
         if isinstance(img, Image):
-            inimg = img
-            ret = inimg.zeros()
-            cv.Undistort2(inimg.bitmap, ret, self._calib_mat, self._dist_coeff)
-            return Image(ret)
-        else:
-            mat = None
-            if isinstance(img, np.ndarray):
-                mat = img
-            else:
-                arr = cv.fromarray(np.array(img))
-                mat = cv.CreateMat(cv.GetSize(arr)[1], 1, cv.CV_64FC2)
-                cv.Merge(arr[:, 0], arr[:, 1], None, None, mat)
+            dst = cv2.undistort(img.narray, self._calib_mat, self._dist_coeff)
+            return Image(dst)
+        elif isinstance(img, PILImage):
+            img = PILImage.fromarray(img)
+            dst = cv2.undistort(img.narray, self._calib_mat, self._dist_coeff)
+            return Image(dst)
+        elif isinstance(img, np.ndarray):
+            dst = cv2.undistortPoints(img, self._calib_mat, self._dist_coeff)
 
-            upoints = cv.CreateMat(cv.GetSize(mat)[1], 1, cv.CV_64FC2)
-            cv.UndistortPoints(mat, upoints, self._calib_mat, self._dist_coeff)
-
-            return (np.array(upoints[:, 0]) * [
-                self.camera_matrix[0, 0],
-                self.camera_matrix[1, 1] + self.camera_matrix[0, 2],
-                self.camera_matrix[1, 2]
-            ])[:, 0]
+            return Image(dst)
 
     def get_image_undisort(self):
         """
@@ -971,10 +962,7 @@ class JpegStreamCamera(FrameSource):
                 time.sleep(0.1)
 
         self.capturetime = self.camthread.thread_capture_time
-        return Image(PILImage.open(StringIO(self.camthread.currentframe)), self)
-
-
-_SANE_INIT = False
+        return Image(PILImage.open(StringIO(self.camthread.currentframe)))
 
 
 class Scanner(FrameSource):
@@ -1012,26 +1000,23 @@ class Scanner(FrameSource):
 
     def __init__(self, id=0, properties={'mode': '_color'}):
         super(Scanner, self).__init__()
-        global _SANE_INIT
-        import sane
-        if not _SANE_INIT:
-            try:
-                sane.init()
-                _SANE_INIT = True
-            except:
-                warn("Initializing pysane failed, do you have pysane installed?")
-                return
+        try:
+            import sane
+        except ImportError:
+            warnings.warn("Initializing pysane failed, do you have pysane "
+                          "installed?")
+        sane.init()
 
         devices = sane.get_devices()
         if not len(devices):
-            warn("Did not find a sane-compatable device")
+            warnings.warn("Did not find a sane-compatable device")
             return
 
         self.usbid, self.manufacturer, self.model, self.kind = devices[id]
 
         self.device = sane.open(self.usbid)
         self.max_x = self.device.br_x
-        self.max_y = self.device.br_y #save our extents for later
+        self.max_y = self.device.br_y  # save our extents for later
 
         for k, v in properties.items():
             setattr(self.device, k, v)
@@ -1087,9 +1072,7 @@ class Scanner(FrameSource):
         return props
 
     def print_properties(self):
-
         """
-        
         Print detailed information about the SANE device properties
         :return:
         Nothing
@@ -1098,10 +1081,7 @@ class Scanner(FrameSource):
         >>> scan.print_properties()
         """
         for prop in self.device.optlist:
-            try:
-                print(self.device[prop])
-            except:
-                pass
+            print(self.device[prop])
 
     def get_property(self, p):
         """
@@ -1197,14 +1177,14 @@ class DigitalCamera(FrameSource):
         super(DigitalCamera, self).__init__()
         try:
             import piggyphoto
-        except:
-            warn("Initializing piggyphoto failed, do you have "
-                 "piggyphoto installed?")
+        except ImportError:
+            warnings.warn("Initializing piggyphoto failed, do you have "
+                          "piggyphoto installed?")
             return
 
         devices = piggyphoto.cameraList(autodetect=True).toList()
         if not len(devices):
-            warn("No compatible digital cameras attached")
+            warnings.warn("No compatible digital cameras attached")
             return
 
         self.device, self.usbid = devices[id]
@@ -1266,8 +1246,9 @@ class ScreenCamera(object):
 
     def __init__(self):
         if not PYSCREENSHOT_ENABLED:
-            warn("Initializing pyscreenshot failed. Install pyscreenshot from"
-                 " https://github.com/vijaym123/pyscreenshot")
+            warnings.warn("Initializing pyscreenshot failed. Install "
+                          "pyscreenshot from https://github.com/vijaym123/"
+                          "pyscreenshot")
             return
 
     def get_resolution(self):
@@ -1279,7 +1260,7 @@ class ScreenCamera(object):
         >>> res = img.get_resolution()
         >>> print(res)
         """
-        return Image(pyscreenshot.grab()).size()
+        return Image(pyscreenshot.grab()).size
 
     @property
     def roi(self):
@@ -1322,6 +1303,7 @@ class ScreenCamera(object):
         except Exception:
             print("Error croping the image. ROI specified is not correctypes.")
             return None
+
         return img
 
 
@@ -1358,11 +1340,11 @@ class AVTCameraThread(threading.Thread):
             frame = self.camera._get_frame(1000)
 
             if frame:
-                img = Image(pil.fromstring(self.camera.imgformat,
-                                           (self.camera.width,
-                                            self.camera.height),
-                                           frame.ImageBuffer[
-                                           :int(frame.ImageBufferSize)]))
+                img = Image(PILImage.fromstring(
+                        self.camera.imgformat,
+                        (self.camera.width, self.camera.height),
+                        frame.ImageBuffer[:int(frame.ImageBufferSize)])
+                )
                 self.camera._buffer.appendleft(img)
 
             self.camera.run_command("AcquisitionStop")
@@ -1657,7 +1639,7 @@ class AVTCamera(FrameSource):
         # This function should disconnect from the AVT Camera
         pverr(self.dll.PvCameraClose(self.handle))
 
-    def __init__(self, camera_id=-1, properties={}, threaded=False):
+    def __init__(self, camera_id=-1, properties=None, threaded=False):
         super(AVTCamera, self).__init__()
         import platform
 
@@ -1677,8 +1659,9 @@ class AVTCamera(FrameSource):
         camlist = self.list_all_cameras()
 
         if not len(camlist):
-            raise Exception("Couldn't find any cameras with the PvAVT driver.  "
-                            "Use SampleViewer to confirm you have one connected.")
+            raise Exception("Could not find any cameras with the PvAVT "
+                            "driver. Use SampleViewer to confirm you have one "
+                            "connected.")
 
         if camera_id < 9000:  # camera was passed as an index reference
             if camera_id == -1:  # accept -1 for "first camera"
@@ -1692,8 +1675,8 @@ class AVTCamera(FrameSource):
         while self.dll.PvCameraOpen(camera_id, 0, ctypes.byref(
                 self.handle)) != 0:  # wait until camera is availble
             if init_count > 4:  # Try to connect 5 times before giving up
-                raise Exception(
-                    'Could not connect to camera, please verify with SampleViewer you can connect')
+                raise Exception('Could not connect to camera, please verify with'
+                                ' SampleViewer you can connect')
             init_count += 1
             time.sleep(1)  # sleep and retry to connect to camera in a second
 
@@ -1749,7 +1732,7 @@ class AVTCamera(FrameSource):
         :return:
         List of AVTCameraInfo objects, otherwise empty list
         """
-        camlist = (self.AVTCameraInfo * 100)()
+        camlist = list(self.AVTCameraInfo * 100)
         starttime = time.time()
         while int(camlist[0].UniqueId) == 0 and time.time() - starttime < 10:
             self.dll.PvCameraListEx(ctypes.byref(camlist), 100, None,
@@ -1797,8 +1780,7 @@ class AVTCamera(FrameSource):
         if not valtype:
             return None
 
-        val = ''
-        err = 0
+        val = None
         if valtype == "Enum":
             val = ctypes.create_string_buffer(100)
             vallen = ctypes.c_long()
@@ -1869,6 +1851,8 @@ class AVTCamera(FrameSource):
         if not valtype:
             return None
 
+        err = None
+
         if valtype == "Uint32":
             err = self.dll.PvAttrUint32Set(self.handle, name,
                                            ctypes.c_uint(int(value)))
@@ -1927,10 +1911,10 @@ class AVTCamera(FrameSource):
         else:
             self.run_command("AcquisitionStart")
             frame = self._get_frame(timeout)
-            img = Image(pil.fromstring(self.imgformat,
-                                       (self.width, self.height),
-                                       frame.ImageBuffer[
-                                       :int(frame.ImageBufferSize)]))
+            img = Image(PILImage.fromstring(
+                    self.imgformat, (self.width, self.height),
+                    frame.ImageBuffer[:int(frame.ImageBufferSize)]
+            ))
             self.run_command("AcquisitionStop")
         return img
 
@@ -1943,9 +1927,10 @@ class AVTCamera(FrameSource):
         self.set_property('FrameStartTriggerMode', 'FreeRun')
 
     def unbuffer(self):
-        img = Image(pil.fromstring(self.imgformat,
-                                   (self.width, self.height),
-                                   self.frame.ImageBuffer[:int(self.frame.ImageBufferSize)]))
+        img = Image(PILImage.fromstring(
+                self.imgformat, (self.width, self.height),
+                self.frame.ImageBuffer[:int(self.frame.ImageBufferSize)]
+        ))
 
         return img
 
@@ -1976,7 +1961,7 @@ class AVTCamera(FrameSource):
                 raise e
 
         except Exception as e:
-            print("Exception aquiring frame:", e)
+            print("Exception acquiring frame:", e)
             raise e
 
         return frame
@@ -1991,7 +1976,7 @@ class AVTCamera(FrameSource):
                                              None))
             self.run_command("AcquisitionStop")
         except Exception as e:
-            print("Exception aquiring frame:", e)
+            print("Exception acquiring frame:", e)
             raise (e)
 
 
@@ -2439,9 +2424,9 @@ class VimbaCamera(FrameSource):
             c = self._camera
             f = self._get_frame()
 
-            colorSpace = ColorSpace.BGR
+            color_space = ColorSpace.BGR
             if self.pixelformat == 'Mono8':
-                colorSpace = ColorSpace.GRAY
+                color_space = ColorSpace.GRAY
 
             c.startCapture()
             f.queueFrameCapture()
@@ -2461,7 +2446,7 @@ class VimbaCamera(FrameSource):
             rgb = cv2.cvtColor(moreUsefulImgData, cv2.COLOR_BAYER_RG2RGB)
             c.endCapture()
 
-            return Image(rgb, colorSpace=colorSpace, cv2image=imgData)
+            return Image(rgb, color_space=color_space, cv2image=imgData)
 
         except Exception as e:
             print("Exception acquiring frame: "
