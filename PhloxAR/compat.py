@@ -20,8 +20,12 @@ clock = None
 
 if PY2:
     unichr = unichr
+    long = long
+    fileopen = file
 else:
     unichr = chr
+    long = int
+    fileopen = open
 
 if PY2:
     iterkeys = lambda d: d.iterkeys()
