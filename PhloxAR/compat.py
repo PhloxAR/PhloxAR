@@ -4,6 +4,8 @@
 Compatibility module for Python 2.7 and > 3.3
 """
 
+from __future__ import unicode_literals
+
 import sys
 import time
 
@@ -12,19 +14,9 @@ try:
 except ImportError:
     import Queue as queue
 
-PY2 = sys.version_info[0] == 2
+PY2 = sys.version < '3'
 
 clock = None
-
-string_types = None
-
-text_type = None
-
-if PY2:
-    string_types = basestring
-    text_type = unicode
-else:
-    string_types = text_type = str
 
 if PY2:
     unichr = unichr
@@ -47,3 +39,22 @@ if PY2:
         clock = time.time
 else:
     clock = time.perf_counter
+
+if PY2:
+    from urllib2 import urlopen, build_opener
+    from urllib2 import HTTPBasicAuthHandler, HTTPPasswordMgrWithDefaultRealm
+else:
+    from urllib import urlopen
+    from urllib.request import build_opener, HTTPBasicAuthHandler
+    from urllib.request import HTTPPasswordMgrWithDefaultRealm
+
+if PY2:
+    from UserDict import UserDict, MutableMapping
+    from cStringIO import StringIO
+    import SocketServer as socketserver
+    import SimpleHTTPServer
+else:
+    from collections import UserDict, MutableMapping
+    import http.server as SimpleHTTPServer
+    import io.StringIO as StringIO
+    import socketserver

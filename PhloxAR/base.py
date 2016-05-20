@@ -28,26 +28,6 @@ from __future__ import unicode_literals, absolute_import
 import os
 import sys
 
-if sys.version > '3':
-    PY3 = True
-else:
-    PY3 = False
-
-
-if PY3:
-    from collections import UserDict, MutableMapping
-    from urllib.request import  urlopen
-    import socketserver as SocketServer
-    import http.server as SimpleHTTPServer
-    import io.StringIO as StringIO
-
-else:
-    from UserDict import UserDict, MutableMapping
-    from urllib2 import urlopen
-    import SocketServer
-    import SimpleHTTPServer
-    from cStringIO import StringIO
-
 try:
     import cv2
 except ImportError:
@@ -190,36 +170,6 @@ def test():
     Run builtin unittests.
     """
     print('')
-
-
-def download(url):
-    """
-    This function takes in a URL for a zip file, extracts it and
-    returns the temporary path it was extracted to.
-    """
-    if url is None:
-        logger.warning("Please provide URL.")
-        return None
-
-    tmpdir = tempfile.mkdtemp()
-    filename = os.path.basename(url)
-    path = tmpdir + '/' + filename
-    zdata = urlopen(url)
-
-    print("Saving file to disk please wait...")
-    with open(path, 'wb') as local:
-        local.write(zdata.read())
-
-    zfile = zipfile.ZipFile(path)
-    print("Extracting zip file.")
-
-    try:
-        zfile.extractall(tmpdir)
-    except:
-        logger.warning("Couldn't extract zip file.")
-        return None
-
-    return tmpdir
 
 
 def int2byte(i):
