@@ -1,5 +1,5 @@
 # PhloxAR
-[![Lisence](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)]
+[![Lisence](https://img.shields.io/hexpm/l/plug.svg?maxAge=2592000)](https://pypi.python.org/pypi/PhloxAR)
 [![Build Status](https://travis-ci.org/PhloxAR/PhloxAR.svg?branch=master)](https://tranvis-ci.org/PhloxAR/PhloxAR)
 [![Coverage Status](https://coveralls.io/repos/github/PhloxAR/PhloxAR/badge.svg?branch=master)](https://coveralls.io/github/PhloxAR/PhloxAR?branch=master)
 
