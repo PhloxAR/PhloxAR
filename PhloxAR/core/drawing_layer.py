@@ -7,8 +7,8 @@ import warnings
 import numpy as np
 import pygame as sdl
 import pygame.gfxdraw as gfxdraw
-from .image import Image
-from .color import Color
+import PhloxAR.core.image
+from PhloxAR.core.color import Color
 
 # TODO: DOCUMENT
 
@@ -489,7 +489,7 @@ class DrawingLayer(object):
 
         if isinstance(img, str):
             image = sdl.image.load(img, "RGB")
-        elif isinstance(img, Image):
+        elif isinstance(img, PhloxAR.core.image.Image):
             image = img.surface
         else:
             image = img  # we assume we have a surface
