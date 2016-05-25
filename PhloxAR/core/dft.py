@@ -3,8 +3,9 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
-from PhloxAR.base import np, warnings
-from PhloxAR.core.image import Image
+from PhloxAR.base import np
+import PhloxAR.core.image
+import warnings
 
 
 class DFT(object):
@@ -20,7 +21,7 @@ class DFT(object):
     channels     - number of channels of the filter
     size         - size of the filter (width, height)
     _narray       - numpy array of the filter
-    _image       - SimpleCV.Image of the filter
+    _image       - Image of the filter
     _dia         - diameter of the filter
                       (applicable for gaussian, butterworth, notch)
     _type        - Type of the filter
@@ -96,7 +97,7 @@ class DFT(object):
             return None
 
         numpy_array = self._narray + other._narray
-        image = Image(numpy_array)
+        image = PhloxAR.core.image.Image(numpy_array)
         ret = DFT(array=numpy_array, image=image, size=image.size())
 
         return ret
@@ -174,7 +175,7 @@ class DFT(object):
             for d in dia:
                 stacked_filter = stacked_filter._stack_filters(cls.gaussian(d, size, fpass))
 
-            image = Image(stacked_filter._narray)
+            image = PhloxAR.core.image.Image(stacked_filter._narray)
             ret = DFT(narray=stacked_filter._narray, image=image,
                           dia=dia, channels=len(dia), size=size, type='gaussian',
                           fpass=stacked_filter._freq_pass)
@@ -191,7 +192,7 @@ class DFT(object):
             if fpass == 'high':
                 flt = 255 - flt
 
-            image = Image(flt)
+            image = PhloxAR.core.image.Image(flt)
             ret = DFT(size=size, narray=flt, image=image, dia=dia,
                           type='gaussian', fpass=fpass)
 
@@ -213,7 +214,7 @@ class DFT(object):
                 stacked_filter = stacked_filter._stack_filters(
                         cls.butterworth(d, size, fpass))
 
-            image = Image(stacked_filter.narray)
+            image = PhloxAR.core.image.Image(stacked_filter.narray)
             ret = DFT(narray=stacked_filter.narray, image=image,
                           dia=dia, channels=len(dia), size=size,
                           type='butterworth', fpass=stacked_filter._freq_pass)
@@ -230,7 +231,7 @@ class DFT(object):
             if fpass == 'high':
                 flt = 255 - flt
 
-            image = Image(flt)
+            image = PhloxAR.core.image.Image(flt)
             ret = DFT(size=size, narray=flt, image=image, dia=dia,
                           type='butterworth', fpass=fpass)
 
@@ -270,7 +271,7 @@ class DFT(object):
                 stacked_filter = stacked_filter._stack_filters(cls.low_pass(
                         xfreq, yfreq, size))
 
-            image = Image(stacked_filter._narray)
+            image = PhloxAR.core.image.Image(stacked_filter._narray)
             ret = DFT(narray=stacked_filter._narray, image=image,
                          xco_low=xco, yco_low=yco, channels=len(xco), size=size,
                          type=stacked_filter._type, order=cls._order,
@@ -289,7 +290,7 @@ class DFT(object):
         flt[0:xco, h - yco:h] = 255
         flt[w - xco:w, 0:yco] = 255
         flt[w - xco:w, h - yco:h] = 255
-        img = Image(flt)
+        img = PhloxAR.core.image.Image(flt)
         lowpass_filter = DFT(size=size, narray=flt, image=img, type="lowpass",
                       xco_low=xco, yco_low=yco, fpass="lowpass")
         return lowpass_filter
@@ -329,7 +330,7 @@ class DFT(object):
                 stacked_filter = stacked_filter._stack_filters(cls.high_pass(
                         xfreq, yfreq, size))
 
-            image = Image(stacked_filter._narray)
+            image = PhloxAR.core.image.Image(stacked_filter._narray)
             ret = DFT(narray=stacked_filter._narray, image=image,
                          xco_low=xco, yco_low=yco, channels=len(xco), size=size,
                          type=stacked_filter._type, order=cls._order,
@@ -340,7 +341,7 @@ class DFT(object):
         w, h = lowpass.size()
         flt = lowpass._narray
         flt = 255 - flt
-        img = Image(flt)
+        img = PhloxAR.core.image.Image(flt)
         highpass_filter = DFT(size=size, narray=flt, image=img,
                               type="highpass", xco_high=xco, yco_high=yco,
                               fpass="highpass")
@@ -369,7 +370,7 @@ class DFT(object):
         bandpassnumpy = lowpassnumpy + highpassnumpy
         bandpassnumpy = np.clip(bandpassnumpy, 0, 255)
 
-        img = Image(bandpassnumpy)
+        img = PhloxAR.core.image.Image(bandpassnumpy)
         bandpass = DFT(size=size, image=img, narray=bandpassnumpy,
                        type="bandpass", xco_low=xco_low, yco_low=yco_low,
                        xco_high=xco_high, yco_high=yco_high, fpass="bandpass",
@@ -420,7 +421,7 @@ class DFT(object):
 
         for d1, d2, c in zip(dia1, dia2, cen):
             stacked_filter = stacked_filter._stack_filters(cls.notch(d1, d2, c, size, ftype))
-        image = Image(stacked_filter._numpy)
+        image = PhloxAR.core.image.Image(stacked_filter._numpy)
         ret = DFT(narray=stacked_filter._narray, image=image,
                       dia=dia1 + dia2, channels=len(dia1), size=size,
                       type=stacked_filter._type, fpass=stacked_filter._fpass)
@@ -462,7 +463,7 @@ class DFT(object):
         """
         flt = self._narray
         flt = 255 - flt
-        img = Image(flt)
+        img = PhloxAR.core.image.Image(flt)
         inverted = DFT(array=flt, image=img, size=self.size(), type=self._type)
         inverted._update(self)
 
@@ -473,7 +474,7 @@ class DFT(object):
         if self._image is None:
             if self._narray is None:
                 warnings.warn("Filter doesn't contain any image.")
-            self._image = Image(self._narray)
+            self._image = PhloxAR.core.image.Image(self._narray)
         return self._image
 
     @property
@@ -536,7 +537,7 @@ class DFT(object):
         numpy_filter1 = flt1.narray
         numpy_filter2 = flt2.narray
         flt = np.dstack((numpy_filter, numpy_filter1, numpy_filter2))
-        image = Image(flt)
+        image = PhloxAR.core.image.Image(flt)
         stacked_filter = DFT(size=self.size(), array=flt, image=image, channels=3)
 
         return stacked_filter

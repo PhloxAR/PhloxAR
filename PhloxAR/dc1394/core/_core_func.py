@@ -2,7 +2,7 @@
 #
 # -*- coding: utf-8 -*-
 #
-# phlox-libdc1394/phloxar-dc1394/core/_core.py
+# phlox-libdc1394/dc1394/core/_core.py
 #
 # Copyright (C) 2016, by Matthias Yang Chen <matthias_cy@outlook.com>
 # All rights reserved.
@@ -49,7 +49,7 @@ __all__ = [
 #  so at least the API can handle the ingoing/returning parameters properly.
 
 try:
-    _dll = cdll.LoadLibrary(find_library('phloxar-dc1394'))
+    _dll = cdll.LoadLibrary(find_library('dc1394'))
 except Exception as e:
     raise RuntimeError("Fatal: libdc1394 could not be found or open: %s" % e)
 
@@ -63,7 +63,7 @@ def _errcheck(rtype, func, arg):
     messages from the library.
     """
     if rtype != 0:
-        raise RuntimeError("Error in phloxar-dc1394 function call: %s" %
+        raise RuntimeError("Error in dc1394 function call: %s" %
                            err_val(rtype))
 
 

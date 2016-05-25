@@ -184,40 +184,6 @@ def int2byte(i):
     return chr(i1) + chr(i2)
 
 
-# deprecated
-def npArray2cvMat(mat, dtype=cv.CV_32FC1):
-    """
-    This function is a utility for converting numpy arrays to
-    the cv.cvMat format.
-    Returns: cvMatrix
-    """
-    if type(mat) == np.ndarray:
-        size = len(mat.shape)
-        tmp_mat = None
-        if dtype in (cv.CV_32FC1, cv.cv32FC2, cv.CV_32FC3, cv.CV_32FC4):
-            tmp_mat = np.array(mat, dtype='float32')
-        elif dtype in (cv.CV_8UC1, cv.CV_8UC2, cv.CV_8UC3, cv.CV_8UC3):
-            tmp_mat = np.array(mat, dtype='uint8')
-        else:
-            logger.warning("Input matrix type is not supported")
-            return None
-
-        if size == 1:  # this needs to be changed so we can do row/col vectors
-            retVal = cv.CreateMat(mat.shape[0], 1, dtype)
-            cv.SetData(retVal, tmp_mat.tostring(),
-                       tmp_mat.dtype.itemsize * tmp_mat.shape[0])
-        elif size == 2:
-            retVal = cv.CreateMat(tmp_mat.shape[0], tmp_mat.shape[1], dtype)
-            cv.SetData(retVal, tmp_mat.tostring(),
-                       tmp_mat.dtype.itemsize * tmp_mat.shape[1])
-        else:
-            logger.warning("Input matrix type is not supported")
-            return None
-
-        return retVal
-    else:
-        logger.warning("Input matrix type is not supported")
-
 try:
     import IPython
     ipy_ver = IPython.__version__
