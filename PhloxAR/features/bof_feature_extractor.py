@@ -16,7 +16,7 @@ class BOFFeatureExtractor(FeatureExtractorBase):
     For a discussion of bag of features please see:
     http://en.wikipedia.org/wiki/Bag_of_words_model_in_computer_vision
     Initialize the bag of features extractor. This assumes you don't have
-    the feature codebook pre-computed.
+    the features codebook pre-computed.
     patchsz = the dimensions of each codebook patch
     numcodes = the number of different patches in the codebook.
     imglayout = the shape of the resulting image in terms of patches
@@ -305,7 +305,7 @@ class BOFFeatureExtractor(FeatureExtractorBase):
 
     def get_field_names(self):
         """
-        This method gives the names of each field in the feature vector in the
+        This method gives the names of each field in the features vector in the
         order in which they are returned. For example, 'xpos' or 'width'
         """
         ret = []
@@ -317,6 +317,6 @@ class BOFFeatureExtractor(FeatureExtractorBase):
 
     def get_num_fields(self):
         """
-        This method returns the total number of fields in the feature vector.
+        This method returns the total number of fields in the features vector.
         """
         return self._num_codes

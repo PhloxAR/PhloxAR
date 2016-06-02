@@ -12,8 +12,8 @@ __all__ = [
 
 class HaarLikeFeature(object):
     """
-    Create a single Haar feature and optionally set the regions that define
-    the Haar feature and its name. The formal of the feature is
+    Create a single Haar features and optionally set the regions that define
+    the Haar features and its name. The formal of the features is
     The format is [[[TL],[BR],SIGN],[[TL],[BR],SIGN].....]
     Where TR and BL are the unit coordinates for the top right and bottom
     left coordinates.
@@ -55,7 +55,7 @@ class HaarLikeFeature(object):
     @name.setter
     def name(self, name):
         """
-        Set the name of this feature, the name must be unique.
+        Set the name of this features, the name must be unique.
         """
         self._name = name
 

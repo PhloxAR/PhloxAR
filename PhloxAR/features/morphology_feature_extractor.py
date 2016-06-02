@@ -14,7 +14,7 @@ __all__ = [
 
 class MorphologyFeatureExtractor(FeatureExtractorBase):
     """
-    This feature extractor collects some basic morphology information about a
+    This features extractor collects some basic morphology information about a
     given image. It is assumed that the object to be recognized is the largest
     object in the image. The user must provide a segmented white on black blob
     image. This operation then straightens the image and collects the data.
@@ -77,7 +77,7 @@ class MorphologyFeatureExtractor(FeatureExtractorBase):
 
     def get_field_names(self):
         """
-        This method gives the names of each field in the feature vector in the
+        This method gives the names of each field in the features vector in the
         order in which they are returned. For example, 'xpos' or 'width'
         """
         ret = []
@@ -94,7 +94,7 @@ class MorphologyFeatureExtractor(FeatureExtractorBase):
 
     def get_num_fields(self):
         """
-        This method returns the total number of fields in the feature vector.
+        This method returns the total number of fields in the features vector.
         """
         return self._nbins
 

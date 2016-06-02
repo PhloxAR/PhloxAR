@@ -33,7 +33,7 @@ def surf_tracker(img, bb, ts, **kwargs):
                   The number of samples in a neighborhood for a point
                   to be considered as a core point.
 
-    distance    - thresholding KNN distance of each feature
+    distance    - thresholding KNN distance of each features
                   if KNN distance > distance, point is discarded.
     **RETURNS**
     

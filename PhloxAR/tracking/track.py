@@ -717,7 +717,7 @@ class TrackSet(FeatureSet):
     def area_ratio(self):
         """
         **SUMMARY**
-        Returns a numpy array of the area_ratio of each feature.
+        Returns a numpy array of the area_ratio of each features.
         where area_ratio is the ratio of the size of the current bounding box to
         the size of the initial bounding box
         **RETURNS**
@@ -1066,7 +1066,7 @@ class TrackSet(FeatureSet):
     def predicted_coordinates(self):
         """
         **SUMMARY**
-        Returns a numpy array of the predicted coordinates of each feature.
+        Returns a numpy array of the predicted coordinates of each features.
         **RETURNS**
         A numpy array.
         **EXAMPLE**
@@ -1081,7 +1081,7 @@ class TrackSet(FeatureSet):
     def predict_x(self):
         """
         **SUMMARY**
-        Returns a numpy array of the predicted x (vertical) coordinate of each feature.
+        Returns a numpy array of the predicted x (vertical) coordinate of each features.
         **RETURNS**
         A numpy array.
         """
@@ -1090,7 +1090,7 @@ class TrackSet(FeatureSet):
     def predict_y(self):
         """
         **SUMMARY**
-        Returns a numpy array of the predicted y (vertical) coordinate of each feature.
+        Returns a numpy array of the predicted y (vertical) coordinate of each features.
         **RETURNS**
         A numpy array.
         """
@@ -1187,7 +1187,7 @@ class TrackSet(FeatureSet):
     def correct_x(self):
         """
         **SUMMARY**
-        Returns a numpy array of the corrected x coordinate of each feature.
+        Returns a numpy array of the corrected x coordinate of each features.
         **RETURNS**
         A numpy array.
         """
@@ -1196,7 +1196,7 @@ class TrackSet(FeatureSet):
     def correct_y(self):
         """
         **SUMMARY**
-        Returns a numpy array of the corrected y coordinate of each feature.
+        Returns a numpy array of the corrected y coordinate of each features.
         **RETURNS**
         A numpy array.
         """
@@ -1205,7 +1205,7 @@ class TrackSet(FeatureSet):
     def corrected_coordinates(self):
         """
         **SUMMARY**
-        Returns a numpy array of the corrected coordinates of each feature.
+        Returns a numpy array of the corrected coordinates of each features.
         **RETURNS**
         A numpy array.
         """

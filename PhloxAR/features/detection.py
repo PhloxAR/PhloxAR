@@ -24,7 +24,7 @@ __all__ = [
 
 class Corner(Feature):
     """
-    The Corner feature is a point returned by the find_corners function.
+    The Corner features is a point returned by the find_corners function.
     Corners are used in machine vision as a very computationally efficient
     way to find unique features in an image. These corners can be used in
     conjunction with many other algorithms.
@@ -39,7 +39,7 @@ class Corner(Feature):
         default is Color.RED.
 
         :param color: an RGB _color triplet
-        :param width: if width is less than zero the draw the feature filled in,
+        :param width: if width is less than zero the draw the features filled in,
                        otherwise draw the contour using specified width.
         :return: None
         """
@@ -48,7 +48,7 @@ class Corner(Feature):
 
 class Line(Feature):
     """
-    The line feature is returned by the find_lines function, also can be
+    The line features is returned by the find_lines function, also can be
     initialized with any two points.
 
     >>> line = Line(Image, (point1, point2))
@@ -110,10 +110,10 @@ class Line(Feature):
 
     def crop(self):
         """
-        Crops the source image to the location of the feature and returns
+        Crops the source image to the location of the features and returns
         a new Image.
 
-        :return: an Image that is cropped to the feature position and size
+        :return: an Image that is cropped to the features position and size
 
         :Example:
         >>> img = Image('edge_test2.png')
@@ -129,7 +129,7 @@ class Line(Feature):
         Note that when the line falls "between" pixels, each pixels _color
         contributes to the weighted average.
 
-        :return: a RGB triplet corresponding to the mean _color of the feature
+        :return: a RGB triplet corresponding to the mean _color of the features
 
         :Example:
         >>> img = Image('lena')
@@ -510,7 +510,7 @@ class Barcode(Feature):
     The Barcode Feature wrappers the object returned by find_barcode(),
     a zbar symbol
     * The x,y coordinate is the center of the code.
-    * points represents the four boundary points of the feature. Note: for
+    * points represents the four boundary points of the features. Note: for
       QR codes, these points are the reference rectangls, and are quadrangular,
       rather than rectangular with other datamatrix types.
     * data is the parsed data of the code.
@@ -560,7 +560,7 @@ class Barcode(Feature):
         the actual code.
         **PARAMETERS**
         * *_color* - An RGB _color triplet.
-        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        * *width* - if width is less than zero we draw the features filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
@@ -642,7 +642,7 @@ class HaarFeature(Feature):
             x, y, width, height = haar_obj
 
         at_x = x + width / 2
-        at_y = y + height / 2  # set location of feature to middle of rectangle.
+        at_y = y + height / 2  # set location of features to middle of rectangle.
         points = ((x, y), (x + width, y),
                   (x + width, y + height), (x, y + height))
 
@@ -658,7 +658,7 @@ class HaarFeature(Feature):
         Draw the bounding rectangle, default _color is Color.GREEN
 
         :param color: a RGB _color tuple
-        :param width: if width is less than zero we draw the feature filled in, otherwise we draw the
+        :param width: if width is less than zero we draw the features filled in, otherwise we draw the
                        contour using the specified width.
         :return: None, modify the source images drawing layer.
         """
@@ -677,7 +677,7 @@ class HaarFeature(Feature):
         """
         Find the mean _color of the boundary rectangle
 
-        :return: a RGB tuple that corresponds to the mean _color of the feature.
+        :return: a RGB tuple that corresponds to the mean _color of the features.
 
         :Example:
         >>> img = Image('lena')
@@ -691,9 +691,9 @@ class HaarFeature(Feature):
 
     def area(self):
         """
-        Returns the area of the feature in pixels
+        Returns the area of the features in pixels
 
-        :return: area of feature in pixels.
+        :return: area of features in pixels.
 
         :Example:
         >>> img = Image('lena')
@@ -754,7 +754,7 @@ class Chessboard(Feature):
         >>> print feats[-1].area()
         """
         # note, copying this from barcode means we probably need a subclass of
-        # feature called "quandrangle"
+        # features called "quandrangle"
         sqform = spsd.squareform(spsd.pdist(self._points, "euclidean"))
         a = sqform[0][1]
         b = sqform[1][2]
@@ -794,7 +794,7 @@ class TemplateMatch(Feature):
 
     def _template_overlaps(self, other):
         """
-        Returns true if this feature overlaps another template feature.
+        Returns true if this features overlaps another template features.
         """
         (maxx, minx, maxy, miny) = self.extents()
         overlap = False
@@ -807,7 +807,7 @@ class TemplateMatch(Feature):
 
     def consume(self, other):
         """
-        Given another template feature, make this feature the size of the two features combined.
+        Given another template features, make this features the size of the two features combined.
         """
         (maxx, minx, maxy, miny) = self.extents()
         (maxx0, minx0, maxy0, miny0) = other.extents()
@@ -823,7 +823,7 @@ class TemplateMatch(Feature):
 
     def rescale(self, w, h):
         """
-        This method keeps the feature's center the same but sets a new width and height
+        This method keeps the features's center the same but sets a new width and height
         """
         (maxx, minx, maxy, miny) = self.extents()
         xc = minx + ((maxx - minx) / 2)
@@ -848,7 +848,7 @@ class TemplateMatch(Feature):
         Draw the bounding rectangle, default _color green.
         **PARAMETERS**
         * *_color* - An RGB _color triplet.
-        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        * *width* - if width is less than zero we draw the features filled in, otherwise we draw the
           contour using the specified width.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
@@ -860,7 +860,7 @@ class TemplateMatch(Feature):
 
 class Circle(Feature):
     """
-    Class for a general circle feature with a center at (x,y) and a radius r
+    Class for a general circle features with a center at (x,y) and a radius r
     """
     _radius = 0.00
     _avg_color = None
@@ -885,10 +885,10 @@ class Circle(Feature):
     def draw(self, color=Color.GREEN, width=1):
         """
         **SUMMARY**
-        With no dimension information, _color the x,y point for the feature.
+        With no dimension information, _color the x,y point for the features.
         **PARAMETERS**
         * *_color* - An RGB _color triplet.
-        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        * *width* - if width is less than zero we draw the features filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
@@ -901,7 +901,7 @@ class Circle(Feature):
         This function will automatically draw the features on the image and show it.
         It is a basically a shortcut function for development and is the same as:
         **PARAMETERS**
-        * *_color* - the _color of the feature as an rgb triplet.
+        * *_color* - the _color of the features as an rgb triplet.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
         **EXAMPLE**
@@ -934,7 +934,7 @@ class Circle(Feature):
         **SUMMARY**
         Returns the average _color within the circle.
         **RETURNS**
-        Returns an RGB triplet that corresponds to the mean _color of the feature.
+        Returns an RGB triplet that corresponds to the mean _color of the features.
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> c = img.find_circle()
@@ -953,9 +953,9 @@ class Circle(Feature):
     @property
     def area(self):
         """
-        Area covered by the feature -- for a pixel, 1
+        Area covered by the features -- for a pixel, 1
         **SUMMARY**
-        Returns a numpy array of the area of each feature in pixels.
+        Returns a numpy array of the area of each features in pixels.
         **RETURNS**
         A numpy array of all the positions in the featureset.
         **EXAMPLE**
@@ -969,21 +969,21 @@ class Circle(Feature):
     @property
     def perimeter(self):
         """
-        Returns the perimeter of the circle feature in pixels.
+        Returns the perimeter of the circle features in pixels.
         """
         return 2 * npy.pi * self._radius
 
     @property
     def width(self):
         """
-        Returns the width of the feature -- for compliance just r*2
+        Returns the width of the features -- for compliance just r*2
         """
         return self._radius * 2
 
     @property
     def height(self):
         """
-        Returns the height of the feature -- for compliance just r*2
+        Returns the height of the features -- for compliance just r*2
         """
         return self._radius * 2
 
@@ -1105,17 +1105,17 @@ class KeyPoint(Feature):
 
     def angle(self):
         """
-        Return the angle (theta) in degrees of the feature. The default is 0 (horizontal).
+        Return the angle (theta) in degrees of the features. The default is 0 (horizontal).
         """
         return self._angle
 
     def draw(self, color=Color.GREEN, width=1):
         """
         **SUMMARY**
-        Draw a circle around the feature.  Color tuple is single parameter, default is Green.
+        Draw a circle around the features.  Color tuple is single parameter, default is Green.
         **PARAMETERS**
         * *_color* - An RGB _color triplet.
-        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        * *width* - if width is less than zero we draw the features filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
@@ -1151,9 +1151,9 @@ class KeyPoint(Feature):
     def mean_color(self):
         """
         **SUMMARY**
-        Return the average _color within the feature's radius
+        Return the average _color within the features's radius
         **RETURNS**
-        Returns an  RGB triplet that corresponds to the mean _color of the feature.
+        Returns an  RGB triplet that corresponds to the mean _color of the features.
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> kp = img.findKeypoints()
@@ -1179,20 +1179,20 @@ class KeyPoint(Feature):
     def perimeter(self):
         """
         **SUMMARY**
-        Returns the perimeter of the circle feature in pixels.
+        Returns the perimeter of the circle features in pixels.
         """
         return 2 * npy.pi * self._radius
 
     @property
     def width(self):
         """
-        Returns the width of the feature -- for compliance just r*2
+        Returns the width of the features -- for compliance just r*2
         """
         return self._radius * 2
 
     def height(self):
         """
-        Returns the height of the feature -- for compliance just r*2
+        Returns the height of the features -- for compliance just r*2
         """
         return self._radius * 2
 
@@ -1234,7 +1234,7 @@ class KeyPoint(Feature):
 
 class Motion(Feature):
     """
-    The motion feature is used to encapsulate optical flow vectors. The feature
+    The motion features is used to encapsulate optical flow vectors. The features
     holds the length and direction of the vector.
     """
     dx = 0.00
@@ -1267,7 +1267,7 @@ class Motion(Feature):
         Draw the optical flow vector going from the sample point along the length of the motion vector.
         **PARAMETERS**
         * *_color* - An RGB _color triplet.
-        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        * *width* - if width is less than zero we draw the features filled in, otherwise we draw the
         contour using the specified width.
         * *normalize* - normalize the vector size to the size of the block (i.e. the biggest optical flow
         vector is scaled to the size of the block, all other vectors are scaled relative to
@@ -1343,7 +1343,7 @@ class Motion(Feature):
         **SUMMARY**
         Return a numpy array of the average _color of the area covered by each Feature.
         **RETURNS**
-        Returns an array of RGB triplets the correspond to the mean _color of the feature.
+        Returns an array of RGB triplets the correspond to the mean _color of the features.
         **EXAMPLE**
         >>> img = Image("lenna")
         >>> kp = img.findKeypoints()
@@ -1408,7 +1408,7 @@ class KeyPointMatch(Feature):
         Draw a small circle around the corner.  Color tuple is single parameter, default is Red.
         **PARAMETERS**
         * *_color* - An RGB _color triplet.
-        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        * *width* - if width is less than zero we draw the features filled in, otherwise we draw the
         contour using the specified width.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
@@ -1432,7 +1432,7 @@ class KeyPointMatch(Feature):
 
     def crop(self):
         """
-        Returns a cropped image of the feature match. This cropped version is the
+        Returns a cropped image of the features match. This cropped version is the
         axes aligned box masked to just include the image data of the minimum bounding
         rectangle.
         """
@@ -1447,7 +1447,7 @@ class KeyPointMatch(Feature):
         **SUMMARY**
         Return a numpy array of the average _color of the area covered by each Feature.
         **RETURNS**
-        Returns an array of RGB triplets the correspond to the mean _color of the feature.
+        Returns an array of RGB triplets the correspond to the mean _color of the features.
         **EXAMPLE**
         >>> img = Image("lena")
         >>> kp = img.find_keypoints()
@@ -1469,7 +1469,7 @@ class KeyPointMatch(Feature):
     @property
     def min_rect(self):
         """
-        Returns the minimum bounding rectangle of the feature as a list
+        Returns the minimum bounding rectangle of the features as a list
         of (x,y) tuples.
         """
         return self._min_rect
@@ -1506,7 +1506,7 @@ class ShapeContextDescriptor(Feature):
         Draw a small circle around the corner.  Color tuple is single parameter, default is Red.
         **PARAMETERS**
         * *_color* - An RGB _color triplet.
-        * *width* - if width is less than zero we draw the feature filled in, otherwise we draw the
+        * *width* - if width is less than zero we draw the features filled in, otherwise we draw the
           contour using the specified width.
         **RETURNS**
         Nothing - this is an inplace operation that modifies the source images drawing layer.
@@ -1531,7 +1531,7 @@ class ROI(Feature):
         """
         **SUMMARY**
         This function can handle just about whatever you throw at it
-        and makes a it into a feature. Valid input items are tuples and lists
+        and makes a it into a features. Valid input items are tuples and lists
         of x,y points, features, featuresets, two x,y points, and a
         set of x,y,width,height values.
         **PARAMETERS**
@@ -1953,7 +1953,7 @@ class ROI(Feature):
 
         **RETURNS**
 
-        Returns a feature set of ROIs split from the source ROI.
+        Returns a features set of ROIs split from the source ROI.
         **EXAMPLE**
         >>> roi = ROI(0,0,100,100,img)
         >>> splits = roi.split_x(50) # create two ROIs
@@ -1961,7 +1961,7 @@ class ROI(Feature):
         """
         retVal = FeatureSet()
         if unit_vals and src_vals:
-            logger.warning("Not sure how you would like to split the feature")
+            logger.warning("Not sure how you would like to split the features")
             return None
 
         if not isinstance(x, (list, tuple)):
@@ -2000,7 +2000,7 @@ class ROI(Feature):
 
         **RETURNS**
 
-        Returns a feature set of ROIs split from the source ROI.
+        Returns a features set of ROIs split from the source ROI.
         **EXAMPLE**
         >>> roi = ROI(0,0,100,100,img)
         >>> splits = roi.split_y(50) # create two ROIs
@@ -2008,7 +2008,7 @@ class ROI(Feature):
         """
         ret = FeatureSet()
         if unit_vals and src_vals:
-            logger.warning("Not sure how you would like to split the feature")
+            logger.warning("Not sure how you would like to split the features")
             return None
 
         if not isinstance(y, (list, tuple)):
@@ -2104,7 +2104,7 @@ class ROI(Feature):
     def draw(self, color=Color.GREEN, width=3):
         """
         **SUMMARY**
-        This method will draw the feature on the source image.
+        This method will draw the features on the source image.
         **PARAMETERS**
         * *_color* - The _color as an RGB tuple to render the image.
         **RETURNS**
@@ -2135,7 +2135,7 @@ class ROI(Feature):
     def mean_color(self):
         """
         **SUMMARY**
-        Return the average _color within the feature as a tuple.
+        Return the average _color within the features as a tuple.
         **RETURNS**
         An RGB _color tuple.
         **EXAMPLE**
@@ -2184,9 +2184,9 @@ class ROI(Feature):
                 return [x, y, w, h]
         elif isinstance(x, ROI):
             x, y, w, h = x.to_xywh()
-        # If it's a feature extract what we need
+        # If it's a features extract what we need
         elif isinstance(x, FeatureSet) and len(x) > 0:
-            # double check that everything in the list is a feature
+            # double check that everything in the list is a features
             features = [feat for feat in x if isinstance(feat, Feature)]
             xmax = npy.max([feat.maxX() for feat in features])
             xmin = npy.min([feat.minX() for feat in features])

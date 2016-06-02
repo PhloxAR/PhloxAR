@@ -120,7 +120,7 @@ TRIGGER_ACTIVE_MIN = trigger_polarities['TRIGGER_ACTIVE_LOW']
 TRIGGER_ACTIVE_MAX = trigger_polarities['TRIGGER_ACTIVE_HIGH']
 TRIGGER_ACTIVE_NUM = TRIGGER_ACTIVE_MAX - TRIGGER_ACTIVE_MIN + 1
 
-# Control modes for feature.
+# Control modes for features.
 feature_modes = {
     'FEATURE_MODE_MANUAL': 736,
     'FEATURE_MODE_AUTO': 737,
@@ -134,7 +134,7 @@ FEATURE_MODE_MAX = feature_modes['FEATURE_MODE_ONE_PUSH_AUTO']
 FEATURE_MODE_NUM = FEATURE_MODE_MAX - FEATURE_MODE_MIN + 1
 
 
-# List of feature modes
+# List of features modes
 class feature_modes_t(Structure):
     _fields_ = [
         ('num', c_uint32),
@@ -158,7 +158,7 @@ class trigger_sources_t(Structure):
     ]
 
 
-# A structure containing all information about a feature.
+# A structure containing all information about a features.
 class feature_info_t(Structure):
     _fields_ = [
         ('id', feature_t),
@@ -193,5 +193,5 @@ class feature_info_t(Structure):
 # The list of features.
 class featureset_t(Structure):
     _fields_ = [
-        ('feature', (feature_info_t) * FEATURE_NUM)
+        ('features', (feature_info_t) * FEATURE_NUM)
     ]
