@@ -13,7 +13,7 @@ __all__ = [
 
 class HueHistogramFeatureExtractor(FeatureExtractorBase):
     """
-    Create a Hue Histogram feature extractor. This feature extractor
+    Create a Hue Histogram features extractor. This features extractor
     takes in an image, gets the hue channel, bins the number of pixels
     with a particular Hue, and returns the results.
     _nbins - the number of Hue bins.
@@ -27,7 +27,7 @@ class HueHistogramFeatureExtractor(FeatureExtractorBase):
 
     def extract(self, img):
         """
-        This feature extractor takes in a _color image and returns a normalized _color
+        This features extractor takes in a _color image and returns a normalized _color
         histogram of the pixel counts of each hue.
         """
         img = img.toHLS()
@@ -40,7 +40,7 @@ class HueHistogramFeatureExtractor(FeatureExtractorBase):
 
     def get_field_names(self):
         """
-        This method gives the names of each field in the feature vector in the
+        This method gives the names of each field in the features vector in the
         order in which they are returned. For example, 'xpos' or 'width'
         """
         ret = []
@@ -51,6 +51,6 @@ class HueHistogramFeatureExtractor(FeatureExtractorBase):
 
     def get_num_fields(self):
         """
-        This method returns the total number of fields in the feature vector.
+        This method returns the total number of fields in the features vector.
         """
         return self._nbins

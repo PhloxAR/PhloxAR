@@ -62,7 +62,7 @@ ISO_SPEED_NUM = ISO_SPEED_MAX - ISO_SPEED_MIN + 1
 # Enumeration of video framerates.
 # This enumeration is used for non-Format_7 modes. The framerate can be lower
 # than expected if the exposure time is longer than the requested frame period.
-# Framerate can be controlled in a number of other ways: framerate feature,
+# Framerate can be controlled in a number of other ways: framerate features,
 # external trigger, software trigger, shutter throttling and packet
 # size (Format_7)
 framerates = {

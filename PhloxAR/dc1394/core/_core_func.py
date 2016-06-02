@@ -151,19 +151,19 @@ _dll.dc1394_feature_get_all.argtypes = [PTR(camera_t), PTR(featureset_t)]
 _dll.dc1394_feature_get_all.restype = error_t
 _dll.dc1394_feature_get_all.errcheck = _errcheck
 
-# Stores the bounds and options associated with the feature described by
-# feature->feature_id
+# Stores the bounds and options associated with the features described by
+# features->feature_id
 _dll.dc1394_feature_get.argtypes = [PTR(camera_t), PTR(feature_info_t)]
 _dll.dc1394_feature_get.restype = error_t
 _dll.dc1394_feature_get.errcheck = _errcheck
 
-# Displays the bounds and options of the given feature
-# dc1394error_t dc1394_feature_print(dc1394feature_info_t *feature, FILE *fd);
+# Displays the bounds and options of the given features
+# dc1394error_t dc1394_feature_print(dc1394feature_info_t *features, FILE *fd);
 _dll.dc1394_feature_print.argtypes = [PTR(feature_info_t), c_void_p]
 _dll.dc1394_feature_print.restype = error_t
 _dll.dc1394_feature_print.errcheck = _errcheck
 
-# Displays the bounds and options of every feature supported by the camera
+# Displays the bounds and options of every features supported by the camera
 _dll.dc1394_feature_print_all.argtypes = [PTR(featureset_t), c_void_p]
 _dll.dc1394_feature_print_all.restype = error_t
 _dll.dc1394_feature_print_all.errcheck = _errcheck
@@ -204,27 +204,27 @@ _dll.dc1394_feature_set_value.argtypes = [PTR(camera_t), feature_t, c_uint32]
 _dll.dc1394_feature_set_value.restype = error_t
 _dll.dc1394_feature_set_value.errcheck = _errcheck
 
-# Tells whether a feature is present or not
+# Tells whether a features is present or not
 _dll.dc1394_feature_is_present.argtypes = [PTR(camera_t), feature_t, PTR(bool_t)]
 _dll.dc1394_feature_is_present.restype = error_t
 _dll.dc1394_feature_is_present.errcheck = _errcheck
 
-# Tells whether a feature is readable or not
+# Tells whether a features is readable or not
 _dll.dc1394_feature_is_readable.argtypes = [PTR(camera_t), feature_t, PTR(bool_t)]
 _dll.dc1394_feature_is_readable.restype = error_t
 _dll.dc1394_feature_is_readable.errcheck = _errcheck
 
-# Gets the boundaries of a feature
+# Gets the boundaries of a features
 _dll.dc1394_feature_get_boundaries.argtypes = [PTR(camera_t), feature_t, PTR(c_uint32), PTR(c_uint32)]
 _dll.dc1394_feature_get_boundaries.restype = error_t
 _dll.dc1394_feature_get_boundaries.errcheck = _errcheck
 
-# Tells whether a feature is switcheable or not (ON/OFF)
+# Tells whether a features is switcheable or not (ON/OFF)
 _dll.dc1394_feature_is_switchable.argtypes = [PTR(camera_t), feature_t, PTR(bool_t)]
 _dll.dc1394_feature_is_switchable.restype = error_t
 _dll.dc1394_feature_is_switchable.errcheck = _errcheck
 
-# Power status of a feature (ON/OFF): get/set
+# Power status of a features (ON/OFF): get/set
 _dll.dc1394_feature_get_power.argtypes = [PTR(camera_t), feature_t, PTR(switch_t)]
 _dll.dc1394_feature_get_power.restype = error_t
 _dll.dc1394_feature_get_power.errcheck = _errcheck
@@ -233,12 +233,12 @@ _dll.dc1394_feature_set_power.argtypes = [PTR(camera_t), feature_t, switch_t]
 _dll.dc1394_feature_set_power.restype = error_t
 _dll.dc1394_feature_set_power.errcheck = _errcheck
 
-# Gets the list of control modes for a feature (manual, auto, etc...)
+# Gets the list of control modes for a features (manual, auto, etc...)
 _dll.dc1394_feature_get_modes.argtypes = (PTR(camera_t), feature_t, PTR(feature_modes_t))
 _dll.dc1394_feature_get_modes.restype = error_t
 _dll.dc1394_feature_get_modes.errcheck = _errcheck
 
-# Current control modes for a feature: get/set
+# Current control modes for a features: get/set
 _dll.dc1394_feature_get_mode.argtypes = [PTR(camera_t), feature_t, PTR(feature_mode_t)]
 _dll.dc1394_feature_get_mode.restype = error_t
 _dll.dc1394_feature_get_mode.errcheck = _errcheck
@@ -247,17 +247,17 @@ _dll.dc1394_feature_set_mode.argtypes = [PTR(camera_t), feature_t, feature_mode_
 _dll.dc1394_feature_set_mode.restype = error_t
 _dll.dc1394_feature_set_mode.errcheck = _errcheck
 
-# Tells whether a feature can be controlled in absolute mode
+# Tells whether a features can be controlled in absolute mode
 _dll.dc1394_feature_has_absolute_control.argtypes = [PTR(camera_t), feature_t, PTR(bool_t)]
 _dll.dc1394_feature_has_absolute_control.restype = error_t
 _dll.dc1394_feature_has_absolute_control.errcheck = _errcheck
 
-# Gets the absolute boundaries of a feature
+# Gets the absolute boundaries of a features
 _dll.dc1394_feature_get_absolute_boundaries.argtypes = [PTR(camera_t), feature_t, PTR(c_float), PTR(c_float)]
 _dll.dc1394_feature_get_absolute_boundariesrestype = error_t
 _dll.dc1394_feature_get_absolute_boundaries.errcheck = _errcheck
 
-# Absolute value of a feature: get/set
+# Absolute value of a features: get/set
 _dll.dc1394_feature_get_absolute_value.argtypes = [PTR(camera_t), feature_t, PTR(c_float)]
 _dll.dc1394_feature_get_absolute_value.restype = error_t
 _dll.dc1394_feature_get_absolute_value.errcheck = _errcheck
@@ -266,7 +266,7 @@ _dll.dc1394_feature_set_absolute_value.argtypes = [PTR(camera_t), feature_t, c_f
 _dll.dc1394_feature_set_absolute_value.restype = error_t
 _dll.dc1394_feature_set_absolute_value.errcheck = _errcheck
 
-# The status of absolute control of a feature(ON/OFF): get/set
+# The status of absolute control of a features(ON/OFF): get/set
 _dll.dc1394_feature_get_absolute_control.argtypes = [PTR(camera_t), feature_t, PTR(switch_t)]
 _dll.dc1394_feature_get_absolute_control.restype = error_t
 _dll.dc1394_feature_get_absolute_control.errcheck = _errcheck
@@ -681,7 +681,7 @@ _dll.dc1394_set_format7_register.restype = error_t
 _dll.dc1394_set_format7_register.errcheck = _errcheck
 
 # ---- Get/set absolute control registers ----
-# parameters *camera, feature, offset, *value
+# parameters *camera, features, offset, *value
 _dll.dc1394_get_absolute_register.argtypes = [PTR(camera_t), c_uint, c_uint64, PTR(c_uint32)]
 _dll.dc1394_get_absolute_register.restype = error_t
 _dll.dc1394_get_absolute_register.errcheck = _errcheck
@@ -690,7 +690,7 @@ _dll.dc1394_set_absolute_register.restype = error_t
 _dll.dc1394_set_absolute_register.argtypes = [PTR(camera_t), c_uint, c_uint64, c_uint32]
 _dll.dc1394_set_absolute_register.errcheck = _errcheck
 
-# ---- Get/set PIO feature registers ----
+# ---- Get/set PIO features registers ----
 # parameters: *camera, offset, *value
 _dll.dc1394_get_PIO_register.argtypes = [PTR(camera_t), c_uint64, PTR(c_uint32)]
 _dll.dc1394_get_PIO_register.restype = error_t
@@ -916,7 +916,7 @@ _dll.dc1394_is_video_mode_still_image.restype = bool_t
 _dll.dc1394_is_same_camera.argtypes = [camera_id_t, camera_id_t]
 _dll.dc1394_is_same_camera.restype = bool_t
 
-# Returns a descriptive name for a feature
+# Returns a descriptive name for a features
 _dll.dc1394_feature_get_string.argtypes = [feature_t]
 _dll.dc1394_feature_get_string.restype = c_char_p
 

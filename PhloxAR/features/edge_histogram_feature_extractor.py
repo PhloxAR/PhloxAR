@@ -43,7 +43,7 @@ class EdgeHistogramFeatureExtractor(FeatureExtractorBase):
         """
         Return the names of all of the length and angle fields.
 
-        This method gives the names of each field in the feature vector in the
+        This method gives the names of each field in the features vector in the
         order in which they are returned. For example, 'xpos' or 'width'
         """
         ret = []
@@ -58,6 +58,6 @@ class EdgeHistogramFeatureExtractor(FeatureExtractorBase):
 
     def get_num_fields(self):
         """
-        This method returns the total number of fields in the feature vector.
+        This method returns the total number of fields in the features vector.
         """
         return self._nbins * 2

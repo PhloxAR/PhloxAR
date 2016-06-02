@@ -27,7 +27,7 @@ class HaarLikeFeatureExtractor(FeatureExtractorBase):
 
     def __init__(self, fname=None, do45=True):
         """
-        fname - The feature file name
+        fname - The features file name
         do45 - if this is true we use the regular integral image plus the
         45 degree integral image
         """
@@ -87,7 +87,7 @@ class HaarLikeFeatureExtractor(FeatureExtractorBase):
     def extract(self, img):
         """
         This extractor takes in an image, creates the integral image, applies
-        the Haar cascades, and returns the result as a feature vector.
+        the Haar cascades, and returns the result as a features vector.
         """
         regular = img.integralImage()
         retVal = []
@@ -102,7 +102,7 @@ class HaarLikeFeatureExtractor(FeatureExtractorBase):
 
     def get_field_names(self):
         """
-        This method gives the names of each field in the feature vector in the
+        This method gives the names of each field in the features vector in the
         order in which they are returned. For example, 'xpos' or 'width'
         """
         retVal = []
@@ -116,7 +116,7 @@ class HaarLikeFeatureExtractor(FeatureExtractorBase):
 
     def get_num_fields(self):
         """
-        This method returns the total number of fields in the feature vector.
+        This method returns the total number of fields in the features vector.
         """
         mult = 1
         if self._do45:

@@ -350,7 +350,7 @@ class DCCameraProperty(object):
     @property
     def on(self):
         """
-        Toggle this feature on and off;
+        Toggle this features on and off;
         For the trigger this means the external trigger ON/OFF
         """
 
@@ -375,7 +375,7 @@ class DCCameraProperty(object):
     @property
     def pos_modes(self):
         """
-        The possible control modes for this feature (auto,manual,...)
+        The possible control modes for this features (auto,manual,...)
         """
         if self._name.lower() == "trigger":
             # we need a trick:
@@ -392,11 +392,11 @@ class DCCameraProperty(object):
 
     @property
     def mode(self):
-        """The current control mode this feature is running in.
+        """The current control mode this features is running in.
         For the trigger it shows the trigger modes (from the dc1394
         website):
         mode 0:     Exposure starts with a falling edge and stops when
-                    the the exposure specified by the SHUTTER feature
+                    the the exposure specified by the SHUTTER features
                     is elapsed.
         mode 1:     Exposure starts with a falling edge and stops with
                     the next rising edge.
@@ -411,11 +411,11 @@ class DCCameraProperty(object):
         mode 4:     A multiple exposure mode. N exposures are performed
                     each time a falling edge is observed on the trigger
                     signal. Each exposure is as long as defined by the
-                    SHUTTER (camera.shutter) feature.
+                    SHUTTER (camera.shutter) features.
         mode 5:     Another multiple exposure mode. Same as Mode 4
                     except that the exposure is is defined by the
                     length of the trigger pulse instead of the SHUTTER
-                    feature.
+                    features.
         mode 14 and 15: vendor specified trigger mode.
             """
         if self._name.lower() == "trigger":
@@ -442,7 +442,7 @@ class DCCameraProperty(object):
 
     def polarity_capable(self):
         """
-        Is this feature polarity capable?  This is valid for the trigger
+        Is this features polarity capable?  This is valid for the trigger
         only.
         """
         finfo = feature_info_t()
@@ -839,7 +839,7 @@ class DCCamera(object):
         the bus.
         Note:   that behaviour might be strange if one camera tries to
                 broadcast and another not.
-        Note 2: that this feature is currently only supported under linux
+        Note 2: that this features is currently only supported under linux
                 and I have not seen it working yet though I tried it with
                 cameras that should support it. So use on your own risk!
         """
@@ -962,7 +962,7 @@ class DCCamera(object):
         video mode can be obtained from :attr:`Mode.rates`.
         .. note::
            You may also be able to set the framerate with the
-           :attr:`framerate` feature if present.
+           :attr:`framerate` features if present.
         .. note::
            Framerates are used with fixed-size image formats (Format_0
            to Format_2).  In :class:`Format7` modes the camera can tell

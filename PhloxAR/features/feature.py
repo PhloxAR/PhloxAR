@@ -14,12 +14,12 @@ __all__ = [
 class Feature(object):
     """
     Abstract class which real features descend from.
-    Each feature object has:
+    Each features object has:
     a draw() method,
     an image property, referencing the originating Image object,
     x and y coordinates
     default functions for determining angle, area, mean _color, etc.
-    these functions assume the feature is 1px
+    these functions assume the features is 1px
     """
     _x = 0.00  # center x coordinate
     _y = 0.00  # center y coordinate
@@ -72,9 +72,9 @@ class Feature(object):
 
     def reassign(self, img):
         """
-        Reassign the image of this feature and return an updated copy of the
-        feature.
-        :param img: the new image to which to assign the feature
+        Reassign the image of this features and return an updated copy of the
+        features.
+        :param img: the new image to which to assign the features
         :return: a deep copied Feature object.
         """
         feature = copy.deepcopy(self)
@@ -91,15 +91,15 @@ class Feature(object):
 
     def coordinates(self):
         """
-        Returns the x, y position of the feature. This is usually the center
+        Returns the x, y position of the features. This is usually the center
         coordinate.
-        :return: a (x, y) tuple of the position of the feature.
+        :return: a (x, y) tuple of the position of the features.
         """
         return npy.array([self._x, self._y])
 
     def draw(self, color=Color.GREEN):
         """
-        Draw the feature on the source image.
+        Draw the features on the source image.
         :param color: a RGB tuple to render the image.
         :return: None
         """
@@ -127,7 +127,7 @@ class Feature(object):
 
     def mean_color(self):
         """
-        Return the average _color within the feature as a tuple.
+        Return the average _color within the features as a tuple.
         :return: an RGB _color tuple
         """
         return self._image[self._x, self._y]
@@ -144,7 +144,7 @@ class Feature(object):
 
     def angle(self):
         """
-        Return the angle (theta) in degrees of the feature. The default is 0
+        Return the angle (theta) in degrees of the features. The default is 0
         (horizontal). Not valid for all features.
         :return:
         """
@@ -152,7 +152,7 @@ class Feature(object):
 
     def length(self):
         """
-        Returns the longest dimension of the feature (i.e., max(width, height))
+        Returns the longest dimension of the features (i.e., max(width, height))
         :return: a floating point length value.
         """
         return float(npy.max([self.width, self.height]))
@@ -170,17 +170,17 @@ class Feature(object):
 
     def on_image_edge(self, tolerance=1):
         """
-        Returns True if the feature is less than 'tolerance' pixels away from
+        Returns True if the features is less than 'tolerance' pixels away from
         the nearest edge.
-        :param tolerance: the distance in pixels at which a feature qualifies
+        :param tolerance: the distance in pixels at which a features qualifies
                            as being on the image edge.
-        :return: True if the feature is on the edge, False otherwise.
+        :return: True if the features is on the edge, False otherwise.
         """
         return self.distance_to_nearest_edge() <= tolerance
 
     def aspect_ratio(self):
         """
-        Return the aspect ratio of the feature, which for our purposes is
+        Return the aspect ratio of the features, which for our purposes is
         max(width, height) / min(width, height)
         :return: a single floating point value of the aspect ratio.
         """
@@ -189,16 +189,16 @@ class Feature(object):
 
     def area(self):
         """
-        Returns the area (number of pixels) covered by the feature
-        :return: an integer area of the feature
+        Returns the area (number of pixels) covered by the features
+        :return: an integer area of the features
         """
         return self.width * self.height
 
     @property
     def width(self):
         """
-        Returns the width of the feature.
-        :return: integer value for the feature's width
+        Returns the width of the features.
+        :return: integer value for the features's width
         """
         self._update_extents()
         return self._width
@@ -206,17 +206,17 @@ class Feature(object):
     @property
     def height(self):
         """
-        Returns the height of the feature.
-        :return: integer value for the feature's height
+        Returns the height of the features.
+        :return: integer value for the features's height
         """
         self._update_extents()
         return self._height
 
     def crop(self):
         """
-        Crops the source image to the location of the feature and
+        Crops the source image to the location of the features and
         returns a new Image.
-        :return: an Image that is cropped to the feature position and size.
+        :return: an Image that is cropped to the features position and size.
         """
         return self._image.crop(self._x, self._y,
                                 self.width, self.height, centered=True)
@@ -237,9 +237,9 @@ class Feature(object):
 
     def extents(self):
         """
-        Returns the maximum and minimum x and y values for the feature and
+        Returns the maximum and minimum x and y values for the features and
         returns them as a tuple
-        :return: a tuple of the extents of the feature.
+        :return: a tuple of the extents of the features.
                   Order is(max_x, max_y, min_x, min_y)
         """
         self._update_extents()
@@ -297,32 +297,32 @@ class Feature(object):
 
     def min_x(self):
         """
-        Returns the minimum x value of the bounding box of the feature.
-        :return: an integer value of the minimum x value of the feature.
+        Returns the minimum x value of the bounding box of the features.
+        :return: an integer value of the minimum x value of the features.
         """
         self._update_extents()
         return self._min_x
 
     def min_y(self):
         """
-        Returns the minimum y value of the bounding box of the feature.
-        :return: an integer value of the minimum y value of the feature.
+        Returns the minimum y value of the bounding box of the features.
+        :return: an integer value of the minimum y value of the features.
         """
         self._update_extents()
         return self._min_y
 
     def max_x(self):
         """
-        Returns the maximum x value of the bounding box of the feature.
-        :return: an integer value of the maximum x value of the feature.
+        Returns the maximum x value of the bounding box of the features.
+        :return: an integer value of the maximum x value of the features.
         """
         self._update_extents()
         return self._max_x
 
     def max_y(self):
         """
-        Returns the maximum y value of the bounding box of the feature.
-        :return: an integer value of the maximum y value of the feature.
+        Returns the maximum y value of the bounding box of the features.
+        :return: an integer value of the maximum y value of the features.
         """
         self._update_extents()
         return self._max_y
@@ -361,14 +361,14 @@ class Feature(object):
 
     def above(self, obj):
         """
-        Return True if the feature is above the object, where object can be
+        Return True if the features is above the object, where object can be
         a bounding box, bounding circle, a list of tuples in a closed polygon,
         or any other features.
         :param obj: bounding box - (x, y, w, h) where (x, y) is the top left
                     bounding circle - (x, y, r)
                     a list of (x, y) tuples defining a closed polygon
-                    any two dimensional feature (e.g. blobs, circle ...
-        :return: Bool, True if the feature is above the object, False otherwise.
+                    any two dimensional features (e.g. blobs, circle ...
+        :return: Bool, True if the features is above the object, False otherwise.
         """
         if isinstance(obj, Feature):
             return self.max_y() < obj.min_y()
@@ -382,14 +382,14 @@ class Feature(object):
 
     def below(self, obj):
         """
-        Return True if the feature is below the object, where object can be
+        Return True if the features is below the object, where object can be
         a bounding box, bounding circle, a list of tuples in a closed polygon,
         or any other features.
         :param obj: bounding box - (x, y, w, h) where (x, y) is the top left
                     bounding circle - (x, y, r)
                     a list of (x, y) tuples defining a closed polygon
-                    any two dimensional feature (e.g. blobs, circle ...
-        :return: Bool, True if the feature is below the object, False otherwise.
+                    any two dimensional features (e.g. blobs, circle ...
+        :return: Bool, True if the features is below the object, False otherwise.
         """
 
         if isinstance(obj, Feature):
@@ -404,14 +404,14 @@ class Feature(object):
 
     def right(self, obj):
         """
-        Return True if the feature is to the right object, where object can be
+        Return True if the features is to the right object, where object can be
         a bounding box, bounding circle, a list of tuples in a closed polygon,
         or any other features.
         :param obj: bounding box - (x, y, w, h) where (x, y) is the top left
                     bounding circle - (x, y, r)
                     a list of (x, y) tuples defining a closed polygon
-                    any two dimensional feature (e.g. blobs, circle ...
-        :return: Bool, True if the feature is to the right object, False otherwise.
+                    any two dimensional features (e.g. blobs, circle ...
+        :return: Bool, True if the features is to the right object, False otherwise.
         """
 
         if isinstance(obj, Feature):
@@ -426,14 +426,14 @@ class Feature(object):
 
     def left(self, obj):
         """
-        Return True if the feature is to the left object, where object can be
+        Return True if the features is to the left object, where object can be
         a bounding box, bounding circle, a list of tuples in a closed polygon,
         or any other features.
         :param obj: bounding box - (x, y, w, h) where (x, y) is the top left
                      bounding circle - (x, y, r)
                      a list of (x, y) tuples defining a closed polygon
-                     any two dimensional feature (e.g. blobs, circle ...
-        :return: Bool, True if the feature is to the left object, False otherwise.
+                     any two dimensional features (e.g. blobs, circle ...
+        :return: Bool, True if the features is to the left object, False otherwise.
         """
 
         if isinstance(obj, Feature):
@@ -449,7 +449,7 @@ class Feature(object):
     def contains(self, other):
         ret_val = False
         bounds = self._points
-        if isinstance(other, Feature):  # A feature
+        if isinstance(other, Feature):  # A features
             ret_val = True
             # this isn't completely correct - only tests if points lie
             # in poly, not edges.
@@ -499,7 +499,7 @@ class Feature(object):
         ret_val = False
         bounds = self._points
 
-        if isinstance(other, Feature):  # A feature
+        if isinstance(other, Feature):  # A features
             ret_val = True
             for p in other._points:  # this isn't completely correct - only tests if points lie in poly, not edges.
                 ret_val = self._point_inside_polygon(p, bounds)
@@ -546,19 +546,19 @@ class Feature(object):
 
     def is_contained_within(self, other):
         """
-        Return true if the feature is contained withing  the object other,
+        Return true if the features is contained withing  the object other,
         where other can be a bounding box, bounding circle, a list of tuples
         in a closed polygon, or any other features.
         :param other: bounding box - (x, y, w, h) where (x, y) is the top left
                        bounding circle - (x, y, r)
                        a list of (x, y) tuples defining a closed polygon
-                       any two dimensional feature (e.g. blobs, circle ...
+                       any two dimensional features (e.g. blobs, circle ...
         :return: Bool
         """
         ret_val = True
         bounds = self._points
 
-        if isinstance(other, Feature):  # another feature do the containment test
+        if isinstance(other, Feature):  # another features do the containment test
             ret_val = other.contains(self)
         elif isinstance(other, tuple) and len(other) == 3:  # a circle
             # assume we are in x,y, r format
@@ -596,11 +596,11 @@ class Feature(object):
         form ((a,b),(c,d),...,(a,b)) the polygon should be closed
         """
         if len(polygon) < 3:
-            logger.warning("feature._point_inside_polygon - not a valid polygon")
+            logger.warning("features._point_inside_polygon - not a valid polygon")
             return False
 
         if not isinstance(polygon, list):
-            logger.warning("feature._point_inside_polygon - not a valid polygon")
+            logger.warning("features._point_inside_polygon - not a valid polygon")
             return False
 
         counter = 0
@@ -663,12 +663,12 @@ class Feature(object):
 class FeatureSet(list):
     """
 
-    FeatureSet is a class extended from Python's list which has special functions so that it is useful for handling feature metadata on an image.
+    FeatureSet is a class extended from Python's list which has special functions so that it is useful for handling features metadata on an image.
     In general, functions dealing with attributes will return numpy arrays, and functions dealing with sorting or filtering will return new FeatureSets.
 
     >>> image = Image("/path/to/image.png")
-    >>> lines = image.find_lines()  #lines are the feature set
-    >>> lines.draw()
+    >>> lines = image.find_lines()  features
+    >>features.draw()
     >>> lines.x()
     >>> lines.crop()
     """
@@ -693,15 +693,15 @@ class FeatureSet(list):
     def draw(self, color=Color.GREEN, width=1, autocolor=False, alpha=-1):
         """
 
-        Call the draw() method on each feature in the FeatureSet.
+        Call the draw() method on each feature in the Feafeatures.
 
 
         * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
-        * *width* - The width to draw the feature in pixels. A value of -1 usually indicates a filled region.
+        * *width* - The width to draw the feature in pixels.featurese of -1 usually indicates a filled region.
         * *autocolor* - If true a _color is randomly selected for each feature.
 
 
-        Nada. Nothing. Zilch.
+       featuresNothing. Zilch.
 
         >>> img = Image("lenna")
         >>> feats = img.find_blobs()
@@ -723,10 +723,10 @@ class FeatureSet(list):
         It is a basically a shortcut function for development and is the same as:
 
         * *_color* - The _color to draw the object. Either an BGR tuple or a member of the :py:class:`Color` class.
-        * *width* - The width to draw the feature in pixels. A value of -1 usually indicates a filled region.
+        * *width* - The width to draw the feature in pixels.featurese of -1 usually indicates a filled region.
         * *autocolor* - If true a _color is randomly selected for each feature.
 
-        Nada. Nothing. Zilch.
+        featuresothing. Zilch.
 
         >>> img = Image("logo")
         >>> feat = img.find_blobs()
@@ -742,7 +742,7 @@ class FeatureSet(list):
         Return a new featureset where the features are assigned to a new image.
 
         * *img* - the new image to which to assign the feature.
-        .. Warning::
+        .featuresng::
           THIS DOES NOT PERFORM A SIZE CHECK. IF YOUR NEW IMAGE IS NOT THE EXACT SAME SIZE YOU WILL CERTAINLY CAUSE ERRORS.
 
         >>> img = Image("lenna")
@@ -761,7 +761,7 @@ class FeatureSet(list):
 
         Returns a numpy array of the x (horizontal) coordinate of each feature.
 
-        A numpy array.
+        features array.
 
         >>> img = Image("lenna")
         >>> feats = img.find_blobs()
@@ -775,7 +775,7 @@ class FeatureSet(list):
 
         Returns a numpy array of the y (vertical) coordinate of each feature.
 
-        A numpy array.
+        features array.
 
         >>> img = Image("lenna")
         >>> feats = img.find_blobs()
@@ -788,7 +788,7 @@ class FeatureSet(list):
         """
 
         Returns a 2d numpy array of the x,y coordinates of each feature.  This
-        is particularly useful if you want to use Scipy's Spatial Distance module
+   features particularly useful if you want to use Scipy's Spatial Distance module
 
         A numpy array of all the positions in the featureset.
 
@@ -807,9 +807,7 @@ class FeatureSet(list):
     def area(self):
         """
 
-        Returns a numpy array of the area of each feature in pixels.
-
-        A numpy array of all the positions in the featureset.
+        Returns a numpy array of the area of each feature in pixels.features   A numpy array of all the positions in the featureset.
 
         >>> img = Image("lenna")
         >>> feats = img.find_blobs()
@@ -922,7 +920,7 @@ class FeatureSet(list):
         """
 
         Return a numpy array of the angles (theta) of each feature.
-        Note that theta is given in degrees, with 0 being horizontal.
+        Nfeaturest theta is given in degrees, with 0 being horizontal.
 
         An array of angle values corresponding to the features.
 
@@ -952,9 +950,9 @@ class FeatureSet(list):
 
         Return a numpy array of the length (longest dimension) of each feature.
 
-        A numpy array of the length, in pixels, of eatch feature object.
+        features array of the length, in pixels, of eatch feature object.
 
-        >>> img = Image("Lenna")
+ features>>> img = Image("Lenna")
         >>> l = img.find_lines()
         >>> lengt = l.length()
         >>> lengt[0] # length of the 0th element.
@@ -981,7 +979,7 @@ class FeatureSet(list):
 
         Returns an array of RGB triplets the correspond to the mean _color of the feature.
 
-        >>> img = Image("lenna")
+        features = Image("lenna")
         >>> kp = img.find_keypoints()
         >>> c = kp.mean_color()
         """
@@ -995,7 +993,7 @@ class FeatureSet(list):
 
         * *_color* - The _color to calculate the distance from.
 
-        The distance of the average _color for the feature from given _color as a numpy array.
+        The distance of the average _color for the feature from givenfeatures as a numpy array.
 
         >>> img = Image("lenna")
         >>> circs = img.find_circle()
@@ -1019,11 +1017,11 @@ class FeatureSet(list):
         of return FeatureSets.
 
         * *filterarray* - A numpy array, matching  the size of the feature set,
-          made of Boolean values, we return the true values and reject the False value.
+     featuresde of Boolean values, we return the true values and reject the False value.
 
         The revised feature set.
 
-        Return all lines < 200px
+    featuresurn all lines < 200px
         >>> my_lines.filter(my_lines.length() < 200) # returns all lines < 200px
         >>> my_blobs.filter(my_blobs.area() > 0.9 * my_blobs.length**2) # returns blobs that are nearly square
         >>> my_lines.filter(abs(my_lines.angle()) < numpy.pi / 4) #any lines within 45 degrees of horizontal
@@ -1082,7 +1080,7 @@ class FeatureSet(list):
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
           * A bounding circle of the form (x,y,r)
           * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
-          * Any two dimensional feature (e.g. blobs, circle ...)
+          * Any two dimensional feature (e.g. blobfeaturesle ...)
 
         Returns a featureset of features that are inside the region.
 
@@ -1110,7 +1108,7 @@ class FeatureSet(list):
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
           * A bounding circle of the form (x,y,r)
           * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
-          * Any two dimensional feature (e.g. blobs, circle ...)
+          * Any two dimensional feature (e.g. blobfeaturesle ...)
 
         Returns a featureset of features that are outside the region.
 
@@ -1138,7 +1136,7 @@ class FeatureSet(list):
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
           * A bounding circle of the form (x,y,r)
           * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
-          * Any two dimensional feature (e.g. blobs, circle ...)
+          * Any two dimensional feature (e.g. blobfeaturesle ...)
 
         Returns a featureset of features that overlap the region.
 
@@ -1168,7 +1166,7 @@ class FeatureSet(list):
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
           * A bounding circle of the form (x,y,r)
           * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
-          * Any two dimensional feature (e.g. blobs, circle ...)
+          * Any two dimensional feature (e.g. blobfeaturesle ...)
 
         Returns a featureset of features that are above the region.
 
@@ -1199,7 +1197,7 @@ class FeatureSet(list):
                              corner
           * A bounding circle of the form (x,y,r)
           * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),..)
-          * Any two dimensional feature (e.g. blobs, circle ...)
+          * Any two dimensional feature (e.g. blobfeaturesle ...)
 
         Returns a featureset of features that are below the region.
 
@@ -1227,7 +1225,7 @@ class FeatureSet(list):
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
           * A bounding circle of the form (x,y,r)
           * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
-          * Any two dimensional feature (e.g. blobs, circle ...)
+          * Any two dimensional feature (e.g. blobfeaturesle ...)
 
         Returns a featureset of features that are left of the region.
 
@@ -1255,7 +1253,7 @@ class FeatureSet(list):
           * A bounding box - of the form (x,y,w,h) where x,y is the upper left corner
           * A bounding circle of the form (x,y,r)
           * A list of x,y tuples defining a closed polygon e.g. ((x,y),(x,y),....)
-          * Any two dimensional feature (e.g. blobs, circle ...)
+          * Any two dimensional feature (e.g. blobfeaturesle ...)
 
         Returns a featureset of features that are right of the region.
 
@@ -1275,12 +1273,12 @@ class FeatureSet(list):
 
     def on_image_edge(self, tolerance=1):
         """
-        The method returns a feature set of features that are on or "near" the
+        The method returns a feature set of feafeatureshat are on or "near" the
         edge of the image. This is really helpful for removing features that are
         edge effects.
 
         * *tolerance* - the distance in pixels from the edge at which a feature
-          qualifies as being "on" the edge of the image.
+          featureses as being "on" the edge of the image.
 
         Returns a featureset of features that are on the edge of the image.
 
@@ -1299,9 +1297,7 @@ class FeatureSet(list):
     def top_left_corners(self):
         """
 
-        This method returns the top left corner of each feature's bounding box.
-
-        A numpy array of x,y position values.
+        This method returns the top left corner of each feature's boundingfeatures        A numpy array of x,y position values.
 
         >>> img = Image("./sampleimages/EdgeTest1.png")
         >>> blobs = img.find_blobs()
@@ -1313,9 +1309,7 @@ class FeatureSet(list):
     def bottom_left_corners(self):
         """
 
-        This method returns the bottom left corner of each feature's bounding box.
-
-        A numpy array of x,y position values.
+        This method returns the bottom left corner of each feature's boundingfeatures        A numpy array of x,y position values.
 
         >>> img = Image("./sampleimages/EdgeTest1.png")
         >>> blobs = img.find_blobs()
@@ -1326,9 +1320,7 @@ class FeatureSet(list):
 
     def top_left_corners(self):
         """
-        This method returns the top left corner of each feature's bounding box.
-
-        A numpy array of x,y position values.
+        This method returns the top left corner of each feature's boundingfeatures        A numpy array of x,y position values.
 
         >>> img = Image("./sampleimages/EdgeTest1.png")
         >>> blobs = img.find_blobs()
@@ -1340,9 +1332,7 @@ class FeatureSet(list):
     def top_right_corners(self):
         """
 
-        This method returns the top right corner of each feature's bounding box.
-
-        A numpy array of x,y position values.
+        This method returns the top right corner of each feature's boundingfeatures        A numpy array of x,y position values.
 
         >>> img = Image("./sampleimages/EdgeTest1.png")
         >>> blobs = img.find_blobs()
@@ -1354,9 +1344,7 @@ class FeatureSet(list):
     def bottom_right_corners(self):
         """
 
-        This method returns the bottom right corner of each feature's bounding box.
-
-        A numpy array of x,y position values.
+        This method returns the bottom right corner of each feature's boundingfeatures        A numpy array of x,y position values.
 
         >>> img = Image("./sampleimages/EdgeTest1.png")
         >>> blobs = img.find_blobs()
@@ -1368,7 +1356,7 @@ class FeatureSet(list):
     def aspect_ratio(self):
         """
 
-        Return the aspect ratio of all the features in the feature set, For our purposes
+        Return the aspect ratio of all the features in the feature set, For ofeaturesoses
         aspect ration is max(width,height)/min(width,height).
 
         A numpy array of the aspect ratio of the features in the featureset.
@@ -1407,7 +1395,7 @@ class FeatureSet(list):
         except:
             logger.warning("install scikits-learning package")
             return
-        X = []  # List of feature vector of each blob
+        X = []  # List of feature vector of featuresob
         if not properties:
             properties = ['c_color, 'shape', 'position']
         if k > len(self):

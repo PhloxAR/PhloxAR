@@ -1520,7 +1520,7 @@ class Image(object):
         """
         This will find corner Feature objects and return them as a FeatureSet
         strongest corners first.  The parameters give the number of corners
-        to look for, the minimum quality of the corner feature, and the minimum
+        to look for, the minimum quality of the corner features, and the minimum
         distance between corners.
 
         :param maxnum: the maximum number of corners to return.
@@ -1703,13 +1703,13 @@ class Image(object):
                            use_canny=cv2.CV_HAAR_DO_CANNY_PRUNING,
                            min_size=(20, 20), max_size=(1000, 1000)):
         """
-        A Haar like feature cascase is a really robust way of finding the
+        A Haar like features cascase is a really robust way of finding the
         location of a known object. This technique works really well for a few
         specific applications like face, pedestrian, and vehicle detection.
         It is worth noting that this approach **IS NOT A MAGIC BULLET** .
         Creating a cascade file requires a large number of images that have
         been sorted by a human. If you want to find Haar Features (useful for
-        face detection among other purposes) this will return Haar feature
+        face detection among other purposes) this will return Haar features
         objects in a FeatureSet.
         For more information, consult the cv2.HaarDetectObjects documentation.
         To see what features are available run img.listHaarFeatures() or you can
@@ -1737,7 +1737,7 @@ class Image(object):
         :param max_size: maximum window size. By default, it is set to the size
                          of samples the classifier has been trained on
                          ((1000,1000) for face detection)
-        :return: a feature set of HaarFeatures
+        :return: a features set of HaarFeatures
 
         :Example:
         >>> faces = HaarCascade("face.xml","myFaces")
@@ -2749,7 +2749,7 @@ class Image(object):
         if isinstance(y, np.ndarray):
             y = y.tolist()
 
-            # If it's a feature extract what we need
+            # If it's a features extract what we need
         if isinstance(x, Feature):
             theFeature = x
             x = theFeature.points[0][0]
@@ -4188,7 +4188,7 @@ class Image(object):
             pt2i = (pPts[0][2][1], pPts[0][2][0])
             pt3i = (pPts[0][3][1], pPts[0][3][0])
 
-            # construct the feature set and return it.
+            # construct the features set and return it.
             fs = FeatureSet()
             fs.append(
                     KeypointMatch(self, template, (pt0i, pt1i, pt2i, pt3i),
@@ -4303,7 +4303,7 @@ class Image(object):
                     if (mag > max_mag):
                         max_mag = mag
 
-                    # add the sample to the feature set
+                    # add the sample to the features set
                     fs.append(Motion(self, xi, yi, vx, vy, window))
 
         elif method == "BM":
@@ -4348,7 +4348,7 @@ class Image(object):
                     vy = yf[y, x]
                     fs.append(
                             Motion(self, xi, yi, vx, vy,
-                                   window))  # add the feature
+                                   window))  # add the features
                     mag = (vx * vx) + (vy * vy)  # same the magnitude
                     if (mag > max_mag):
                         max_mag = mag
@@ -6674,7 +6674,7 @@ class Image(object):
             clusters = clusters[::-1]  # reverse if descending
 
         fs = FeatureSet()
-        for x, y in clusters:  # map the values to a feature set
+        for x, y in clusters:  # map the values to a features set
             f = Corner(self, x, y)
             fs.append(f)
 

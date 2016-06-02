@@ -18,7 +18,7 @@ __all__ = [
 
 class Blob(Feature):
     """
-    Blob is a typical cluster of pixels that form a feature or unique
+    Blob is a typical cluster of pixels that form a features or unique
     shape that allows it to be distinguished from the reset of the image.
     Blobs typically are computed very quickly so they are used often to
     find various items in a picture based on properties. Typically these
@@ -667,7 +667,7 @@ class Blob(Feature):
         
         :param tolerance* - the percentage difference between our blob and an ideal circle.
         :return:
-        True if the feature is within tolerance for being a circle, false otherwise.
+        True if the features is within tolerance for being a circle, false otherwise.
         """
         if self.circle_distance() < tolerance:
             return True
