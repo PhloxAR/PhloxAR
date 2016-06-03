@@ -8,6 +8,11 @@ import PhloxAR.core.image
 import warnings
 
 
+__all__ = [
+    'DFT'
+]
+
+
 class DFT(object):
     """
     The DFT class is the refactored class to create DFT filters which can be

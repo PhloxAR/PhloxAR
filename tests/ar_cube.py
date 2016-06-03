@@ -71,7 +71,7 @@ tp = homography.make_homog(l1[ndx2,:2].T)
 model = homography.RansacModel()
 H, inliers = homography.H_from_ransac(fp,tp,model)
 
-# camera calibration
+# camera calib
 K = my_calibration((747,1000))
 
 # 3D points at plane z=0 with sides of length 0.2

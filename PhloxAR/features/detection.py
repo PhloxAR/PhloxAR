@@ -13,6 +13,8 @@ the right hand rule.
 from PhloxAR.core.image import *
 from PhloxAR.core.color import *
 from PhloxAR.features.feature import Feature, FeatureSet
+from ..base import lazy_property
+import numpy as np
 
 
 __all__ = [
@@ -76,10 +78,10 @@ class Line(Feature):
         # coordinate of the line object is the midpoint
         at_x = (line[0][0] + line[1][0]) / 2
         at_y = (line[0][1] + line[1][1]) / 2
-        xmin = int(npy.min([line[0][0], line[1][0]]))
-        xmax = int(npy.max([line[0][0], line[1][0]]))
-        ymin = int(npy.min([line[0][1], line[1][1]]))
-        ymax = int(npy.max([line[0][1], line[1][1]]))
+        xmin = int(np.min([line[0][0], line[1][0]]))
+        xmax = int(np.max([line[0][0], line[1][0]]))
+        ymin = int(np.min([line[0][1], line[1][1]]))
+        ymax = int(np.max([line[0][1], line[1][1]]))
         points = [(xmin, ymin), (xmin, ymax), (xmax, ymax), [xmax, ymin]]
         super(Line, self).__init__(img, at_x, at_y, points)
 
@@ -202,11 +204,11 @@ class Line(Feature):
                     error -= 1.0
 
         # once we have iterated over every pixel in the line, we avg the weights
-        clr_arr = npy.array(px)
-        weight_arr = npy.array(weights)
+        clr_arr = np.array(px)
+        weight_arr = np.array(weights)
 
         # multiply each _color tuple by its weight
-        weighted_clrs = npy.transpose(npy.transpose(clr_arr) * weight_arr)
+        weighted_clrs = np.transpose(np.transpose(clr_arr) * weight_arr)
 
         tmp = sum(weighted_clrs / sum(weight_arr))
         return float(tmp[0]), float(tmp[1]), float(tmp[2])
@@ -347,7 +349,7 @@ class Line(Feature):
         dy = self._end_pts[b][1] - self._end_pts[a][1]
 
         # internal standard if degrees
-        return float(360.0 * (atan2(dy, dx) / (2 * npy.pi)))
+        return float(360.0 * (atan2(dy, dx) / (2 * np.pi)))
 
     def crop2image_edges(self):
         """
@@ -422,10 +424,10 @@ class Line(Feature):
         return self._vector
 
     def dot(self, other):
-        return npy.dot(self.vector, other.vector)
+        return np.dot(self.vector, other.vector)
 
     def cross(self, other):
-        return npy.cross(self.vector, other.vector)
+        return np.cross(self.vector, other.vector)
 
     def get_y_intercept(self):
         """
@@ -522,10 +524,10 @@ class Barcode(Feature):
         if len(locs) > 4:
             xs = [l[0] for l in locs]
             ys = [l[1] for l in locs]
-            xmax = npy.max(xs)
-            xmin = npy.min(xs)
-            ymax = npy.max(ys)
-            ymin = npy.min(ys)
+            xmax = np.max(xs)
+            xmin = np.min(xs)
+            ymax = np.max(ys)
+            ymin = np.min(ys)
             points = ((xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin))
         else:
             points = copy(locs)  # hopefully this is in tl clockwise order
@@ -715,8 +717,8 @@ class Chessboard(Feature):
     def __init__(self, img, dim, subpixelscorners):
         self._dims = dim
         self._spcorners = subpixelscorners
-        x = npy.average(npy.array(self._spcorners)[:, 0])
-        y = npy.average(npy.array(self._spcorners)[:, 1])
+        x = np.average(np.array(self._spcorners)[:, 0])
+        y = np.average(np.array(self._spcorners)[:, 1])
 
         posdiagsorted = sorted(self._spcorners,
                                key=lambda corner: corner[0] + corner[1])
@@ -877,9 +879,9 @@ class Circle(Feature):
         self._contour = []
 
         for theta in rng:
-            rp = 2.0 * npy.pi * float(theta) / float(segments)
-            x = (r * npy.sin(rp)) + at_x
-            y = (r * npy.cos(rp)) + at_y
+            rp = 2.0 * np.pi * float(theta) / float(segments)
+            x = (r * np.sin(rp)) + at_x
+            y = (r * np.cos(rp)) + at_y
             self._contour.append((x, y))
 
     def draw(self, color=Color.GREEN, width=1):
@@ -926,7 +928,7 @@ class Circle(Feature):
         >>> blobs[-1].distance_from(blobs[-2].coordinates())
         """
         if point[0] == -1 or point[1] == -1:
-            point = npy.array(self._image.size()) / 2
+            point = np.array(self._image.size()) / 2
         return spsd.euclidean(point, [self.x, self.y])
 
     def mean_color(self):
@@ -964,14 +966,14 @@ class Circle(Feature):
         >>> xs = feats.coordinates()
         >>> print(xs)
         """
-        return self._radius * self._radius * npy.pi
+        return self._radius * self._radius * np.pi
 
     @property
     def perimeter(self):
         """
         Returns the perimeter of the circle features in pixels.
         """
-        return 2 * npy.pi * self._radius
+        return 2 * np.pi * self._radius
 
     @property
     def width(self):
@@ -1063,9 +1065,9 @@ class KeyPoint(Feature):
         rng = range(1, segments + 1)
         self._points = []
         for theta in rng:
-            rp = 2.0 * npy.pi * float(theta) / float(segments)
-            x = (r * npy.sin(rp)) + self.x
-            y = (r * npy.cos(rp)) + self.y
+            rp = 2.0 * np.pi * float(theta) / float(segments)
+            x = (r * np.sin(rp)) + self.x
+            y = (r * np.cos(rp)) + self.y
             self._points.append((x, y))
 
     @property
@@ -1145,7 +1147,7 @@ class KeyPoint(Feature):
         Given a point (default to center of the image), return the euclidean distance of x,y from this point
         """
         if point[0] == -1 or point[1] == -1:
-            point = npy.array(self._image.size()) / 2
+            point = np.array(self._image.size()) / 2
         return spsd.euclidean(point, [self._x, self._y])
 
     def mean_color(self):
@@ -1173,7 +1175,7 @@ class KeyPoint(Feature):
         """
         Return the euclidean _color distance of the _color tuple at x,y from a given _color (default black)
         """
-        return spsd.euclidean(npy.array(color), npy.array(self.mean_color()))
+        return spsd.euclidean(np.array(color), np.array(self.mean_color()))
 
     @property
     def perimeter(self):
@@ -1181,7 +1183,7 @@ class KeyPoint(Feature):
         **SUMMARY**
         Returns the perimeter of the circle features in pixels.
         """
-        return 2 * npy.pi * self._radius
+        return 2 * np.pi * self._radius
 
     @property
     def width(self):
@@ -1310,7 +1312,7 @@ class Motion(Feature):
         """
         Returns the magnitude of the optical flow vector.
         """
-        return npy.sqrt((self.dx * self.dx) + (self.dy * self.dy))
+        return np.sqrt((self.dx * self.dx) + (self.dy * self.dy))
 
     @property
     def unit_vec(self):
@@ -2058,16 +2060,16 @@ class ROI(Feature):
 
         if result is not None:
             xo, yo, wo, ho = result
-            x = npy.min([xo, self.xtl])
-            y = npy.min([yo, self.ytl])
-            w = npy.max([self.xtl + self.w, xo + wo]) - x
-            h = npy.max([self.ytl + self.h, yo + ho]) - y
+            x = np.min([xo, self.xtl])
+            y = np.min([yo, self.ytl])
+            w = np.max([self.xtl + self.w, xo + wo]) - x
+            h = np.max([self.ytl + self.h, yo + ho]) - y
 
             if self._image is not None:
-                x = npy.clip(x, 0, self._image.width)
-                y = npy.clip(y, 0, self._image.height)
-                w = npy.clip(w, 0, self._image.width - x)
-                h = npy.clip(h, 0, self._image.height - y)
+                x = np.clip(x, 0, self._image.width)
+                y = np.clip(y, 0, self._image.height)
+                w = np.clip(w, 0, self._image.width - x)
+                h = np.clip(h, 0, self._image.height - y)
 
             self._rebase([x, y, w, h])
 
@@ -2167,19 +2169,19 @@ class ROI(Feature):
         self._update_extents()
 
     def _standardize(self, x, y=None, w=None, h=None):
-        if isinstance(x, npy.ndarray):
+        if isinstance(x, np.ndarray):
             x = x.tolist()
-        if isinstance(y, npy.ndarray):
+        if isinstance(y, np.ndarray):
             y = y.tolist()
 
         # make the common case fast
         if (isinstance(x, (int, float)) and isinstance(y, (int, float)) and
                 isinstance(w, (int, float)) and isinstance(h, (int, float))):
             if self._image is not None:
-                x = npy.clip(x, 0, self._image.width)
-                y = npy.clip(y, 0, self._image.height)
-                w = npy.clip(w, 0, self._image.width - x)
-                h = npy.clip(h, 0, self._image.height - y)
+                x = np.clip(x, 0, self._image.width)
+                y = np.clip(y, 0, self._image.height)
+                w = np.clip(w, 0, self._image.width - x)
+                h = np.clip(h, 0, self._image.height - y)
 
                 return [x, y, w, h]
         elif isinstance(x, ROI):
@@ -2188,10 +2190,10 @@ class ROI(Feature):
         elif isinstance(x, FeatureSet) and len(x) > 0:
             # double check that everything in the list is a features
             features = [feat for feat in x if isinstance(feat, Feature)]
-            xmax = npy.max([feat.maxX() for feat in features])
-            xmin = npy.min([feat.minX() for feat in features])
-            ymax = npy.max([feat.maxY() for feat in features])
-            ymin = npy.min([feat.minY() for feat in features])
+            xmax = np.max([feat.maxX() for feat in features])
+            xmin = np.min([feat.minX() for feat in features])
+            ymax = np.max([feat.maxY() for feat in features])
+            ymin = np.min([feat.minY() for feat in features])
             x = xmin
             y = ymin
             w = xmax - xmin
@@ -2219,10 +2221,10 @@ class ROI(Feature):
                 y is None is w is None is h is None):
             if (len(x[0]) == 2 and len(x[1]) == 2 and
                     len(x[2]) == 2 and len(x[3]) == 2):
-                xmax = npy.max([x[0][0], x[1][0], x[2][0], x[3][0]])
-                ymax = npy.max([x[0][1], x[1][1], x[2][1], x[3][1]])
-                xmin = npy.min([x[0][0], x[1][0], x[2][0], x[3][0]])
-                ymin = npy.min([x[0][1], x[1][1], x[2][1], x[3][1]])
+                xmax = np.max([x[0][0], x[1][0], x[2][0], x[3][0]])
+                ymax = np.max([x[0][1], x[1][1], x[2][1], x[3][1]])
+                xmin = np.min([x[0][0], x[1][0], x[2][0], x[3][0]])
+                ymin = np.min([x[0][1], x[1][1], x[2][1], x[3][1]])
                 x = xmin
                 y = ymin
                 w = xmax - xmin
@@ -2238,10 +2240,10 @@ class ROI(Feature):
                 len(x) > 4 and len(y) > 4):
             if (isinstance(x[0], (int, long, float)) and
                 isinstance(y[0], (int, long, float))):
-                xmax = npy.max(x)
-                ymax = npy.max(y)
-                xmin = npy.min(x)
-                ymin = npy.min(y)
+                xmax = np.max(x)
+                ymax = np.max(y)
+                xmin = np.min(x)
+                ymin = np.min(y)
                 x = xmin
                 y = ymin
                 w = xmax - xmin
@@ -2258,10 +2260,10 @@ class ROI(Feature):
             if isinstance(x[0][0], (int, long, float)):
                 xs = [pt[0] for pt in x]
                 ys = [pt[1] for pt in x]
-                xmax = npy.max(xs)
-                ymax = npy.max(ys)
-                xmin = npy.min(xs)
-                ymin = npy.min(ys)
+                xmax = np.max(xs)
+                ymax = np.max(ys)
+                xmin = np.min(xs)
+                ymin = np.min(ys)
                 x = xmin
                 y = ymin
                 w = xmax - xmin
@@ -2277,10 +2279,10 @@ class ROI(Feature):
                 isinstance(x[1], (list, tuple)) and
                 y is None and w is None and h is None):
             if (len(x[0]) == 2 and len(x[1]) == 2):
-                xt = npy.min([x[0][0], x[1][0]])
-                yt = npy.min([x[0][0], x[1][0]])
-                w = npy.abs(x[0][0] - x[1][0])
-                h = npy.abs(x[0][1] - x[1][1])
+                xt = np.min([x[0][0], x[1][0]])
+                yt = np.min([x[0][0], x[1][0]])
+                w = np.abs(x[0][0] - x[1][0])
+                h = np.abs(x[0][1] - x[1][1])
                 x = xt
                 y = yt
             else:
@@ -2291,10 +2293,10 @@ class ROI(Feature):
         elif (isinstance(x, (tuple, list)) and isinstance(y, (tuple, list)) and
                       w is None and h is None):
             if len(x) == 2 and len(y) == 2:
-                xt = npy.min([x[0], y[0]])
-                yt = npy.min([x[1], y[1]])
-                w = npy.abs(y[0] - x[0])
-                h = npy.abs(y[1] - x[1])
+                xt = np.min([x[0], y[0]])
+                yt = np.min([x[1], y[1]])
+                w = np.abs(y[0] - x[0])
+                h = np.abs(y[1] - x[1])
                 x = xt
                 y = yt
 
@@ -2310,10 +2312,10 @@ class ROI(Feature):
             return None
 
         if self._image is not None:
-            x = npy.clip(x, 0, self._image.width)
-            y = npy.clip(y, 0, self._image.height)
-            w = npy.clip(w, 0, self._image.width - x)
-            h = npy.clip(h, 0, self._image.height - y)
+            x = np.clip(x, 0, self._image.width)
+            y = np.clip(y, 0, self._image.height)
+            w = np.clip(w, 0, self._image.width - x)
+            h = np.clip(h, 0, self._image.height - y)
 
         return [x, y, w, h]
 

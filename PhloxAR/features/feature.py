@@ -1397,14 +1397,14 @@ class FeatureSet(list):
             return
         X = []  # List of feature vector of featuresob
         if not properties:
-            properties = ['c_color, 'shape', 'position']
+            properties = ['c_color', 'shape', 'position']
         if k > len(self):
             logger.warning(
                 "Number of clusters cannot be greater then the number of blobs in the featureset")
             return
         for i in self:
             featureVector = []
-            if 'c_color in properties:
+            if 'c_color' in properties:
                 featureVector.extend(i.mAvgColor)
             if 'shape' in properties:
                 featureVector.extend(i.mHu)

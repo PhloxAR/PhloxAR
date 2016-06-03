@@ -4,7 +4,7 @@ from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
 from PIL import ImageFont as PILImageFont
-import const
+from . import const
 
 
 const.ITL = 0x0001
@@ -12,6 +12,11 @@ const.BLD = 0x0010
 const.BLK = 0x0100
 const.LGT = 0x1000
 const.BGR = 0x0000
+
+
+__all__ = [
+    'Font'
+]
 
 
 class Font(object):

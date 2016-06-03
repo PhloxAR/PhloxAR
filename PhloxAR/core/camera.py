@@ -19,13 +19,20 @@ import subprocess
 import numpy as np
 import pygame as sdl
 from collections import deque
-from .color import Color
+from PhloxAR.core.color import Color
 from .display import Display
 from .image import Image, ImageSet, ColorSpace
 from ..compat import build_opener, HTTPBasicAuthHandler
 from ..compat import urlopen, HTTPPasswordMgrWithDefaultRealm, long
 from ..base import logger, cv2, PILImage, PYSCREENSHOT_ENABLED, pyscreenshot
 from ..compat import StringIO
+
+__all__ = [
+    'AVTCamera', 'Camera', 'DigitalCamera',
+    'GigECamera', 'JpegStreamCamera', 'Scanner',
+    'ScreenCamera', 'StereoCamera', 'VimbaCamera',
+    'VirtualCamera', 'VimbaCameraThread', 'FrameBufferThread'
+]
 
 # globals
 _gcameras = []
@@ -39,7 +46,7 @@ class FrameSource(object):
     An abstract Camera-type class, for handling multiple types of video
     input. Any sources of image inherit from it.
     """
-    _calib_mat = ''  # intrinsic calibration matrix
+    _calib_mat = ''  # intrinsic calib matrix
     _dist_coeff = ''  # distortion matrix
     _thread_cap_time = ''  # the time the last picture was taken
     _cap_time = ''  # timestamp of the last acquired image
@@ -59,22 +66,22 @@ class FrameSource(object):
 
     def calibrate(self, imgs, dims=(7, 6)):
         """
-        Camera calibration will help remove distortion and fish eye effects
+        Camera calib will help remove distortion and fish eye effects
         It is agnostic of the imagery source, and can be used with any camera
 
-        The easiest way to run calibration is to run the calibrate.py file
+        The easiest way to run calib is to run the calibrate.py file
         under the tools directory.
 
         Args:
-            imgs (list): a list of images of color calibration images
-            dims (tuple): the count of the 'interior' corners in the calibration
+            imgs (list): a list of images of color calib images
+            dims (tuple): the count of the 'interior' corners in the calib
                           grid. So far a grid where there are 4x4 black squares
                           has seven interior corners.
 
         Returns:
             (numpy.array) camera's intrinsic matrix.
         """
-        # number of images used in calibration process
+        # number of images used in calib process
         img_num = int(len(imgs))
 
         # number of corners horizontally and vertically
@@ -84,7 +91,7 @@ class FrameSource(object):
 
         if img_num < 20:
             logger.warning('FrameSource.calibrate: We suggest suing 20 or'
-                           'more images to perform camera calibration.')
+                           'more images to perform camera calib.')
 
         # prepare object points
         objp = np.zeros((corner_num, 3), np.float32)
@@ -124,7 +131,7 @@ class FrameSource(object):
                 img = cv2.drawChessboardCorners(img, pattern_size,
                                                 corners2, found)
 
-        # camera calibration
+        # camera calib
         ret, cam_mat, dist_coeff, rvecs, tvecs = cv2.calibrateCamera(
                 objpts,
                 imgpts,
@@ -160,7 +167,7 @@ class FrameSource(object):
         if not (isinstance(self._calib_mat, np.ndarray) and
                 isinstance(self._dist_coeff, np.ndarray)):
             logger.warning('FrameSource.undistort: This operation requires '
-                           'calibration, please load the calibration matrix')
+                           'calib, please load the calib matrix')
             return None
 
         if isinstance(img, Image):
@@ -190,17 +197,17 @@ class FrameSource(object):
 
     def save_calibration(self, filename):
         """
-        Save the calibration matrices to file.
+        Save the calib matrices to file.
 
         Args:
-            filename: to which to save the calibration matrix
+            filename: to which to save the calib matrix
 
         Returns:
             (bool)
         """
         if (not isinstance(self._calib_mat, np.ndarray) or
                 not isinstance(self._dist_coeff, np.ndarray)):
-            logger.warning("FrameSource.save_calibration: No calibration matrix"
+            logger.warning("FrameSource.save_calibration: No calib matrix"
                            "present, can't save")
         else:
             np.savez(filename, mat=self._calib_mat, dist=self._dist_coeff)
@@ -210,7 +217,7 @@ class FrameSource(object):
 
     def load_calibration(self, filename):
         """
-        Load a calibration matrix from file.
+        Load a calib matrix from file.
 
         Args:
             filename: from which to load the camera matrix
@@ -317,7 +324,7 @@ class Camera(FrameSource):
 
         :param threaded: if True we constantly debuffer the camera, otherwise
                           the user must do this manually.
-        :param calib_file: calibration file to load.
+        :param calib_file: calib file to load.
         """
         if prop_set is None:
             prop_set = {}

@@ -53,7 +53,7 @@ else:
     from urllib.request import HTTPPasswordMgrWithDefaultRealm
 
 if PY2:
-    from UserDict import UserDict, MutableMapping
+    from UserDict import UserDict
     from cStringIO import StringIO
     import SocketServer as socketserver
     import SimpleHTTPServer

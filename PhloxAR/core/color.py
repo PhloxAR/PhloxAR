@@ -4,11 +4,16 @@ from __future__ import division, print_function
 from __future__ import unicode_literals, absolute_import
 
 from scipy.interpolate import UnivariateSpline
-from .image import Image
+import PhloxAR.core.image
 import numpy as np
 import colorsys
 import random
 import pickle
+
+
+__all__ = [
+    'Color', 'ColorSpace', 'ColorCurve', 'ColorMap', 'ColorModel'
+]
 
 
 class ColorSpace(object):
@@ -467,7 +472,7 @@ class ColorModel(object):
         mapped = np.array(map(self._data.has_key, map(np.ndarray.tostring, rs)))
         thresh = np.where(mapped, a, b)
 
-        return Image(thresh.reshape(image.width, image.height))
+        return PhloxAR.core.image.Image(thresh.reshape(image.width, image.height))
 
     def contains(self, color):
         """

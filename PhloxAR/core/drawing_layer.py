@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*_
+# -*- coding: utf-8 -*-
 
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
@@ -7,7 +7,6 @@ import warnings
 import numpy as np
 import pygame as sdl
 import pygame.gfxdraw as gfxdraw
-import PhloxAR.core.image
 from PhloxAR.core.color import Color
 
 # TODO: DOCUMENT
