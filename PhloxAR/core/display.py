@@ -11,6 +11,11 @@ import numpy as np
 PYGAME_INITIALIZED = False
 
 
+__all__ = [
+    'Display'
+]
+
+
 class Display(object):
     """
     WindowsStream opens a window (Pygame Display Surface) to which you

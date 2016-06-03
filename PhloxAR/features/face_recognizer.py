@@ -2,8 +2,10 @@
 from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
+import re
+import warnings
 from PhloxAR.base import *
-from PhloxAR.core.image import Image
+import PhloxAR.core.image
 
 __all__ = [
     'FaceRecognizer'
@@ -97,7 +99,7 @@ class FaceRecognizer(object):
             self.csvfiles.append(csvfile)
             filereader = csv.reader(f, delimiter=delimiter)
             for row in filereader:
-                images.append(Image(row[0]))
+                images.append(PhloxAR.core.image.Image(row[0]))
                 labels.append(row[1])
 
         if isinstance(labels, type(None)):

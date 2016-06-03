@@ -6,7 +6,8 @@ import re
 import warnings
 import scipy.stats as sps
 import scipy.spatial.distance as spsd
-from ..core import Color, Image
+from ..core.color import Color
+import PhloxAR.core.image
 from ..base import cv2, np, lazy_property
 from .detection import Corner, Line, ShapeContextDescriptor
 from .feature import Feature, FeatureSet
@@ -463,7 +464,7 @@ class Blob(Feature):
 
             cv2.merge((maskblu, maskgrn, maskred), maskbit)
 
-            masksurface = Image(maskbit).surface
+            masksurface = PhloxAR.core.image.Image(maskbit).surface
             masksurface.set_colorkey(Color.BLACK)
             if alpha != -1:
                 masksurface.set_alpha(alpha)
@@ -685,7 +686,7 @@ class Blob(Feature):
         w = self._hull_mask.width
         h = self._hull_mask.height
 
-        idealcircle = Image((w, h))
+        idealcircle = PhloxAR.core.image.Image((w, h))
         radius = min(w, h) / 2
         idealcircle.dl().circle((w / 2, h / 2), radius, filled=True,
                                 color=Color.WHITE)
@@ -736,7 +737,7 @@ class Blob(Feature):
         cv.SetImageROI(bmp, (tl[0], tl[1], self.width, self.height))
         cv.Copy(bmp, ret, mask)
         cv.ResetImageROI(bmp)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     @lazy_property
     def mask(self):
@@ -761,7 +762,7 @@ class Blob(Feature):
                 holes.append([(h2[0] - l, h2[1] - t) for h2 in h])
 
             cv2.fillPoly(ret, holes, (0, 0, 0), 8)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     @lazy_property
     def HullImage(self):
@@ -772,7 +773,7 @@ class Blob(Feature):
         cv.SetImageROI(bmp, (tl[0], tl[1], self.width, self.height))
         cv.Copy(bmp, ret, mask)
         cv.ResetImageROI(bmp)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     @lazy_property
     def HullMask(self):
@@ -784,7 +785,7 @@ class Blob(Feature):
         l, t = self.top_left_corner()
         cv.FillPoly(ret, [[(p[0] - l, p[1] - t) for p in self._convex_hull]],
                     (255, 255, 255), 8)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     @property
     def hull_image(self):
@@ -893,7 +894,7 @@ class Blob(Feature):
         cv.SetImageROI(bmp, (tl[0], tl[1], self.width, self.height))
         cv.Copy(bmp, ret, mask)
         cv.ResetImageROI(bmp)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_full_masked_image(self):
         """
@@ -908,7 +909,7 @@ class Blob(Feature):
         cv.Copy(bmp, ret, mask)
         cv.ResetImageROI(bmp)
         cv.ResetImageROI(ret)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_full_hull_masked_image(self):
         """
@@ -923,7 +924,7 @@ class Blob(Feature):
         cv.Copy(bmp, ret, mask)
         cv.ResetImageROI(bmp)
         cv.ResetImageROI(ret)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_full_mask(self):
         """
@@ -935,7 +936,7 @@ class Blob(Feature):
         cv.SetImageROI(ret, (tl[0], tl[1], self.width, self.height))
         cv.Copy(mask, ret)
         cv.ResetImageROI(ret)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_full_hull_mask(self):
         """
@@ -947,19 +948,19 @@ class Blob(Feature):
         cv.SetImageROI(ret, (tl[0], tl[1], self.width, self.height))
         cv.Copy(mask, ret)
         cv.ResetImageROI(ret)
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_hull_edge_image(self):
         ret = np.zeros((self._image.width, self._image.height, 3), np.uint8)
         tl = self.top_left_corner()
         translate = [(cs[0] - tl[0], cs[1] - tl[1]) for cs in self._convex_hull]
         cv2.polylines(ret, [translate], 1, (255, 255, 255))
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_full_hull_edge_image(self):
         ret = np.zeros((self._image.width, self._image.height, 3), np.uint8)
         cv2.polylines(ret, [self._convex_hull], 1, (255, 255, 255))
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_edge_image(self):
         """
@@ -969,7 +970,7 @@ class Blob(Feature):
         tl = self.top_left_corner()
         translate = [(cs[0] - tl[0], cs[1] - tl[1]) for cs in self._contour]
         cv2.polylines(ret, [translate], 1, (255, 255, 255))
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def get_full_edge_image(self):
         """
@@ -977,7 +978,7 @@ class Blob(Feature):
         """
         ret = np.zeros((self._image.width, self._image.height, 3), np.uint8)
         cv2.polylines(ret, [self._contour], 1, (255, 255, 255))
-        return Image(ret)
+        return PhloxAR.core.image.Image(ret)
 
     def __repr__(self):
         return "PhloxAR.Features.Blob.Blob object at (%d, %d) with area %d" % (
@@ -1527,4 +1528,4 @@ class BlobMaker(object):
         cv.Zero(outputImg)
         cv.Copy(colorbitmap, outputImg, mask)
         cv.ResetImageROI(colorbitmap)
-        return Image(outputImg)
+        return PhloxAR.core.image.Image(outputImg)

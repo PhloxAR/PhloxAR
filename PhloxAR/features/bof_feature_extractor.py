@@ -3,7 +3,7 @@ from __future__ import absolute_import, unicode_literals
 from __future__ import division, print_function
 
 from PhloxAR.base import *
-from PhloxAR.core.image import Image
+import PhloxAR.core.image
 from PhloxAR.features.feature_extractor_base import FeatureExtractorBase
 
 __all__ = [
@@ -76,7 +76,7 @@ class BOFFeatureExtractor(FeatureExtractorBase):
                 if verbose:
                     print(path + " " + str(i) + " of " + str(imgs_per_dir))
                     print("Opening file: " + infile)
-                img = Image(infile)
+                img = PhloxAR.core.image.Image(infile)
                 newFeat = self._get_patches(img, sz)
                 if verbose:
                     print("     Got " + str(len(newFeat)) + " features.")
@@ -157,13 +157,13 @@ class BOFFeatureExtractor(FeatureExtractorBase):
             (patch_arrangement[1] + 1) * spacersz)
         bm = cv.CreateImage((w, h), cv.IPL_DEPTH_8U, 1)
         cv.Zero(bm)
-        img = Image(bm)
+        img = PhloxAR.core.image.Image(bm)
         count = 0
         for widx in range(patch_arrangement[0]):
             for hidx in range(patch_arrangement[1]):
                 x = (widx * patchsize[0]) + ((widx + 1) * spacersz)
                 y = (hidx * patchsize[1]) + ((hidx + 1) * spacersz)
-                temp = Image(cb[count, :].reshape(patchsize[0], patchsize[1]))
+                temp = PhloxAR.core.image.Image(cb[count, :].reshape(patchsize[0], patchsize[1]))
                 img.blit(temp, pos=(x, y))
                 count += 1
         return img
@@ -217,7 +217,7 @@ class BOFFeatureExtractor(FeatureExtractorBase):
         # print(self._layout)
         imgfname = myFile.readline().strip()
         # print(imgfname)
-        self._codebook_img = Image(imgfname)
+        self._codebook_img = PhloxAR.core.image.Image(imgfname)
         self._codebook = self._img2codebook(self._codebook_img,
                                             self._patch_size,
                                             self._num_codes,
@@ -291,13 +291,13 @@ class BOFFeatureExtractor(FeatureExtractorBase):
         w = self._patch_size[0]
         h = self._patch_size[1]
         length = w * h
-        ret = Image(ret)
+        ret = PhloxAR.core.image.Image(ret)
         for widx in range(wsteps):
             for hidx in range(hsteps):
                 x = (widx * self._patch_size[0])
                 y = (hidx * self._patch_size[1])
                 p = codes[count]
-                temp = Image(self._codebook[p, :].reshape(self._patch_size[0],
+                temp = PhloxAR.core.image.Image(self._codebook[p, :].reshape(self._patch_size[0],
                                                           self._patch_size[1]))
                 ret = ret.blit(temp, pos=(x, y))
                 count += 1

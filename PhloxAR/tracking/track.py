@@ -5,7 +5,7 @@ from __future__ import division, print_function
 import time
 from ..base import cv2, np
 from ..core.color import Color
-from ..core.image import Image
+import PhloxAR.core.image
 from ..features import Feature, FeatureSet
 
 __all__ = [
@@ -1003,7 +1003,7 @@ class TrackSet(FeatureSet):
             f = img
             cv2.accumulateWeighted(f, avg, 0.01)
             res = cv2.convertScaleAbs(avg)
-        return Image(res, cv2image=True)
+        return PhloxAR.core.image.Image(res, cv2image=True)
 
     def _kalman(self):
 

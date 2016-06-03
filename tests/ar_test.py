@@ -44,12 +44,12 @@ tp = homography.make_homog(l1[ndx2,:2].T)
 model = homography.RansacModel()
 H, inliers = homography.H_from_ransac(fp,tp,model)
 
-# camera calibration
+# camera calib
 K = my_calibration((747,1000))
 
 
 def set_projection_from_camera(K):
-    """ Set view from a camera calibration matrix. """
+    """ Set view from a camera calib matrix. """
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     fx = K[0,0]

@@ -3,13 +3,18 @@
 from __future__ import division, print_function
 from __future__ import absolute_import, unicode_literals
 
-from ..base import SocketServer
-from ..base import SimpleHTTPServer
+from ..compat import socketserver
+from ..compat import SimpleHTTPServer
 from ..base import cv2
 import time
 import socket
 import re
 import threading
+
+
+__all__ = [
+    'JpegStreamHandler', 'JpegStreamer', 'JpegTCPServer', 'VideoStream'
+]
 
 
 _jpeg_streamers = {}
@@ -82,7 +87,7 @@ class JpegStreamHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
                 time.sleep(_jpeg_streamers[port].sleeptime)
 
 
-class JpegTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class JpegTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
     daemon_threads = True
 

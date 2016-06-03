@@ -4,13 +4,15 @@
 from __future__ import division, print_function
 from __future__ import unicode_literals, absolute_import
 
-from PhloxAR.core.color import *
-from PhloxAR.core.dft import *
-from PhloxAR.core.drawing_layer import *
-from PhloxAR.core.linescan import *
+import numpy as np
+from PhloxAR.core.color import ColorSpace, Color
+from PhloxAR.core.dft import DFT
+from PhloxAR.core.drawing_layer import DrawingLayer
+from PhloxAR.core.linescan import LineScan
 from PhloxAR.core.stream import *
 from PhloxAR.features import *
-from PhloxAR.tracking import *
+import PhloxAR.tracking
+from ..compat import *
 
 try:
     import urllib2
@@ -23,11 +25,17 @@ import cv2
 
 from PhloxAR.exif import *
 
-if not init_options_handler.headless:
-    import pygame as sdl2
+#if not init_options_handler.headless:
+#    import pygame as sdl
+import pygame as sdl
 
 import scipy.ndimage as ndimage
 import multipledispatch
+
+
+__all__ = [
+    'Image', 'ImageSet'
+]
 
 
 class Image(object):
@@ -230,9 +238,9 @@ class Image(object):
                 self._pilimg = PILImage.open(self.filename).convert("RGB")
                 self._narray = np.asarray(self._pilimg)
                 self._color_space = ColorSpace.RGB
-        elif isinstance(src, sdl2.Surface):
+        elif isinstance(src, sdl.Surface):
             self._surface = src
-            self._pilimg = sdl2.image.tostring(src, 'RGB')
+            self._pilimg = sdl.image.tostring(src, 'RGB')
             self._narray = np.asarray(self._pilimg)
             cv2.cvtColor(self._narray, self._narray, cv2.COLOR_RGB2BGR)
             self._color_space = ColorSpace.BGR
@@ -779,10 +787,10 @@ class Image(object):
             return self._surface
         else:
             if self.is_gray():
-                self._surface = sdl2.image.fromstring(self.bitmap.tostring(),
+                self._surface = sdl.image.fromstring(self.bitmap.tostring(),
                                                       self.size, 'RGB')
             else:
-                self._surface = sdl2.image.fromstring(
+                self._surface = sdl.image.fromstring(
                     self.to_rgb().bitmap.tostring(),
                     self.size, 'RGB')
             return self._surface
@@ -1699,91 +1707,91 @@ class Image(object):
 
     # this code is based on code that's based on code from
     # http://blog.jozilla.net/2008/06/27/fun-with-python-opencv-and-face-detection/
-    def find_haar_features(self, cascade, scale_factor=1.2, min_neighbors=2,
-                           use_canny=cv2.CV_HAAR_DO_CANNY_PRUNING,
-                           min_size=(20, 20), max_size=(1000, 1000)):
-        """
-        A Haar like features cascase is a really robust way of finding the
-        location of a known object. This technique works really well for a few
-        specific applications like face, pedestrian, and vehicle detection.
-        It is worth noting that this approach **IS NOT A MAGIC BULLET** .
-        Creating a cascade file requires a large number of images that have
-        been sorted by a human. If you want to find Haar Features (useful for
-        face detection among other purposes) this will return Haar features
-        objects in a FeatureSet.
-        For more information, consult the cv2.HaarDetectObjects documentation.
-        To see what features are available run img.listHaarFeatures() or you can
-        provide your own haarcascade file if you have one available.
-        Note that the cascade parameter can be either a filename, or a HaarCascade
-        loaded with cv2.Load(), or a HaarCascade object.
+    #def find_haar_features(self, cascade, scale_factor=1.2, min_neighbors=2,
+    #                       use_canny=cv2.CV_HAAR_DO_CANNY_PRUNING,
+    #                       min_size=(20, 20), max_size=(1000, 1000)):
+    #    """
+    #    A Haar like features cascase is a really robust way of finding the
+    #    location of a known object. This technique works really well for a few
+    #    specific applications like face, pedestrian, and vehicle detection.
+    #    It is worth noting that this approach **IS NOT A MAGIC BULLET** .
+    #    Creating a cascade file requires a large number of images that have
+    #    been sorted by a human. If you want to find Haar Features (useful for
+    #    face detection among other purposes) this will return Haar features
+    #    objects in a FeatureSet.
+    #    For more information, consult the cv2.HaarDetectObjects documentation.
+    #    To see what features are available run img.listHaarFeatures() or you can
+    #    provide your own haarcascade file if you have one available.
+    #    Note that the cascade parameter can be either a filename, or a HaarCascade
+    #    loaded with cv2.Load(), or a HaarCascade object.
+    #
+    #    :param cascade: the Haar Cascade file, this can be either the path to
+    #                    a cascade file or a HaarCascased PhloxAR object that
+    #                    has already been loaded.
+    #    :param scale_factor: the scaling factor for subsequent rounds of the
+    #                         Haar cascade (default 1.2) in terms of a
+    #                         percentage (i.e. 1.2 = 20% increase in size)
+    #    :param min_neighbors: the minimum number of rectangles that makes up
+    #                          an object. Usually detected faces are clustered
+    #                          around the face, this is the number of detections
+    #                          in a cluster that we need for detection. Higher
+    #                          values here should reduce false positives and
+    #                          decrease false negatives.
+    #    :param use_canny: whether or not to use Canny pruning to reject areas
+    #                      with too many edges (default yes, set to 0 to disable)
+    #    :param min_size: minimum window size. By default, it is set to the size
+    #                     of samples the classifier has been trained on ((20,20)
+    #                     for face detection)
+    #    :param max_size: maximum window size. By default, it is set to the size
+    #                     of samples the classifier has been trained on
+    #                     ((1000,1000) for face detection)
+    #    :return: a features set of HaarFeatures
+    #
+    #    :Example:
+    #    >>> faces = HaarCascade("face.xml","myFaces")
+    #    >>> cam = Camera()
+    #    >>> while True:
+    #    >>>     f = cam.get_image().find_haar_features(faces)
+    #    >>>     if f is not None:
+    #    >>>         f.show()
 
-        :param cascade: the Haar Cascade file, this can be either the path to
-                        a cascade file or a HaarCascased PhloxAR object that
-                        has already been loaded.
-        :param scale_factor: the scaling factor for subsequent rounds of the
-                             Haar cascade (default 1.2) in terms of a
-                             percentage (i.e. 1.2 = 20% increase in size)
-        :param min_neighbors: the minimum number of rectangles that makes up
-                              an object. Usually detected faces are clustered
-                              around the face, this is the number of detections
-                              in a cluster that we need for detection. Higher
-                              values here should reduce false positives and
-                              decrease false negatives.
-        :param use_canny: whether or not to use Canny pruning to reject areas
-                          with too many edges (default yes, set to 0 to disable)
-        :param min_size: minimum window size. By default, it is set to the size
-                         of samples the classifier has been trained on ((20,20)
-                         for face detection)
-        :param max_size: maximum window size. By default, it is set to the size
-                         of samples the classifier has been trained on
-                         ((1000,1000) for face detection)
-        :return: a features set of HaarFeatures
-
-        :Example:
-        >>> faces = HaarCascade("face.xml","myFaces")
-        >>> cam = Camera()
-        >>> while True:
-        >>>     f = cam.get_image().find_haar_features(faces)
-        >>>     if f is not None:
-        >>>         f.show()
-
-        :Note:
-        OpenCV Docs:
-        - http://opencv2.willowgarage.com/documentation/python/objdetect_cascade_classification.html
-        Wikipedia:
-        - http://en.wikipedia.org/wiki/Viola-Jones_object_detection_framework
-        - http://en.wikipedia.org/wiki/Haar-like_features
-        The video on this pages shows how Haar features and cascades work to located faces:
-        - http://dismagazine.com/dystopia/evolved-lifestyles/8115/anti-surveillance-how-to-hide-from-machines/
-        """
-        storage = cv2.CreateMemStorage(0)
+    #    :Note:
+    #    OpenCV Docs:
+    #    - http://opencv2.willowgarage.com/documentation/python/objdetect_cascade_classification.html
+    #    Wikipedia:
+    #    - http://en.wikipedia.org/wiki/Viola-Jones_object_detection_framework
+    #    - http://en.wikipedia.org/wiki/Haar-like_features
+    #    The video on this pages shows how Haar features and cascades work to located faces:
+    #    - http://dismagazine.com/dystopia/evolved-lifestyles/8115/anti-surveillance-how-to-hide-from-machines/
+    #    """
+        #storage = cv2.CreateMemStorage(0)
 
         # lovely.  This segfaults if not present
-        if isinstance(cascade, str):
-            cascade = HaarCascade(cascade)
-            if not cascade.get_cascade():
-                return None
-        elif isinstance(cascade, HaarCascade):
-            pass
-        else:
-            logger.warning('Could not initialize HaarCascade. Enter Valid'
-                           'cascade value.')
+        #if isinstance(cascade, str):
+        #    cascade = HaarCascade(cascade)
+        #    if not cascade.get_cascade():
+        #        return None
+        #elif isinstance(cascade, HaarCascade):
+        #    pass
+        #else:
+        #    logger.warning('Could not initialize HaarCascade. Enter Valid'
+        #                   'cascade value.')
 
         # added all of the arguments from the opencv docs arglist
-        import cv2
-        haar_classify = cv2.CascadeClassifier(cascade.get_file_handle())
-        objects = haar_classify.detectMultiScale(self.gray_narray,
-                                                 scale_factor=scale_factor,
-                                                 min_neighbors=min_neighbors,
-                                                 min_size=min_size,
-                                                 flags=use_canny)
-        cv2flag = True
+        #import cv2
+        #haar_classify = cv2.CascadeClassifier(cascade.get_file_handle())
+        #objects = haar_classify.detectMultiScale(self.gray_narray,
+        #                                         scale_factor=scale_factor,
+        #                                         min_neighbors=min_neighbors,
+        #                                         min_size=min_size,
+        #                                         flags=use_canny)
+        #cv2flag = True
 
-        if objects is not None:
-            return FeatureSet(
-                    [HaarFeature(self, o, cascade, cv2flag) for o in objects])
+        #if objects is not None:
+        #    return FeatureSet(
+        #            [HaarFeature(self, o, cascade, cv2flag) for o in objects])
 
-        return None
+        #return None
 
     def draw_circle(self, ctr, rad, color=(0, 0, 0), thickness=1):
         """
@@ -2974,16 +2982,16 @@ class Image(object):
             print("Unknown type to show")
 
     def _surface2image(self, surface):
-        imgarray = sdl2.surfarray.array3d(surface)
+        imgarray = sdl.surfarray.array3d(surface)
         ret = Image(imgarray)
         ret._color_space = ColorSpace.RGB
         return ret.to_bgr().transpose()
 
     def _image2surface(self, img):
-        return sdl2.image.fromstring(img.pilimg.tostring(), img.size(), "RGB")
+        return sdl.image.fromstring(img.pilimg.tostring(), img.size(), "RGB")
 
     def to_pygame_surface(self):
-        return sdl2.image.fromstring(self.pilimg.tostring(), self.size(), "RGB")
+        return sdl.image.fromstring(self.pilimg.tostring(), self.size(), "RGB")
 
     def add_drawing_layer(self, layer=None):
         if not isinstance(layer, DrawingLayer):
@@ -4127,7 +4135,7 @@ class Image(object):
             if result[i]:
                 pt_a = (tkp[i].pt[1], tkp[i].pt[0] + hdif)
                 pt_b = (skp[idx[i]].pt[1] + template.width, skp[idx[i]].pt[0])
-                resultImg.drawLine(pt_a, pt_b, color=Color.random(),
+                resultImg.drawLine(pt_a, pt_b, color=Colorrandom(),
                                    thickness=width)
         return resultImg
 
@@ -6528,7 +6536,7 @@ class Image(object):
             tkp = tfs[i]
             pt_a = (int(tkp.y), int(tkp.x) + hdif)
             pt_b = (int(skp.y) + template.width, int(skp.x))
-            resultImg.drawLine(pt_a, pt_b, color=Color.random(),
+            resultImg.drawLine(pt_a, pt_b, color=Colorrandom(),
                                thickness=width)
         return resultImg
 
@@ -6608,7 +6616,7 @@ class Image(object):
         newmask = None
         if (not useMyMask):
             newmask = Image((self.width, self.height))
-            newmask = newmask.floodFill((0, 0), color=Color.WATERSHED_BG)
+            newmask = newmask.floodFill((0, 0), color=ColorWATERSHED_BG)
             newmask = (newmask - mask.dilate(dilate) + mask.erode(erode))
         else:
             newmask = mask
