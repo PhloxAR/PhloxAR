@@ -69,7 +69,6 @@ paper/
 */tmp/*
 
 # for now, unavailable
-data/
 examples/
 
 # distutils
